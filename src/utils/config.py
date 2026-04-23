@@ -4,17 +4,11 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 
 from src.utils.paths import get_config_path
 
-_cache: dict[str, dict] = {}
-
-_CONFIG_NAMES = ("app", "features", "labels", "model")
-
-
+@functools.lru_cache(maxsize=None)
 def get_config(name: str) -> dict:
-    if name not in _cache:
-        path = get_config_path(name)
-        with path.open() as f:
-            _cache[name] = yaml.safe_load(f)
-    return _cache[name]
+    path = get_config_path(name)
+    with path.open() as f:
+        return yaml.safe_load(f)
 
 
 class AppSettings(BaseSettings):

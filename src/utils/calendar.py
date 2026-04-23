@@ -15,6 +15,8 @@ def _to_et(dt: datetime | None) -> datetime:
 
 
 def is_market_open(dt: datetime | None = None) -> bool:
+    # NOTE: Does not account for US market holidays. Suitable for V1 scheduler
+    # near-live refresh; replace with pandas_market_calendars in Phase E if needed.
     et = _to_et(dt)
     if et.weekday() >= 5:
         return False
@@ -24,6 +26,7 @@ def is_market_open(dt: datetime | None = None) -> bool:
 
 
 def next_market_open(dt: datetime | None = None) -> datetime:
+    # NOTE: Does not account for US market holidays.
     et = _to_et(dt)
     candidate = et.replace(hour=_MARKET_OPEN_H, minute=_MARKET_OPEN_M, second=0, microsecond=0)
     if et >= candidate or et.weekday() >= 5:
