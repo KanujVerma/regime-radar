@@ -2,11 +2,14 @@ __pycache__/
 *.pyc
 *.pyo
 .env
-data/raw/
-data/processed/
-data/models/
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
 !data/processed/.gitkeep
+data/models/*
 !data/models/.gitkeep
+data/fixtures/*
+!data/fixtures/.gitkeep
 .pytest_cache/
 .ruff_cache/
 *.egg-info/

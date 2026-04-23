@@ -1,3 +1,4 @@
+import functools
 import yaml
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -26,5 +27,6 @@ class AppSettings(BaseSettings):
     app_log_level: str = "INFO"
 
 
+@functools.lru_cache(maxsize=None)
 def get_app_settings() -> AppSettings:
     return AppSettings()
