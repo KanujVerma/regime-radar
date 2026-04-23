@@ -34,12 +34,11 @@ def smooth_offline(raw_labels: pd.Series, n: int) -> pd.Series:
             if all(labels[j] == cur for j in range(i, run_end + 1)):
                 pass
             else:
+                # Reject: suppress only this failed run (same label as cur)
+                cur = labels[i]
                 j = i
-                while j < len(labels) and labels[j] != prev:
-                    lj = labels[j]
-                    if lj is None or (isinstance(lj, float) and lj != lj):
-                        break
-                    smoothed[j] = prev
+                while j < len(labels) and labels[j] == cur:
+                    smoothed[j] = smoothed[i - 1]
                     j += 1
         i += 1
     return pd.Series(smoothed, index=raw_labels.index, name=raw_labels.name)
@@ -49,18 +48,33 @@ def smooth_live(raw_labels: pd.Series, n: int) -> pd.Series:
     """Live smoothing: backward-only. A flip is confirmed only when the new label
     has held for n consecutive trailing days. Introduces a known n-day reporting lag.
     Safe for serving (only uses past information).
+    # NOTE: NaN entries (pre-warmup) are passed through unchanged.
     """
+    import math
     labels = raw_labels.tolist()
+
+    def _is_nan(v):
+        return v is None or (isinstance(v, float) and math.isnan(v))
+
     smoothed = [labels[0]]
     for i in range(1, len(labels)):
-        if labels[i] != smoothed[-1]:
+        cur = labels[i]
+        if _is_nan(cur):
+            smoothed.append(cur)
+            continue
+        prev = smoothed[-1]
+        if _is_nan(prev):
+            smoothed.append(cur)
+            continue
+        if cur != prev:
             start = max(0, i - n + 1)
-            if all(labels[j] == labels[i] for j in range(start, i + 1)):
-                smoothed.append(labels[i])
+            window = [labels[j] for j in range(start, i + 1) if not _is_nan(labels[j])]
+            if len(window) >= n and all(v == cur for v in window):
+                smoothed.append(cur)
             else:
-                smoothed.append(smoothed[-1])
+                smoothed.append(prev)
         else:
-            smoothed.append(labels[i])
+            smoothed.append(cur)
     return pd.Series(smoothed, index=raw_labels.index, name=raw_labels.name)
 
 

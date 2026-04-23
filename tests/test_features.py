@@ -10,7 +10,7 @@ class TestFeatureEngineering:
         from src.data.merge_sources import merge_market_panel
         panel = merge_market_panel(synthetic_ohlcv, synthetic_vix, synthetic_emv)
         features = build_features(panel)
-        assert len(features.columns) >= 18
+        assert len(features.columns) == 20
         assert features.index.equals(panel.index)
 
     def test_no_future_looking_windows(self, synthetic_ohlcv, synthetic_vix, synthetic_emv):
@@ -44,7 +44,7 @@ class TestFeatureEngineering:
         features = build_features(panel, regime_series=regime)
 
         flip_day_days = features["days_in_regime_lag1"].iloc[200]
-        assert flip_day_days == pytest.approx(200, abs=2), (
+        assert flip_day_days == 200, (
             f"At regime flip day, days_in_regime_lag1={flip_day_days}, "
             f"expected ~200 (pre-flip calm streak)"
         )

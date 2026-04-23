@@ -69,19 +69,11 @@ def build_features(panel: pd.DataFrame, regime_series: pd.Series | None = None) 
         shifted = regime_series.shift(1)
 
         # days_in_regime_lag1: consecutive days in current regime as of yesterday
-        days_in_regime: list[int] = []
-        shifted_list = shifted.tolist()
-        for i in range(len(shifted_list)):
-            if shifted_list[i] is None or (isinstance(shifted_list[i], float) and np.isnan(shifted_list[i])):
-                days_in_regime.append(np.nan)
-                continue
-            count = 1
-            j = i - 1
-            while j >= 0 and shifted_list[j] == shifted_list[i]:
-                count += 1
-                j -= 1
-            days_in_regime.append(count)
-        feat["days_in_regime_lag1"] = pd.Series(days_in_regime, index=panel.index, dtype=float)
+        shifted2 = shifted.shift(1)
+        changed = shifted != shifted2
+        group_id = changed.cumsum()
+        days_in = shifted.groupby(group_id).cumcount() + 1
+        feat["days_in_regime_lag1"] = days_in.where(shifted.notna()).values
 
         # turbulent_count_30d_lag1: turbulent days in prior 30 days from shifted series
         regime_code = shifted.map({"calm": 0, "elevated": 1, "turbulent": 2})

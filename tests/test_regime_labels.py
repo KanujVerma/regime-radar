@@ -84,3 +84,11 @@ class TestRegimeLabels:
         smoothed = smooth_live(raw, n=2)
         assert smoothed.iloc[5] == "calm"
         assert smoothed.iloc[6] == "turbulent"
+
+    def test_smooth_offline_doesnt_suppress_subsequent_regimes(self):
+        """A rejected brief run must not suppress a following valid regime change."""
+        # calm * 3, elevated * 1 (fails n=2), turbulent * 5
+        raw = pd.Series(["calm"] * 3 + ["elevated"] * 1 + ["turbulent"] * 5)
+        smoothed = smooth_offline(raw, n=2)
+        # The 5-day turbulent run must survive (elevated blip was rejected, not turbulent)
+        assert list(smoothed[-5:]) == ["turbulent"] * 5

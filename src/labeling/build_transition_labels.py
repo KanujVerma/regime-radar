@@ -34,7 +34,12 @@ def build_transition_labels(
     labels = [0] * n
 
     for i in range(n - horizon):
-        current_order = REGIME_ORDER.get(regimes[i], 0)
+        current = regimes[i]
+        if current is None or (isinstance(current, float) and current != current):
+            continue
+        current_order = REGIME_ORDER.get(current, -1)
+        if current_order < 0:
+            continue
         if current_order == 2:
             continue
 
