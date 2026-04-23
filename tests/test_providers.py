@@ -53,3 +53,69 @@ class TestFactory:
         p = get_provider()
         assert p.mode == "live"
         assert p.name == "finnhub"
+
+
+class TestFinnhubProvider:
+    def test_conforms_to_abc(self):
+        from src.data.providers.finnhub_provider import FinnhubProvider
+
+        p = FinnhubProvider(api_key="test-key")
+        assert isinstance(p, LiveQuoteProvider)
+        assert p.mode == "live"
+        assert p.name == "finnhub"
+
+    def test_latest_quote_success(self):
+        from src.data.providers.finnhub_provider import FinnhubProvider
+        import requests
+
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = {
+            "c": 450.25, "h": 451.0, "l": 448.0, "o": 449.0, "pc": 449.0
+        }
+
+        with patch("requests.Session.get", return_value=mock_resp):
+            p = FinnhubProvider(api_key="test-key")
+            q = p.latest_quote("SPY")
+
+        assert q.symbol == "SPY"
+        assert q.price == pytest.approx(450.25)
+        assert q.volume == 0.0  # Finnhub /quote does not return volume
+
+    def test_latest_quote_http_error_raises(self):
+        from src.data.providers.finnhub_provider import FinnhubProvider
+        import requests
+
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status.side_effect = requests.HTTPError("403 Forbidden")
+
+        with patch("requests.Session.get", return_value=mock_resp):
+            p = FinnhubProvider(api_key="test-key")
+            with pytest.raises(RuntimeError):
+                p.latest_quote("SPY")
+
+    def test_recent_candles_success(self):
+        from src.data.providers.finnhub_provider import FinnhubProvider
+        import time
+
+        now = int(time.time())
+        ts = [now - i * 86400 for i in range(4, -1, -1)]
+        mock_resp = MagicMock()
+        mock_resp.raise_for_status = MagicMock()
+        mock_resp.json.return_value = {
+            "s": "ok",
+            "c": [440.0, 441.0, 442.0, 443.0, 444.0],
+            "o": [439.0, 440.0, 441.0, 442.0, 443.0],
+            "h": [445.0, 446.0, 447.0, 448.0, 449.0],
+            "l": [438.0, 439.0, 440.0, 441.0, 442.0],
+            "v": [80_000_000, 82_000_000, 79_000_000, 81_000_000, 83_000_000],
+            "t": ts,
+        }
+
+        with patch("requests.Session.get", return_value=mock_resp):
+            p = FinnhubProvider(api_key="test-key")
+            df = p.recent_candles("SPY", 5)
+
+        assert len(df) == 5
+        assert {"date", "open", "high", "low", "close", "volume"}.issubset(df.columns)
+        assert df["close"].iloc[-1] == pytest.approx(444.0)

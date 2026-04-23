@@ -1,0 +1,379 @@
+[
+  {
+    "id": "mem-MEMORY-memory-index",
+    "key": "memory-index",
+    "content": "- [User Profile — Kanuj](user_kanuj.md) — Founder of Kayna agency; fast-moving, dark-aesthetic, iterates in production\n- [Kayna Site — Project State](project_kayna_site.md) — Stack, design tokens, key components; GitHub private repo added 2026-04-07\n- [Kayna Site — Feedback & Rules](feedback_kayna_site.md) — cwebp frames, canvas opacity 0.18, BeforeAfterSlider drag fix, deploy via vercel --prod\n- [Kayna Premium Refinement — Status](project_kayna_refinement.md) — All tasks 2-15 DONE; uncommitted ",
+    "summary": "Memory Index",
+    "namespace": "core",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/MEMORY.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253602
+  },
+  {
+    "id": "mem-feedback_kayna_site----",
+    "key": "-",
+    "content": "name: Kayna Site — Feedback & Rules\ndescription: Learned rules and validated approaches for working on the kayna-site project\ntype: feedback\n---",
+    "summary": "---",
+    "namespace": "feedback_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/feedback_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253602
+  },
+  {
+    "id": "mem-feedback_kayna_site-webp-frame-conversion--use-cwe",
+    "key": "webp-frame-conversion-use-cwebp-not-ffmpeg",
+    "content": "Use `/opt/homebrew/bin/cwebp -q 85` to convert PNG frames to WebP. Never use ffmpeg's `-c:v libwebp` for RGBA images.\n\n**Why:** ffmpeg's default libwebp produces VP8 encoding which drops the alpha channel. The kayna-site frames are RGBA (transparent background) and rendered with `mix-blend-mode: screen` — opaque white pixels from VP8 encoding cause the entire page to appear white. `cwebp` produces VP8X (extended) with a proper ALPH chunk. Verified via `webpinfo` (look for `Alpha: 1`).\n\n**How to ",
+    "summary": "WebP frame conversion: use cwebp, not ffmpeg",
+    "namespace": "feedback_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/feedback_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253602
+  },
+  {
+    "id": "mem-feedback_kayna_site-canvas-opacity--0-18-is-approv",
+    "key": "canvas-opacity-0-18-is-approved-0-35-was-too-inten",
+    "content": "**Why:** At opacity 0.35, the scroll canvas overpowered page copy and made content hard to read. User requested reduction. 0.18 was approved.\n\n**How to apply:** Do not increase ScrollCanvas opacity without user approval. If the effect needs to be \"more present,\" explore other means before touching opacity.\n\n---",
+    "summary": "Canvas opacity: 0.18 is approved, 0.35 was too intense",
+    "namespace": "feedback_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/feedback_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253602
+  },
+  {
+    "id": "mem-feedback_kayna_site-heroheadline-shadow-blur--keep",
+    "key": "heroheadline-shadow-blur-keep-minimal",
+    "content": "The shadow depth copies use `filter: blur(calc(0.015rem + var(--idx) * 0.004rem))`. This was reduced after the user found the original setting \"too blurry\" — text legibility was affected.\n\n**Why:** The shadows give a cinematic depth effect, but too much blur makes the headline itself hard to read. The current minimal values were approved.\n\n**How to apply:** If adjusting shadow blur, err toward less, not more.\n\n---",
+    "summary": "HeroHeadline shadow blur: keep minimal",
+    "namespace": "feedback_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/feedback_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253602
+  },
+  {
+    "id": "mem-feedback_kayna_site-git-stash-recovery--use-select",
+    "key": "git-stash-recovery-use-selective-checkout",
+    "content": "**Why:** The user had significant in-progress work stashed. Applying the full stash failed due to conflicts with kayna-lead-finder. The fix was to selectively restore individual files: `git checkout stash@{0} -- kayna-site/path/to/file`. This is the safe approach when a full `git stash pop` would conflict.\n\n**How to apply:** When recovering stashed changes in a monorepo, always restore file-by-file rather than popping the full stash.\n\n---",
+    "summary": "Git stash recovery: use selective checkout",
+    "namespace": "feedback_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/feedback_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253602
+  },
+  {
+    "id": "mem-feedback_kayna_site-beforeafterslider--prevent-dra",
+    "key": "beforeafterslider-prevent-drag-to-navigate-with-po",
+    "content": "When the slider is inside a `<Link>` wrapper, dragging triggers the link navigation on pointer release. Fix:\n- Add `e.preventDefault()` inside `handlePointerDown` before `setPointerCapture`\n- Add `draggable={false}` on the container div\n- Add `onClick={(e) => { e.stopPropagation(); e.preventDefault() }}` on the container div\n- Layer order: **after** image is the base layer (always visible); **before** image is clipped to `inset(0 ${100-pct}% 0 0)` so it reveals left\n\n**Why:** User reported that ",
+    "summary": "BeforeAfterSlider: prevent drag-to-navigate with pointer capture + stopPropagation",
+    "namespace": "feedback_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/feedback_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253602
+  },
+  {
+    "id": "mem-feedback_kayna_site-deploy--vercel---prod-from---k",
+    "key": "deploy-vercel-prod-from-kayna-site",
+    "content": "**Why:** Auto-deploy is not wired up (Vercel GitHub OAuth not connected per DECISIONS.md D005). Manual deploy is the production path.\n\n**How to apply:** After implementing changes, remind user to run `vercel --prod` from `~/kayna-site`, or offer to run it if they say \"deploy\".\n\n---",
+    "summary": "Deploy: vercel --prod from ~/kayna-site",
+    "namespace": "feedback_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/feedback_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253603
+  },
+  {
+    "id": "mem-feedback_kayna_site-brand-identity--dark-cinematic",
+    "key": "brand-identity-dark-cinematic-restrained-cyan-neve",
+    "content": "The dark cinematic identity (`#080808` bg, `#5ce1e6` cyan accent, Cormorant Garamond + Inter) is non-negotiable. The user is very intentional about this positioning and gets frustrated when it drifts toward generic startup/SaaS aesthetics.\n\n**Why:** Kayna is positioned as a premium studio above typical local agencies. The visual language is the product demo.\n\n**How to apply:** When adding new UI, always anchor to the existing system. No bright gradients, no loud effects, no generic patterns.",
+    "summary": "Brand identity: dark cinematic, restrained cyan — never redesign",
+    "namespace": "feedback_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/feedback_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253603
+  },
+  {
+    "id": "mem-project_kayna_homepage_strategy----",
+    "key": "-",
+    "content": "name: Kayna Homepage Strategy — Lead Gen Redesign Intent\ndescription: Kanuj's goals and constraints for the next homepage pass; conversion-first repositioning away from portfolio-studio feel\ntype: project\n---\n\n**Intent (as of 2026-04-07):** Reposition the Kayna homepage from \"polished studio\" to \"serious growth partner for local high-trust businesses.\" The site should sell business outcomes, not just beautiful websites.\n\n**Why:** Current homepage reads as a premium design studio portfolio. Kanuj",
+    "summary": "---",
+    "namespace": "project_kayna_homepage_strategy",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_homepage_strategy.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253603
+  },
+  {
+    "id": "mem-project_kayna_homepage_strategy-core-positioning",
+    "key": "core-positioning",
+    "content": "> \"Kayna helps high-trust Tri-Valley businesses turn outdated websites into credibility and inquiry engines.\"\n\nTarget audience: Pleasanton, Dublin, San Ramon, Livermore — dental, medical, legal, aesthetics, professional services.\n\nServices: web design, local SEO foundations, conversion-aware structure, analytics/growth.\n\n---",
+    "summary": "Core Positioning",
+    "namespace": "project_kayna_homepage_strategy",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_homepage_strategy.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253603
+  },
+  {
+    "id": "mem-project_kayna_homepage_strategy-what-the-homepage-must-communi",
+    "key": "what-the-homepage-must-communicate-in-10-seconds",
+    "content": "1. This is for businesses like mine\n2. They understand trust-based local businesses\n3. They can make my website look more credible\n4. They can improve local visibility and inquiries\n5. They feel premium but serious\n6. There is a clear next step\n\n---",
+    "summary": "What the Homepage Must Communicate in <10 Seconds",
+    "namespace": "project_kayna_homepage_strategy",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_homepage_strategy.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253603
+  },
+  {
+    "id": "mem-project_kayna_homepage_strategy-trust-strategy--small--early-s",
+    "key": "trust-strategy-small-early-stage-business-do-not-f",
+    "content": "Trust should come from:\n- Sharp positioning + clear thinking\n- Process clarity and audit/teardown reasoning\n- Niche specificity (who we help, what we fix)\n- Polished execution and strong taste\n- Honest presentation of work (some is concept/unsolicited rebuilds — that's OK)\n- \"Small by design\" framing: intentionally small, hands-on, direct, accountable\n\nDo NOT use:\n- Inflated founder mythology\n- Generic \"founder-led\" language as the main trust mechanism\n- Fake big-agency scale claims\n\n---",
+    "summary": "Trust Strategy (small, early-stage business — do NOT fake authority)",
+    "namespace": "project_kayna_homepage_strategy",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_homepage_strategy.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253603
+  },
+  {
+    "id": "mem-project_kayna_homepage_strategy-conversion---ux-direction",
+    "key": "conversion-ux-direction",
+    "content": "- Form friction: two-step flow — first touch only asks name, email, business name, website, and one dropdown for main need\n- CTA flow: clear primary CTA in hero, secondary throughout, final strong CTA at bottom\n- Cold visitor journey: Is this for me? → Can I trust them? → What do they do? → Why different? → What next?\n\n---",
+    "summary": "Conversion / UX Direction",
+    "namespace": "project_kayna_homepage_strategy",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_homepage_strategy.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253603
+  },
+  {
+    "id": "mem-project_kayna_homepage_strategy-design-constraints--carry-forw",
+    "key": "design-constraints-carry-forward-from-existing-bra",
+    "content": "- Dark cinematic identity stays — no redesign of the visual language\n- Cinematic is for hero + one showcase section; rest stays polished and conversion-clear\n- Motion: guide attention, not entertain\n- Copy: sharp, premium, outcome-focused — no \"elevate your brand\" agency fluff\n\n---",
+    "summary": "Design Constraints (carry forward from existing brand)",
+    "namespace": "project_kayna_homepage_strategy",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_homepage_strategy.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253604
+  },
+  {
+    "id": "mem-project_kayna_homepage_strategy-seo-direction--homepage-",
+    "key": "seo-direction-homepage-",
+    "content": "- Lean into Tri-Valley geography in headlines and copy\n- Support future service-area pages: Pleasanton, Dublin, San Ramon, Livermore\n- Support future niche pages: dental, medical, law firm, med spa website design\n- Homepage H1 should include \"Tri-Valley\" + outcome language\n\n---",
+    "summary": "SEO Direction (homepage)",
+    "namespace": "project_kayna_homepage_strategy",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_homepage_strategy.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253604
+  },
+  {
+    "id": "mem-project_kayna_homepage_strategy-status",
+    "key": "status",
+    "content": "The `/ultraplan` command was attempted (2026-04-07) to produce a full audit + strategy document but failed — no remote Claude session available. The strategy brief (detailed prompt) was not executed. Resume when user reconnects or retries.",
+    "summary": "Status",
+    "namespace": "project_kayna_homepage_strategy",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_homepage_strategy.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253604
+  },
+  {
+    "id": "mem-project_kayna_refinement----",
+    "key": "-",
+    "content": "name: Kayna Premium Refinement — Active Implementation\ndescription: Implementation status for the Kayna site premium refinement pass (atmosphere, interactions, work slider)\ntype: project\n---\n\nActive plan: `docs/superpowers/plans/2026-04-03-kayna-premium-refinement.md`\nSpec: `docs/superpowers/specs/2026-04-03-kayna-premium-refinement-design.md`\nProject dir: `/Users/kanuj/kayna-site`\n\n**Why:** Premium refinement pass — add atmosphere, depth, microinteractions to the existing dark cinematic site wi",
+    "summary": "---",
+    "namespace": "project_kayna_refinement",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_refinement.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253604
+  },
+  {
+    "id": "mem-project_kayna_site----",
+    "key": "-",
+    "content": "name: Kayna Site — Project State\ndescription: Current state, architecture, key files, and deployment for the kayna-site marketing site\ntype: project\n---\n\nKayna's public marketing website for Kanuj's web design agency. Targets Tri-Valley businesses for premium web design and local SEO.\n\n**Live URL:** https://kayna-site.vercel.app  \n**GitHub:** https://github.com/KanujVerma/kayna-site (private, pushed 2026-04-07)  \n**Repo path:** `~/kayna-site`  \n**Deploy command:** `vercel --prod` from `~/kayna-s",
+    "summary": "---",
+    "namespace": "project_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253605
+  },
+  {
+    "id": "mem-project_kayna_site-stack",
+    "key": "stack",
+    "content": "- Next.js 16 (App Router), React 19, TypeScript strict\n- Tailwind CSS 4 (PostCSS plugin — NOT the legacy CLI)\n- Framer Motion 11, Lenis smooth scroll\n- Inter + Cormorant Garamond fonts (loaded via `next/font`)\n- Vercel deployment, Resend for form emails → `team.kayna@gmail.com`\n\n---",
+    "summary": "Stack",
+    "namespace": "project_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253605
+  },
+  {
+    "id": "mem-project_kayna_site-design-system--globals-css-",
+    "key": "design-system-globals-css-",
+    "content": "```css\n--color-bg:      #080808\n--color-surface: #0f0f0f\n--color-border:  #1a1a1a\n--color-heading: #ffffff\n--color-body:    #d2d2d2   /* bumped from #b8b8b8 for readability */\n--color-muted:   #aaaaaa   /* bumped from #909090 for readability */\n--color-dim:     #555555\n--color-accent:  #5ce1e6   /* cyan — CTAs, eyebrows, icons only */\n```\n\nFonts: `var(--font-cormorant)` weight 300 for all headings; `var(--font-inter)` for body/UI.\n\n---",
+    "summary": "Design System (globals.css)",
+    "namespace": "project_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253605
+  },
+  {
+    "id": "mem-project_kayna_site-key-components",
+    "key": "key-components",
+    "content": "- `components/home/ScrollCanvas.tsx` — Fixed canvas, 120 WebP frames, `mix-blend-mode: screen`, opacity 0.18, fades to 0 over 200px before footer starts\n- `components/home/HeroHeadline.tsx` — Cursor-proximity glow + depth shadow copies (12 layers, decreasing alpha). Blur per shadow: `0.015rem + idx * 0.004rem` (decreased from original after user found it too blurry)\n- `components/ui/SpotlightCard.tsx` — Mouse-tracked radial cyan glow on cards\n- `components/ui/HoverBorderGradient.tsx` — Conic gra",
+    "summary": "Key Components",
+    "namespace": "project_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253605
+  },
+  {
+    "id": "mem-project_kayna_site-homepage-section-order",
+    "key": "homepage-section-order",
+    "content": "Hero → TrustStrip → ServicesGrid → IndustriesGrid → WorkPreview → Differentiators → Process → PricingTeaser → StrategyReviewCTA\n\nScrollCanvas is mounted above `<main>` in `app/page.tsx` (homepage only).\n\n---",
+    "summary": "Homepage Section Order",
+    "namespace": "project_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253605
+  },
+  {
+    "id": "mem-project_kayna_site-scrollcanvas-frame-assets",
+    "key": "scrollcanvas-frame-assets",
+    "content": "- 120 frames: `public/frames/frame_001.webp` … `frame_120.webp`\n- Source: 1920×1080 RGBA PNGs of animated 3D glass chevron\n- **Must be converted with `cwebp` (not ffmpeg)** — see `feedback_kayna_site.md`\n\n---",
+    "summary": "ScrollCanvas Frame Assets",
+    "namespace": "project_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253605
+  },
+  {
+    "id": "mem-project_kayna_site-upcoming-work--as-of-2026-04-0",
+    "key": "upcoming-work-as-of-2026-04-07-",
+    "content": "**Premium refinement pass: COMPLETE** (Tasks 2–15 done). Two items remain:\n- Before screenshots for BeforeAfterSlider (user needs to re-share originals)\n- `vercel --prod` deploy when user is ready\n\n**Next major initiative: Homepage strategy redesign** — user wants to reposition the homepage away from \"polished studio\" toward lead generation, conversion, and local trust. See `project_kayna_homepage_strategy.md`.\n\n**Docs:**\n- `docs/superpowers/specs/2026-03-25-kayna-site-design.md` — original full",
+    "summary": "Upcoming Work (as of 2026-04-07)",
+    "namespace": "project_kayna_site",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/project_kayna_site.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253605
+  },
+  {
+    "id": "mem-user_kanuj----",
+    "key": "-",
+    "content": "name: User Profile — Kanuj\ndescription: Who Kanuj is, his working style, and how to collaborate well with him\ntype: user\n---\n\nKanuj is the founder of Kayna, a premium web design and local SEO studio serving Tri-Valley businesses (Pleasanton, Dublin, San Ramon, Livermore). He builds and manages his own marketing site, lead-gen tools, and client work.\n\n**Role:** Founder/operator — designer, developer, and decision-maker in one.\n\n**Working style:**\n- Moves fast. Approves with brief affirmations (\"y",
+    "summary": "---",
+    "namespace": "user_kanuj",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj/memory/user_kanuj.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253605
+  },
+  {
+    "id": "mem-MEMORY-memory-index",
+    "key": "memory-index",
+    "content": "- [Project Direction: Stabilization](project_stabilization.md) — Parser scope frozen; focus is cleanup, consistency, workflow polish\n- [Parser Regression Pack](project_regression_pack.md) — Four tested note fixtures are the permanent regression baseline",
+    "summary": "Memory Index",
+    "namespace": "core",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj-clinical-notes-nlp-assistant/memory/MEMORY.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253607
+  },
+  {
+    "id": "mem-project_regression_pack----",
+    "key": "-",
+    "content": "name: Parser Regression Pack\ndescription: Four note fixtures in test_pipeline.py form the permanent regression baseline — do not remove or weaken these tests\ntype: project\noriginSessionId: 81f16c5d-e165-4197-93c2-07f605eba5c5\n---\n`backend/tests/test_pipeline.py` contains four full-note fixtures that are the regression baseline:\n\n1. **Jane Doe** (basic discharge summary) — vitals, medications, all three instruction categories, metadata\n2. **John Smith** (discharge summary) — albuterol PRN, all vi",
+    "summary": "---",
+    "namespace": "project_regression_pack",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj-clinical-notes-nlp-assistant/memory/project_regression_pack.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253607
+  },
+  {
+    "id": "mem-project_stabilization----",
+    "key": "-",
+    "content": "name: Project Direction: Stabilization\ndescription: Parser scope frozen as of 2026-04-16; focus is cleanup, consistency, and reviewer workflow polish — not new extraction features\ntype: project\noriginSessionId: 81f16c5d-e165-4197-93c2-07f605eba5c5\n---\nParser expansion is complete as of 2026-04-16. User explicitly declared scope frozen.\n\n**Why:** The parser now handles units, duration/qualifier, prose medication extraction, sentence-local binding, and tighter follow-up classification. The four te",
+    "summary": "---",
+    "namespace": "project_stabilization",
+    "type": "semantic",
+    "metadata": {
+      "sourceFile": "/Users/kanuj/.claude/projects/-Users-kanuj-clinical-notes-nlp-assistant/memory/project_stabilization.md",
+      "bootstrapped": true
+    },
+    "createdAt": 1776974253607
+  }
+]

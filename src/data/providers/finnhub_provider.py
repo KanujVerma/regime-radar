@@ -65,7 +65,7 @@ class FinnhubProvider(LiveQuoteProvider):
             )
 
         df = pd.DataFrame({
-            "date": [datetime.utcfromtimestamp(t).strftime("%Y-%m-%d") for t in data["t"]],
+            "date": [datetime.fromtimestamp(t, tz=timezone.utc).strftime("%Y-%m-%d") for t in data["t"]],
             "open": data["o"],
             "high": data["h"],
             "low": data["l"],
