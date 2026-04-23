@@ -1,0 +1,18 @@
+windows:
+  return_short: 1
+  return_medium: 5
+  return_long: 20
+  realized_vol_short: 10
+  realized_vol_long: 20
+  sma: 50
+  vix_zscore: 252
+  vix_pct: 504
+  drawdown_pct: 504
+
+features:
+  returns: [ret_1d, ret_5d, ret_20d]
+  momentum: [momentum_20d, dist_sma50]
+  volatility: [rv_10d, rv_20d, rv_20d_pct]
+  vix: [vix_level, vix_chg_1d, vix_chg_5d, vix_zscore_252d, vix_pct_504d]
+  risk_context: [drawdown, drawdown_pct_504d, days_in_regime_lag1, turbulent_count_30d_lag1, trend_code]
+  macro: [emv_level, emv_chg_5d, emv_lag_5d, emv_lag_20d]

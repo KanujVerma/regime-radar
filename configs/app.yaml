@@ -1,0 +1,21 @@
+app:
+  env: development
+  log_level: INFO
+
+paths:
+  data_raw: data/raw
+  data_processed: data/processed
+  data_models: data/models
+  data_fixtures: data/fixtures
+  data_db: data/app.db
+
+provider:
+  # "auto" = use FINNHUB_API_KEY if set, else mock
+  mode: auto
+
+scheduler:
+  refresh_interval_minutes: 5
+  market_open: "09:30"
+  market_close: "16:00"
+  timezone: "America/New_York"
+  enabled: true

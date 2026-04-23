@@ -1,0 +1,18 @@
+regime:
+  trailing_window_days: 504
+  weights:
+    vix_percentile: 0.45
+    realized_vol_percentile: 0.35
+    drawdown: 0.20
+  thresholds:
+    elevated: 0.40
+    turbulent: 0.70
+  smoothing_days: 2
+
+transition:
+  horizon_days: 5
+  persistence_days: 3
+
+trend:
+  sma_window: 50
+  return_window: 20

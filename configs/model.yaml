@@ -1,0 +1,28 @@
+walk_forward:
+  min_train_days: 1260
+  test_days: 63
+  expanding: true
+  calibration_holdout_fraction: 0.20
+
+xgboost_regime:
+  n_estimators: 400
+  max_depth: 4
+  learning_rate: 0.05
+  subsample: 0.8
+  colsample_bytree: 0.8
+  objective: multi:softprob
+  num_class: 3
+  eval_metric: mlogloss
+  use_label_encoder: false
+
+xgboost_transition:
+  n_estimators: 500
+  max_depth: 4
+  learning_rate: 0.04
+  scale_pos_weight: auto
+  objective: binary:logistic
+  eval_metric: aucpr
+  use_label_encoder: false
+
+baselines:
+  transition_vix_jump_threshold: 15
