@@ -1,9 +1,13 @@
-"""Abstract base class for live market-quote providers."""
+"""Abstract base class for live market-quote providers.
+
+Providers supply only a current-price snapshot (latest_quote).
+Historical OHLCV data for feature generation and training always comes
+from yfinance via fetch_yfinance.py — not from providers.
+"""
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import ClassVar, Literal
-import pandas as pd
 
 
 @dataclass
@@ -19,10 +23,10 @@ class LiveQuoteProvider(ABC):
     mode: ClassVar[Literal["live", "demo"]]
 
     @abstractmethod
-    def latest_quote(self, symbol: str) -> Quote: ...
+    def latest_quote(self, symbol: str) -> Quote:
+        """Return the current price as a Quote snapshot.
 
-    @abstractmethod
-    def recent_candles(self, symbol: str, n: int) -> pd.DataFrame:
-        """Return a DataFrame with columns: date, open, high, low, close, volume.
-        Rows ordered oldest-first. At least n rows."""
+        Used only for the price-card on the Current State dashboard page.
+        Not used for feature generation, labeling, training, or core inference.
+        """
         ...

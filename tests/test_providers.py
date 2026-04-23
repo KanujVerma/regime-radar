@@ -94,28 +94,11 @@ class TestFinnhubProvider:
             with pytest.raises(RuntimeError):
                 p.latest_quote("SPY")
 
-    def test_recent_candles_success(self):
+    def test_no_recent_candles_method(self):
+        """FinnhubProvider does not implement recent_candles.
+        Finnhub free tier does not include US stock OHLC data.
+        Historical OHLCV always comes from yfinance.
+        """
         from src.data.providers.finnhub_provider import FinnhubProvider
-        import time
-
-        now = int(time.time())
-        ts = [now - i * 86400 for i in range(4, -1, -1)]
-        mock_resp = MagicMock()
-        mock_resp.raise_for_status = MagicMock()
-        mock_resp.json.return_value = {
-            "s": "ok",
-            "c": [440.0, 441.0, 442.0, 443.0, 444.0],
-            "o": [439.0, 440.0, 441.0, 442.0, 443.0],
-            "h": [445.0, 446.0, 447.0, 448.0, 449.0],
-            "l": [438.0, 439.0, 440.0, 441.0, 442.0],
-            "v": [80_000_000, 82_000_000, 79_000_000, 81_000_000, 83_000_000],
-            "t": ts,
-        }
-
-        with patch("requests.Session.get", return_value=mock_resp):
-            p = FinnhubProvider(api_key="test-key")
-            df = p.recent_candles("SPY", 5)
-
-        assert len(df) == 5
-        assert {"date", "open", "high", "low", "close", "volume"}.issubset(df.columns)
-        assert df["close"].iloc[-1] == pytest.approx(444.0)
+        p = FinnhubProvider(api_key="test-key")
+        assert not hasattr(p, "recent_candles")

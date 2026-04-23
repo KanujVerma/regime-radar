@@ -10,7 +10,11 @@ paths:
   data_db: data/app.db
 
 provider:
-  # "auto" = use FINNHUB_API_KEY if set, else mock
+  # Price-card provider for the Current State dashboard.
+  # "auto" = FinnhubProvider if FINNHUB_API_KEY is set (optional live price overlay),
+  # else MockProvider (DEMO mode, no network calls).
+  # Historical OHLCV always comes from yfinance; FRED supplies VIX + EMV.
+  # Finnhub is NEVER required for feature generation, labeling, training, or inference.
   mode: auto
 
 scheduler:

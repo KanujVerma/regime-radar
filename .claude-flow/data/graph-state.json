@@ -62,8 +62,8 @@
     "mem-feedback_kayna_site-brand-identity--dark-cinematic": {
       "id": "mem-feedback_kayna_site-brand-identity--dark-cinematic",
       "category": "feedback_kayna_site",
-      "confidence": 0.9000000000000004,
-      "accessCount": 8,
+      "confidence": 1,
+      "accessCount": 14,
       "createdAt": 1776974253603
     },
     "mem-project_kayna_homepage_strategy----": {
@@ -90,8 +90,8 @@
     "mem-project_kayna_homepage_strategy-trust-strategy--small--early-s": {
       "id": "mem-project_kayna_homepage_strategy-trust-strategy--small--early-s",
       "category": "project_kayna_homepage_strategy",
-      "confidence": 0.9000000000000004,
-      "accessCount": 8,
+      "confidence": 1,
+      "accessCount": 14,
       "createdAt": 1776974253603
     },
     "mem-project_kayna_homepage_strategy-conversion---ux-direction": {
@@ -104,8 +104,8 @@
     "mem-project_kayna_homepage_strategy-design-constraints--carry-forw": {
       "id": "mem-project_kayna_homepage_strategy-design-constraints--carry-forw",
       "category": "project_kayna_homepage_strategy",
-      "confidence": 0.9000000000000004,
-      "accessCount": 8,
+      "confidence": 1,
+      "accessCount": 14,
       "createdAt": 1776974253604
     },
     "mem-project_kayna_homepage_strategy-seo-direction--homepage-": {
@@ -174,8 +174,8 @@
     "mem-project_kayna_site-upcoming-work--as-of-2026-04-0": {
       "id": "mem-project_kayna_site-upcoming-work--as-of-2026-04-0",
       "category": "project_kayna_site",
-      "confidence": 0.9000000000000004,
-      "accessCount": 8,
+      "confidence": 1,
+      "accessCount": 14,
       "createdAt": 1776974253605
     },
     "mem-user_kanuj----": {
@@ -195,8 +195,8 @@
     "mem-project_stabilization----": {
       "id": "mem-project_stabilization----",
       "category": "project_stabilization",
-      "confidence": 0.9000000000000004,
-      "accessCount": 8,
+      "confidence": 1,
+      "accessCount": 14,
       "createdAt": 1776974253607
     }
   },

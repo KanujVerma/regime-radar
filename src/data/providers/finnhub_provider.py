@@ -1,7 +1,12 @@
-"""Finnhub live market data provider implementation."""
+"""Finnhub live quote provider — price-card overlay only.
+
+Finnhub free tier provides real-time quotes (/quote endpoint) but does NOT
+include US stock OHLC candle data. This provider is used exclusively for
+the current-price card on the dashboard. All historical OHLCV data for
+feature generation and model inference comes from yfinance.
+"""
 from __future__ import annotations
-from datetime import datetime, timezone, timedelta
-import pandas as pd
+from datetime import datetime, timezone
 import requests
 from src.data.providers.base import LiveQuoteProvider, Quote
 
@@ -34,43 +39,6 @@ class FinnhubProvider(LiveQuoteProvider):
         return Quote(
             symbol=symbol,
             price=price,
-            volume=0.0,
+            volume=0.0,  # Finnhub /quote does not return volume
             timestamp=datetime.now(timezone.utc).isoformat(),
         )
-
-    def recent_candles(self, symbol: str, n: int) -> pd.DataFrame:
-        now = datetime.now(timezone.utc)
-        from_ts = int((now - timedelta(days=n + 10)).timestamp())
-        to_ts = int(now.timestamp())
-
-        url = f"{self._base_url}/stock/candle"
-        params = {
-            "symbol": symbol,
-            "resolution": "D",
-            "from": from_ts,
-            "to": to_ts,
-        }
-        try:
-            resp = self._session.get(url, params=params, timeout=15)
-            resp.raise_for_status()
-        except requests.RequestException as exc:
-            raise RuntimeError(
-                f"Finnhub /stock/candle request failed for {symbol}: {exc}"
-            ) from exc
-
-        data = resp.json()
-        if data.get("s") == "no_data" or not data.get("c"):
-            raise RuntimeError(
-                f"Finnhub returned empty candle data for {symbol}. Response status: {data.get('s')}"
-            )
-
-        df = pd.DataFrame({
-            "date": [datetime.fromtimestamp(t, tz=timezone.utc).strftime("%Y-%m-%d") for t in data["t"]],
-            "open": data["o"],
-            "high": data["h"],
-            "low": data["l"],
-            "close": data["c"],
-            "volume": data["v"],
-        })
-        df = df.sort_values("date").reset_index(drop=True)
-        return df.tail(n).reset_index(drop=True)
