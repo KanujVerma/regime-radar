@@ -4,6 +4,7 @@ import Topbar from '../components/layout/Topbar'
 import Panel from '../components/ui/Panel'
 import MetricCard from '../components/ui/MetricCard'
 import EventReplayChart from '../components/charts/EventReplayChart'
+import RegimeLegend from '../components/ui/RegimeLegend'
 import { useEventReplay } from '../hooks/useEventReplay'
 import { DEFAULT_THRESHOLD } from '../lib/constants'
 
@@ -102,6 +103,9 @@ export default function EventReplay() {
 
             {/* Chart */}
             <Panel title={`${EVENTS.find(e => e.id === selected)?.label} — Transition Risk & Regime`}>
+              <div className="mb-2">
+                <RegimeLegend />
+              </div>
               <EventReplayChart data={pts} />
             </Panel>
 

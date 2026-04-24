@@ -1,3 +1,10 @@
+export function formatRisk(r: number): string {
+  if (r === 0) return '0%'
+  const pct = r * 100
+  if (pct < 0.1) return '<0.1%'
+  return `${pct.toFixed(1)}%`
+}
+
 export function buildCurrentStateNarrative(
   regime: string,
   risk: number,
@@ -23,5 +30,5 @@ export function buildCurrentStateNarrative(
     ? ` VIX is at ${vixLevel.toFixed(1)} and ${vixDir}.`
     : ''
 
-  return `SPY is in a ${regime} regime with ${riskLevel} transition risk (${(risk * 100).toFixed(0)}%). ${trendSentence}${vixPart}`
+  return `SPY is in a ${regime} regime with ${riskLevel} transition risk (${formatRisk(risk)}). ${trendSentence}${vixPart}`
 }

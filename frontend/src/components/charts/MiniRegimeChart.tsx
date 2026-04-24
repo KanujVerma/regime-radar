@@ -42,6 +42,7 @@ export default function MiniRegimeChart({ data }: MiniRegimeChartProps) {
           stroke="#42a5f5"
           strokeWidth={1.5}
           dot={false}
+          activeDot={false}
           name="SPY"
           isAnimationActive={false}
         />

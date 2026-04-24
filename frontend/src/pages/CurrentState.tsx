@@ -9,7 +9,7 @@ import Panel from '../components/ui/Panel'
 import MetricCard from '../components/ui/MetricCard'
 import RegimeBadge from '../components/ui/RegimeBadge'
 import DriverBar from '../components/ui/DriverBar'
-import { buildCurrentStateNarrative } from '../lib/narratives'
+import { buildCurrentStateNarrative, formatRisk } from '../lib/narratives'
 import { regimeColor } from '../lib/tokens'
 import { labelFor } from '../lib/featureLabels'
 
@@ -52,7 +52,7 @@ export default function CurrentState() {
     { label: 'Market Regime', value: data.regime, color: rColor },
     {
       label: 'Transition Risk',
-      value: `${(data.transition_risk * 100).toFixed(0)}%`,
+      value: formatRisk(data.transition_risk),
       color: data.transition_risk > 0.40 ? '#f87171' : data.transition_risk > 0.20 ? '#fbbf24' : '#4ade80',
     },
     { label: 'VIX Level', value: data.vix_level != null ? data.vix_level.toFixed(1) : '—', color: '#f1f5f9' },
@@ -200,7 +200,7 @@ function GaugeArc({ risk }: { risk: number }) {
           fill="none" stroke={color} strokeWidth={8} strokeLinecap="round"
         />
         <text x={cx} y={cy - 10} textAnchor="middle" fill={color} fontSize={18} fontWeight={800}>
-          {(risk * 100).toFixed(0)}%
+          {formatRisk(risk)}
         </text>
         <text x={cx} y={cy + 6} textAnchor="middle" fill="#64748b" fontSize={8}>
           Transition Risk
