@@ -50,9 +50,9 @@
 
 **Full width below — driver chart**
 - Top 5 feature driver bar chart — existing component, unchanged
-- Fallback message (less developer-specific):
+- Fallback message (product-facing, not developer-facing):
   - Replace: `"No feature driver data available for this refresh."`
-  - With: `"Feature driver data will appear here once the model has been run. Contact the administrator or restart with a trained model."`
+  - With: `"Detailed driver explanations are unavailable for this refresh."`
 
 ---
 
@@ -89,13 +89,17 @@
 - Regime match rate: `{pct:.0%}` of days where `regime_actual == regime_predicted`; denominator = days where both fields are non-`"unknown"` and non-`None`
 - High-stress days: `sum(1 for p in data if p["regime_actual"] in ("elevated", "turbulent"))`
 
-### Context paragraph (per event, hardcoded)
-One sentence for each window (below the summary card, above the chart):
-- 2008: *"Replay metrics are computed from out-of-fold predictions, so each day in this window was scored by a model that did not train on that day."*
-- 2020: Same methodology sentence.
-- 2022: Same methodology sentence.
+### Context paragraphs (per event, hardcoded, below summary card, above chart)
 
-(All three windows get the same methodology note — consistent, honest, no per-event narrative that could be seen as interpretation.)
+Two separate elements for each window:
+
+**1. Event description** — one sentence of factual historical context, no model performance language:
+- 2008: *"The 2008 financial crisis saw SPY fall more than 50% from peak as credit markets seized."*
+- 2020: *"The COVID-19 market crash in early 2020 was one of the fastest equity declines on record."*
+- 2022: *"The 2022 rate-tightening cycle saw aggressive Fed hikes as inflation reached 40-year highs."*
+
+**2. Methodology note** — same sentence for all three windows, rendered as `st.caption` beneath the event description:
+*"Replay metrics are computed from out-of-fold predictions — each day in this window was scored by a model that did not train on that day."*
 
 ### Chart improvements
 - Add vertical dashed line at first day risk crossed `DEFAULT_THRESHOLD` (0.10) on the risk subplot (if any such day exists in the window)
