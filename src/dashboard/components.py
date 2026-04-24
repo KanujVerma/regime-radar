@@ -89,7 +89,7 @@ def apply_regime_colormap(
                 y0=0,
                 y1=1,
                 fillcolor=color,
-                opacity=0.12,
+                opacity=0.08,
                 layer="below",
                 line_width=0,
             )
