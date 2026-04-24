@@ -49,29 +49,35 @@ class AppState:
                     vix_chg_1d REAL,
                     top_drivers TEXT,
                     mode TEXT,
-                    price_card_price REAL
+                    price_card_price REAL,
+                    prob_calm REAL,
+                    prob_elevated REAL,
+                    prob_turbulent REAL
                 )
             """)
+            for col in ("prob_calm", "prob_elevated", "prob_turbulent"):
+                try:
+                    conn.execute(f"ALTER TABLE live_state ADD COLUMN {col} REAL")
+                except Exception:
+                    pass  # column already exists
             conn.commit()
 
     def write_state(self, state: dict) -> None:
         """Write latest inference result to SQLite."""
         with self._connect() as conn:
-            conn.execute("""
-                INSERT INTO live_state
-                (as_of_ts, regime, transition_risk, trend, vix_level, vix_chg_1d, top_drivers, mode, price_card_price)
-                VALUES (?,?,?,?,?,?,?,?,?)
-            """, (
-                state.get("as_of_ts"),
-                state.get("regime"),
-                state.get("transition_risk"),
-                state.get("trend"),
-                state.get("vix_level"),
-                state.get("vix_chg_1d"),
-                json.dumps(state.get("top_drivers", [])),
-                state.get("mode"),
-                state.get("price_card_price"),
-            ))
+            conn.execute(
+                """INSERT INTO live_state
+                   (as_of_ts, regime, transition_risk, trend, vix_level, vix_chg_1d,
+                    top_drivers, mode, price_card_price, prob_calm, prob_elevated, prob_turbulent)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (
+                    state.get("as_of_ts"), state.get("regime"), state.get("transition_risk"),
+                    state.get("trend"), state.get("vix_level"), state.get("vix_chg_1d"),
+                    json.dumps(state.get("top_drivers") or []), state.get("mode"),
+                    state.get("price_card_price"),
+                    state.get("prob_calm"), state.get("prob_elevated"), state.get("prob_turbulent"),
+                ),
+            )
             conn.commit()
 
     def read_latest_state(self) -> dict | None:

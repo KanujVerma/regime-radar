@@ -1,12 +1,13 @@
 """FastAPI route definitions for RegimeRadar."""
 from __future__ import annotations
-from datetime import datetime, timezone
+import math
+from datetime import datetime, date, timezone
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Request
 from src.api.schemas import (
     HealthResponse, CurrentStateResponse, HistoricalStateResponse,
     EventReplayResponse, ModelDriversResponse, DriverItem,
-    HistoricalPoint, EventReplayPoint,
+    HistoricalPoint, EventReplayPoint, TransitionRiskResponse, TransitionRiskPoint,
 )
 from src.utils.logging import get_logger
 
@@ -68,11 +69,14 @@ async def current_state(request: Request):
         top_drivers=drivers,
         as_of_ts=latest.get("as_of_ts", ""),
         mode=latest.get("mode", "demo"),
+        prob_calm=latest.get("prob_calm"),
+        prob_elevated=latest.get("prob_elevated"),
+        prob_turbulent=latest.get("prob_turbulent"),
     )
 
 
 @router.get("/historical-state", response_model=HistoricalStateResponse)
-async def historical_state(request: Request, start: str = "2020-01-01", end: str | None = None):
+async def historical_state(request: Request, start: date = date(2020, 1, 1), end: date | None = None):
     from src.utils.paths import PROCESSED_DIR
     from pathlib import Path
     panel_path = Path(PROCESSED_DIR) / "panel.parquet"
@@ -85,7 +89,7 @@ async def historical_state(request: Request, start: str = "2020-01-01", end: str
     from src.models.registry import artifact_exists, load_artifact
     oof_path = Path(PROCESSED_DIR)
 
-    panel = panel.loc[start:end] if end else panel.loc[start:]
+    panel = panel.loc[str(start):str(end)] if end else panel.loc[str(start):]
 
     from src.labeling.build_regime_labels import build_regime_labels
     from src.labeling.build_transition_labels import build_transition_labels
@@ -124,19 +128,19 @@ async def historical_state(request: Request, start: str = "2020-01-01", end: str
 
     return HistoricalStateResponse(
         data=points,
-        start=str(panel_aligned.index[0].date()) if len(panel_aligned) > 0 else start,
-        end=str(panel_aligned.index[-1].date()) if len(panel_aligned) > 0 else (end or ""),
+        start=str(panel_aligned.index[0].date()) if len(panel_aligned) > 0 else str(start),
+        end=str(panel_aligned.index[-1].date()) if len(panel_aligned) > 0 else str(end or ""),
     )
 
 
-@router.get("/transition-risk")
-async def transition_risk(request: Request, start: str = "2020-01-01", end: str | None = None):
+@router.get("/transition-risk", response_model=TransitionRiskResponse)
+async def transition_risk(request: Request, start: date = date(2020, 1, 1), end: date | None = None):
     resp = await historical_state(request, start=start, end=end)
-    return {
-        "data": [{"date": p.date, "transition_risk": p.transition_risk} for p in resp.data],
-        "start": resp.start,
-        "end": resp.end,
-    }
+    return TransitionRiskResponse(
+        data=[TransitionRiskPoint(date=p.date, transition_risk=p.transition_risk) for p in resp.data],
+        start=resp.start,
+        end=resp.end,
+    )
 
 
 @router.get("/event-replay/{event_name}", response_model=EventReplayResponse)
@@ -170,7 +174,7 @@ async def event_replay(request: Request, event_name: str):
 
     return EventReplayResponse(
         event_name=event_name,
-        warning_lead_days=lead_days if not (lead_days != lead_days) else None,  # NaN → None
+        warning_lead_days=None if (lead_days is None or math.isnan(lead_days)) else lead_days,
         data=points,
     )
 
@@ -178,7 +182,6 @@ async def event_replay(request: Request, event_name: str):
 @router.get("/model-drivers", response_model=ModelDriversResponse)
 async def model_drivers(request: Request):
     from src.models.registry import artifact_exists, load_artifact, load_metadata
-    from src.evaluation.threshold_analysis import threshold_sweep
     from src.utils.paths import PROCESSED_DIR
     from pathlib import Path
     import numpy as np
@@ -216,10 +219,7 @@ async def model_drivers(request: Request):
         _logger.warning("SHAP explanation failed, using global importance: %s", e)
         local_exp = {item.feature: item.importance for item in global_imp[:10]}
 
-    threshold_data = meta.get("threshold_sweep", [])
-
     return ModelDriversResponse(
         global_importance=global_imp[:20],
         local_explanation=local_exp,
-        threshold_sweep=threshold_data,
     )
