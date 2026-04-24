@@ -3,6 +3,7 @@ import {
   ReferenceArea, CartesianGrid,
 } from 'recharts'
 import type { HistoricalPoint } from '../../types/api'
+import { buildRegimeBands } from '../../lib/chartUtils'
 
 interface RegimeChartProps {
   data: HistoricalPoint[]
@@ -13,21 +14,6 @@ const REGIME_COLORS: Record<string, string> = {
   calm: '#4ade80',
   elevated: '#fbbf24',
   turbulent: '#f87171',
-}
-
-function buildRegimeBands(data: HistoricalPoint[]) {
-  const bands: { start: string; end: string; regime: string }[] = []
-  let current: { start: string; regime: string } | null = null
-  for (const pt of data) {
-    if (!current || current.regime !== pt.regime) {
-      if (current) bands.push({ ...current, end: pt.date })
-      current = { start: pt.date, regime: pt.regime }
-    }
-  }
-  if (current && data.length > 0) {
-    bands.push({ ...current, end: data[data.length - 1].date })
-  }
-  return bands
 }
 
 export default function RegimeChart({ data, showVix }: RegimeChartProps) {
