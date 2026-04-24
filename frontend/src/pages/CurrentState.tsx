@@ -2,6 +2,8 @@ import { motion } from 'framer-motion'
 import type { StateDelta } from '../types/api'
 import { useCurrentState } from '../hooks/useCurrentState'
 import { useModelDrivers } from '../hooks/useModelDrivers'
+import { useHistoricalState } from '../hooks/useHistoricalState'
+import MiniRegimeChart from '../components/charts/MiniRegimeChart'
 import Topbar from '../components/layout/Topbar'
 import Panel from '../components/ui/Panel'
 import MetricCard from '../components/ui/MetricCard'
@@ -19,6 +21,7 @@ const cardVariants = {
 export default function CurrentState() {
   const { data, loading, error, refresh } = useCurrentState()
   const { data: drivers } = useModelDrivers()
+  const { data: recentData, loading: recentLoading } = useHistoricalState('2020-01-01')
 
   if (loading) return <div className="p-6 text-slate-500 text-sm">Loading…</div>
   if (error) return <div className="p-6 text-red-400 text-sm">{error}</div>
@@ -93,6 +96,16 @@ export default function CurrentState() {
                 <DeltaRows delta={data.delta} />
               </Panel>
             )}
+
+            {recentLoading ? (
+              <Panel title="Last 30 Trading Days">
+                <div className="h-[120px] rounded" style={{ background: '#0c1020' }} />
+              </Panel>
+            ) : recentData && recentData.data.length > 0 ? (
+              <Panel title="Last 30 Trading Days">
+                <MiniRegimeChart data={recentData.data.slice(-30)} />
+              </Panel>
+            ) : null}
           </div>
 
           <div className="space-y-4">

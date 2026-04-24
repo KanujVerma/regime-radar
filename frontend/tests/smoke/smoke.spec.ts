@@ -194,6 +194,15 @@ test.describe('Current State page', () => {
     await expect(page.getByText('What is pushing risk right now')).toBeVisible()
   })
 
+  test('"Last 30 Trading Days" panel renders with a chart', async ({ page }) => {
+    const panelTitle = page.getByText('Last 30 Trading Days')
+    await expect(panelTitle).toBeVisible()
+    // Panel.tsx structure: title div is a direct child of the Panel root div.
+    // One level up from the title div lands on the Panel root, which contains the chart SVG.
+    const panel = panelTitle.locator('..')
+    await expect(panel.locator('svg').first()).toBeVisible()
+  })
+
   test('Refresh Data button works without error', async ({ page }) => {
     const refreshBtn = page.getByText('↻ Refresh Data')
     await expect(refreshBtn).toBeVisible()
