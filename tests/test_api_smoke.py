@@ -105,6 +105,24 @@ def test_cors_header_present(monkeypatch, tmp_path):
     assert resp.headers.get("access-control-allow-origin") == "http://localhost:3000"
 
 
+def test_current_state_response_has_delta_field():
+    from src.api.schemas import CurrentStateResponse
+    fields = CurrentStateResponse.model_fields
+    assert "delta" in fields
+
+def test_model_drivers_response_has_threshold_sweep():
+    from src.api.schemas import ModelDriversResponse
+    fields = ModelDriversResponse.model_fields
+    assert "threshold_sweep" in fields
+
+def test_scenario_response_schema_exists():
+    from src.api.schemas import ScenarioResponse, ScenarioRequest, DriverDelta
+    req = ScenarioRequest(
+        vix_level=20.0, vix_chg_5d=1.0, rv_20d_pct=0.5,
+        drawdown_pct_504d=0.1, ret_20d=0.01, dist_sma50=0.02,
+    )
+    assert req.vix_level == 20.0
+
 def test_read_prior_state_returns_second_row(tmp_path):
     from src.api.state import AppState
     state = AppState(db_path=str(tmp_path / "test.db"))
