@@ -100,7 +100,6 @@ class AppState:
             return None
         row = dict(rows[1])
         if row.get("top_drivers"):
-            import json
             row["top_drivers"] = json.loads(row["top_drivers"])
         return row
 
