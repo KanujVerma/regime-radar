@@ -23,7 +23,7 @@ export default function MetricCard({ label, value, subtitle, valueColor = '#f1f5
           {delta.label}
         </span>
       )}
-      <div className="text-[9px] font-bold tracking-widest uppercase mb-1.5" style={{ color: '#2d4060' }}>
+      <div className="text-[9px] font-bold tracking-widest uppercase mb-1.5" style={{ color: '#4a6080' }}>
         {label}
       </div>
       <div className="text-[22px] font-extrabold tracking-tight leading-none" style={{ color: valueColor }}>

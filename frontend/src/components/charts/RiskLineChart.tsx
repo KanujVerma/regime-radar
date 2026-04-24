@@ -16,14 +16,14 @@ export default function RiskLineChart({ data }: RiskLineChartProps) {
         <CartesianGrid strokeDasharray="3 3" stroke="#151d2e" />
         <XAxis
           dataKey="date"
-          tick={{ fill: '#475569', fontSize: 9 }}
+          tick={{ fill: '#64748b', fontSize: 9 }}
           tickLine={false}
           axisLine={false}
           interval="preserveStartEnd"
         />
         <YAxis
           tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
-          tick={{ fill: '#475569', fontSize: 9 }}
+          tick={{ fill: '#64748b', fontSize: 9 }}
           tickLine={false}
           axisLine={false}
           domain={[0, 1]}

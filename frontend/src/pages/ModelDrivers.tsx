@@ -27,7 +27,7 @@ export default function ModelDrivers() {
       <Topbar title="Model Drivers" />
       <div className="p-5 space-y-5">
         <Panel title="What usually raises risk">
-          <p className="text-[10px] mb-4" style={{ color: '#475569' }}>
+          <p className="text-[10px] mb-4" style={{ color: '#64748b' }}>
             These inputs have the strongest upward effect on transition risk across all historical predictions.
           </p>
           {topUp.map(d => (

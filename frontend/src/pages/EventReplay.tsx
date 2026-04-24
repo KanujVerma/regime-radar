@@ -54,7 +54,7 @@ export default function EventReplay() {
               style={{
                 background: selected === e.id ? '#0e4d6e' : '#0c1020',
                 border: `1px solid ${selected === e.id ? '#06b6d4' : '#151d2e'}`,
-                color: selected === e.id ? '#06b6d4' : '#475569',
+                color: selected === e.id ? '#06b6d4' : '#64748b',
               }}
             >
               {e.label}
@@ -96,7 +96,7 @@ export default function EventReplay() {
             )}
 
             {/* Methodology note */}
-            <p className="text-[10px] italic" style={{ color: '#475569' }}>
+            <p className="text-[10px] italic" style={{ color: '#64748b' }}>
               Replay metrics are computed from out-of-fold predictions — each day in this window was scored by a model that did not train on that day.
             </p>
 

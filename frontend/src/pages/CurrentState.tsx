@@ -189,7 +189,7 @@ function GaugeArc({ risk }: { risk: number }) {
         <text x={cx} y={cy - 10} textAnchor="middle" fill={color} fontSize={18} fontWeight={800}>
           {(risk * 100).toFixed(0)}%
         </text>
-        <text x={cx} y={cy + 6} textAnchor="middle" fill="#475569" fontSize={8}>
+        <text x={cx} y={cy + 6} textAnchor="middle" fill="#64748b" fontSize={8}>
           Transition Risk
         </text>
       </svg>

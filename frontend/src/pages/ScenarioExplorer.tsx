@@ -80,7 +80,7 @@ export default function ScenarioExplorer() {
                     <span className="text-[10px] font-semibold" style={{ color: '#94a3b8' }}>{cfg.label}</span>
                     <span className="text-[10px] font-bold" style={{ color }}>{val.toFixed(cfg.step < 0.1 ? 2 : 1)}</span>
                   </div>
-                  <p className="text-[9px] mb-1.5" style={{ color: '#475569' }}>{cfg.helper}</p>
+                  <p className="text-[9px] mb-1.5" style={{ color: '#64748b' }}>{cfg.helper}</p>
                   <input
                     type="range"
                     min={cfg.min}
@@ -100,7 +100,7 @@ export default function ScenarioExplorer() {
 
           {/* Threshold slider */}
           <div>
-            <div className="text-[9px] font-bold tracking-widest uppercase mb-2" style={{ color: '#2d4060' }}>Alert threshold</div>
+            <div className="text-[9px] font-bold tracking-widest uppercase mb-2" style={{ color: '#4a6080' }}>Alert threshold</div>
             <div className="flex justify-between mb-1">
               <span className="text-[10px]" style={{ color: '#94a3b8' }}>Threshold</span>
               <span className="text-[10px] font-bold" style={{ color: '#fbbf24' }}>{(threshold * 100).toFixed(0)}%</span>
@@ -120,13 +120,13 @@ export default function ScenarioExplorer() {
                   { label: 'Lead Time', value: `${sweepRow.avg_lead_time_days.toFixed(0)}d` },
                 ].map(m => (
                   <div key={m.label} className="rounded-lg p-2 text-center" style={{ background: '#080b12', border: '1px solid #151d2e' }}>
-                    <div className="text-[8px] tracking-wide uppercase" style={{ color: '#2d4060' }}>{m.label}</div>
+                    <div className="text-[8px] tracking-wide uppercase" style={{ color: '#4a6080' }}>{m.label}</div>
                     <div className="text-[14px] font-extrabold" style={{ color: '#94a3b8' }}>{m.value}</div>
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-[9px] mt-2" style={{ color: '#475569' }}>Threshold data unavailable</p>
+              <p className="text-[9px] mt-2" style={{ color: '#64748b' }}>Threshold data unavailable</p>
             )}
           </div>
         </div>
@@ -174,7 +174,7 @@ export default function ScenarioExplorer() {
               )}
 
               <Panel title="What changed the most">
-                <p className="text-[10px] mb-3" style={{ color: '#475569' }}>Biggest input shifts driving the scenario difference</p>
+                <p className="text-[10px] mb-3" style={{ color: '#64748b' }}>Biggest input shifts driving the scenario difference</p>
                 {data.driver_deltas.map(d => (
                   <div key={d.feature} className="flex justify-between items-center mb-2">
                     <span className="text-[10px]" style={{ color: '#94a3b8' }}>{d.plain_label}</span>

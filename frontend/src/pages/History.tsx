@@ -33,14 +33,14 @@ export default function History() {
       <Topbar title="History" subtitle={`${data.start} — ${data.end}`} />
       <div className="p-5 space-y-5">
         <Panel title="What happened over time?">
-          <p className="text-[10px] mb-3" style={{ color: '#475569' }}>
+          <p className="text-[10px] mb-3" style={{ color: '#64748b' }}>
             Shaded bands show the market regime on each day. A darker shade indicates higher stress.
           </p>
           <div className="flex justify-end mb-2">{toggleBtn}</div>
           <RegimeChart data={data.data} showVix={showVix} />
         </Panel>
         <Panel title="When did the model get worried?">
-          <p className="text-[10px] mb-3" style={{ color: '#475569' }}>
+          <p className="text-[10px] mb-3" style={{ color: '#64748b' }}>
             The line shows the model's daily estimate of the chance conditions worsen within the next week.
           </p>
           <RiskLineChart data={data.data} />

@@ -137,7 +137,7 @@ async def historical_state(request: Request, start: date = date(2020, 1, 1), end
         points.append(HistoricalPoint(
             date=str(date.date()),
             regime=regime_pred.iloc[i] if i < len(regime_pred) else "unknown",
-            transition_risk=float(risk[i]) if risk is not None and i < len(risk) else None,
+            transition_risk=float(risk[i]) if risk is not None and i < len(risk) and risk[i] is not None else None,
             vix_level=float(row["vixcls"]) if "vixcls" in row.index else None,
             close=float(row["close"]) if "close" in row.index else None,
         ))

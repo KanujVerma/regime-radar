@@ -46,10 +46,10 @@ export default function EventReplayChart({ data }: { data: EventReplayPoint[] })
     <ResponsiveContainer width="100%" height={240}>
       <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#151d2e" />
-        <XAxis dataKey="date" tick={{ fill: '#475569', fontSize: 9 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+        <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 9 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
         <YAxis
           tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
-          tick={{ fill: '#475569', fontSize: 9 }}
+          tick={{ fill: '#64748b', fontSize: 9 }}
           tickLine={false} axisLine={false} domain={[0, 1]} width={40}
         />
         <Tooltip
@@ -62,7 +62,7 @@ export default function EventReplayChart({ data }: { data: EventReplayPoint[] })
         {bands.map((b, i) => (
           <ReferenceArea
             key={i} x1={b.start} x2={b.end}
-            fill={REGIME_COLORS[b.regime] ?? '#475569'} fillOpacity={0.1}
+            fill={REGIME_COLORS[b.regime] ?? '#64748b'} fillOpacity={0.1}
           />
         ))}
         {firstCrossDate && (

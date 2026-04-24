@@ -15,7 +15,7 @@ export default function Panel({ title, children, className = '' }: PanelProps) {
       {title && (
         <div
           className="text-[9px] font-bold tracking-widest uppercase mb-4 pb-2.5"
-          style={{ color: '#2d4060', borderBottom: '1px solid #131b2a' }}
+          style={{ color: '#4a6080', borderBottom: '1px solid #131b2a' }}
         >
           {title}
         </div>

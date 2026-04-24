@@ -7,6 +7,18 @@ from sklearn.isotonic import IsotonicRegression
 from sklearn.linear_model import LogisticRegression
 
 
+class PlattWrapper:
+    """Thin wrapper around LogisticRegression to expose a unified .predict() interface."""
+    def __init__(self, model=None):
+        self._inner = model
+
+    def predict(self, scores):
+        inner = getattr(self, '_inner', None)
+        if inner is None:
+            return np.array(scores, dtype=float)
+        return inner.predict_proba(np.array(scores).reshape(-1, 1))[:, 1]
+
+
 def fit_calibrator(y_true: np.ndarray, y_score: np.ndarray, method: str = "auto") -> object:
     """Fit a post-hoc calibrator on holdout predictions.
 
@@ -29,12 +41,7 @@ def fit_calibrator(y_true: np.ndarray, y_score: np.ndarray, method: str = "auto"
     else:  # platt
         cal = LogisticRegression(C=1.0, solver="lbfgs")
         cal.fit(y_score.reshape(-1, 1), y_true)
-        # Wrap to expose unified .predict() interface
-        _inner = cal
-        class PlattWrapper:
-            def predict(self, scores):
-                return _inner.predict_proba(np.array(scores).reshape(-1, 1))[:, 1]
-        cal = PlattWrapper()
+        cal = PlattWrapper(cal)
 
     return cal
 

@@ -14,8 +14,8 @@ export const colors = {
   redDim: '#7f1d1d',
   textPrimary: '#f1f5f9',
   textSecondary: '#94a3b8',
-  textMuted: '#475569',
-  textDim: '#2d4060',
+  textMuted: '#64748b',
+  textDim: '#4a6080',
 } as const
 
 export const regimeColor: Record<string, string> = {

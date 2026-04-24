@@ -39,14 +39,14 @@ export default function RegimeChart({ data, showVix }: RegimeChartProps) {
         <CartesianGrid strokeDasharray="3 3" stroke="#151d2e" />
         <XAxis
           dataKey="date"
-          tick={{ fill: '#475569', fontSize: 9 }}
+          tick={{ fill: '#64748b', fontSize: 9 }}
           tickLine={false}
           axisLine={false}
           interval="preserveStartEnd"
         />
         <YAxis
           yAxisId="spy"
-          tick={{ fill: '#475569', fontSize: 9 }}
+          tick={{ fill: '#64748b', fontSize: 9 }}
           tickLine={false}
           axisLine={false}
           width={48}
@@ -55,11 +55,11 @@ export default function RegimeChart({ data, showVix }: RegimeChartProps) {
           <YAxis
             yAxisId="vix"
             orientation="right"
-            tick={{ fill: '#475569', fontSize: 9 }}
+            tick={{ fill: '#64748b', fontSize: 9 }}
             tickLine={false}
             axisLine={false}
             width={32}
-            label={{ value: 'VIX', angle: -90, position: 'insideRight', fill: '#475569', fontSize: 9 }}
+            label={{ value: 'VIX', angle: -90, position: 'insideRight', fill: '#64748b', fontSize: 9 }}
           />
         )}
         <Tooltip
@@ -72,7 +72,7 @@ export default function RegimeChart({ data, showVix }: RegimeChartProps) {
             yAxisId="spy"
             x1={b.start}
             x2={b.end}
-            fill={REGIME_COLORS[b.regime] ?? '#475569'}
+            fill={REGIME_COLORS[b.regime] ?? '#64748b'}
             fillOpacity={0.08}
           />
         ))}

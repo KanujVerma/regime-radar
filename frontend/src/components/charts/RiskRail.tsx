@@ -17,12 +17,12 @@ export default function RiskRail({ baselineRisk, scenarioRisk }: RiskRailProps) 
       {/* Numbers row */}
       <div className="flex items-center gap-4 mb-5">
         <div>
-          <div className="text-[9px] font-bold tracking-widest uppercase mb-1" style={{ color: '#2d4060' }}>Baseline</div>
+          <div className="text-[9px] font-bold tracking-widest uppercase mb-1" style={{ color: '#4a6080' }}>Baseline</div>
           <div className="text-[28px] font-extrabold tracking-tight leading-none" style={{ color: '#4ade80' }}>{bPct}</div>
         </div>
         <div style={{ color: '#1e293b', fontSize: 24 }}>→</div>
         <div>
-          <div className="text-[9px] font-bold tracking-widest uppercase mb-1" style={{ color: '#2d4060' }}>Scenario</div>
+          <div className="text-[9px] font-bold tracking-widest uppercase mb-1" style={{ color: '#4a6080' }}>Scenario</div>
           <div className="text-[28px] font-extrabold tracking-tight leading-none" style={{ color: '#f87171' }}>{sPct}</div>
         </div>
         <div
