@@ -31,8 +31,13 @@ class AppState:
         self._init_db()
         self._scheduler: BackgroundScheduler | None = None
 
+    def _connect(self) -> sqlite3.Connection:
+        conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        conn.execute("PRAGMA journal_mode=WAL")
+        return conn
+
     def _init_db(self) -> None:
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 CREATE TABLE IF NOT EXISTS live_state (
                     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,7 +56,7 @@ class AppState:
 
     def write_state(self, state: dict) -> None:
         """Write latest inference result to SQLite."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.execute("""
                 INSERT INTO live_state
                 (as_of_ts, regime, transition_risk, trend, vix_level, vix_chg_1d, top_drivers, mode, price_card_price)
@@ -71,7 +76,7 @@ class AppState:
 
     def read_latest_state(self) -> dict | None:
         """Read the most recent inference result from SQLite."""
-        with sqlite3.connect(self.db_path) as conn:
+        with self._connect() as conn:
             conn.row_factory = sqlite3.Row
             row = conn.execute(
                 "SELECT * FROM live_state ORDER BY id DESC LIMIT 1"
@@ -82,6 +87,22 @@ class AppState:
         if isinstance(d.get("top_drivers"), str):
             d["top_drivers"] = json.loads(d["top_drivers"])
         return d
+
+    def read_prior_state(self) -> dict | None:
+        """Return the second-most-recent state row, or None if fewer than 2 rows exist."""
+        with self._connect() as conn:
+            conn.row_factory = sqlite3.Row  # required — without this fetchall() returns tuples
+            cur = conn.execute(
+                "SELECT * FROM live_state ORDER BY id DESC LIMIT 2"
+            )
+            rows = cur.fetchall()
+        if len(rows) < 2:
+            return None
+        row = dict(rows[1])
+        if row.get("top_drivers"):
+            import json
+            row["top_drivers"] = json.loads(row["top_drivers"])
+        return row
 
     def start_scheduler(self) -> None:
         cfg = get_config("app")["scheduler"]

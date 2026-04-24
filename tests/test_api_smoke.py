@@ -63,10 +63,46 @@ class TestCurrentStateEndpoint:
 
 
 class TestRefreshEndpoint:
-    def test_refresh_returns_500_without_data(self, app_with_state):
-        """Force refresh fails gracefully when no data available."""
-        app, _ = app_with_state
+    def test_refresh_returns_500_without_data(self, app_with_state, monkeypatch):
+        """Force refresh propagates errors as HTTP 500 when data is unavailable."""
+        app, state = app_with_state
+
+        def _failing_refresh():
+            raise RuntimeError("No data available in test environment")
+
+        monkeypatch.setattr(state, "force_refresh", _failing_refresh)
         client = TestClient(app)
         resp = client.post("/refresh-data")
-        # Either succeeds (if data present) or 500 (no data)
-        assert resp.status_code in (200, 500)
+        assert resp.status_code == 500
+
+    def test_refresh_returns_200_on_success(self, app_with_state, monkeypatch):
+        """Force refresh returns 200 when it completes without error."""
+        app, state = app_with_state
+
+        def _noop_refresh():
+            pass
+
+        monkeypatch.setattr(state, "force_refresh", _noop_refresh)
+        client = TestClient(app)
+        resp = client.post("/refresh-data")
+        assert resp.status_code == 200
+        assert resp.json()["status"] == "refreshed"
+
+
+def test_read_prior_state_returns_none_on_empty_db(tmp_path):
+    from src.api.state import AppState
+    state = AppState(db_path=str(tmp_path / "test.db"))
+    assert state.read_prior_state() is None
+
+def test_read_prior_state_returns_second_row(tmp_path):
+    from src.api.state import AppState
+    state = AppState(db_path=str(tmp_path / "test.db"))
+    state.write_state({"regime": "calm", "transition_risk": 0.05, "trend": "uptrend",
+                       "vix_level": 15.0, "vix_chg_1d": 0.1, "top_drivers": [],
+                       "mode": "demo", "price_card_price": None, "as_of_ts": "2024-01-01"})
+    state.write_state({"regime": "elevated", "transition_risk": 0.25, "trend": "neutral",
+                       "vix_level": 22.0, "vix_chg_1d": 0.5, "top_drivers": [],
+                       "mode": "demo", "price_card_price": None, "as_of_ts": "2024-01-02"})
+    prior = state.read_prior_state()
+    assert prior is not None
+    assert prior["regime"] == "calm"
