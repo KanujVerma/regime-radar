@@ -148,19 +148,36 @@ export default function ScenarioExplorer() {
                   const scen = data[`prob_${r}` as keyof typeof data] as number
                   const colors = { calm: '#4ade80', elevated: '#fbbf24', turbulent: '#f87171' }
                   const c = colors[r]
+                  const diff = scen - base
+                  const diffLabel = diff === 0 ? 'no change' : `${diff > 0 ? '+' : ''}${(diff * 100).toFixed(0)}pp`
+                  const diffColor = diff > 0.02 ? '#f87171' : diff < -0.02 ? '#4ade80' : '#64748b'
                   return (
-                    <div key={r} className="flex items-center gap-3 mb-3">
-                      <div className="w-20 text-[10px] font-semibold capitalize" style={{ color: '#94a3b8' }}>{r}</div>
-                      <div className="flex-1 space-y-1">
-                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#151d2e' }}>
-                          <div className="h-full rounded-full opacity-30" style={{ width: `${base * 100}%`, background: c }} />
-                        </div>
-                        <div className="h-1.5 rounded-full overflow-hidden" style={{ background: '#151d2e' }}>
-                          <div className="h-full rounded-full" style={{ width: `${scen * 100}%`, background: c }} />
-                        </div>
+                    <div key={r} className="flex items-center gap-3 mb-4">
+                      <div className="w-20 text-[10px] font-semibold capitalize shrink-0" style={{ color: '#94a3b8' }}>{r}</div>
+                      <div className="flex-1 relative" style={{ height: 20 }}>
+                        {/* Track */}
+                        <div className="absolute inset-0 rounded-full" style={{ background: '#151d2e', top: 7, bottom: 7 }} />
+                        {/* Scenario fill */}
+                        <div
+                          className="absolute rounded-full"
+                          style={{ left: 0, width: `${scen * 100}%`, background: c, top: 7, bottom: 7 }}
+                        />
+                        {/* Baseline tick */}
+                        <div
+                          className="absolute rounded-full"
+                          style={{
+                            left: `${base * 100}%`, width: 2,
+                            top: 4, bottom: 4,
+                            background: `${c}70`,
+                            transform: 'translateX(-50%)',
+                          }}
+                        />
                       </div>
-                      <div className="text-[10px] font-bold w-24 text-right" style={{ color: c }}>
-                        {(base * 100).toFixed(0)}% → {(scen * 100).toFixed(0)}%
+                      <div className="text-right shrink-0" style={{ width: 100 }}>
+                        <div className="text-[10px] font-bold" style={{ color: c }}>
+                          {(base * 100).toFixed(0)}% → {(scen * 100).toFixed(0)}%
+                        </div>
+                        <div className="text-[9px] font-semibold" style={{ color: diffColor }}>{diffLabel}</div>
                       </div>
                     </div>
                   )

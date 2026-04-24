@@ -11,6 +11,7 @@ export default function RiskRail({ baselineRisk, scenarioRisk }: RiskRailProps) 
   const sPct = `${(scenarioRisk * 100).toFixed(0)}%`
   const delta = scenarioRisk - baselineRisk
   const deltaLabel = `${delta >= 0 ? '+' : ''}${(delta * 100).toFixed(0)}pp`
+  const close = Math.abs(delta) < 0.08
 
   return (
     <div>
@@ -76,9 +77,19 @@ export default function RiskRail({ baselineRisk, scenarioRisk }: RiskRailProps) 
           animate={{ left: `${baselineRisk * 100}%` }}
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
-          <div className="flex flex-col items-center" style={{ transform: 'translateX(-50%)', position: 'absolute', top: -28 }}>
-            <div className="text-[10px] font-extrabold" style={{ color: '#4ade80' }}>{bPct}</div>
-            <div className="text-[9px] font-bold" style={{ color: '#4ade8090' }}>Baseline</div>
+          <div
+            style={{
+              transform: 'translateX(-50%)',
+              position: 'absolute',
+              top: -36,
+              textAlign: close ? 'right' : 'center',
+              right: close ? -4 : undefined,
+              left: close ? undefined : '50%',
+              marginLeft: close ? undefined : undefined,
+            }}
+          >
+            <div className="text-[10px] font-extrabold whitespace-nowrap" style={{ color: '#4ade80' }}>{bPct}</div>
+            <div className="text-[9px] font-bold whitespace-nowrap" style={{ color: '#4ade8090' }}>Baseline</div>
           </div>
           <div
             className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[8px] font-extrabold"
@@ -92,13 +103,20 @@ export default function RiskRail({ baselineRisk, scenarioRisk }: RiskRailProps) 
         {/* Scenario marker */}
         <motion.div
           className="absolute flex flex-col items-center"
-          style={{ top: 14, zIndex: 10 }}
+          style={{ top: 14, zIndex: 11 }}
           animate={{ left: `${scenarioRisk * 100}%` }}
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
-          <div className="flex flex-col items-center" style={{ transform: 'translateX(-50%)', position: 'absolute', top: -28 }}>
-            <div className="text-[10px] font-extrabold" style={{ color: '#f87171' }}>{sPct}</div>
-            <div className="text-[9px] font-bold" style={{ color: '#f8717190' }}>Scenario</div>
+          <div
+            style={{
+              transform: 'translateX(-50%)',
+              position: 'absolute',
+              top: close ? -58 : -36,
+              textAlign: 'center',
+            }}
+          >
+            <div className="text-[10px] font-extrabold whitespace-nowrap" style={{ color: '#f87171' }}>{sPct}</div>
+            <div className="text-[9px] font-bold whitespace-nowrap" style={{ color: '#f8717190' }}>Scenario</div>
           </div>
           <div
             className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[8px] font-extrabold"
