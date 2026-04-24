@@ -50,19 +50,31 @@ frontend/
 
 ### 1.2 Docker Compose additions
 
+`VITE_API_URL` is a **build-time** variable in Vite (inlined via `import.meta.env`), not a runtime env var. The Dockerfile must pass it as a build ARG:
+
+```dockerfile
+# frontend/Dockerfile
+ARG VITE_API_URL=http://localhost:8000
+ENV VITE_API_URL=$VITE_API_URL
+RUN npm run build       # build bakes the value into static files
+```
+
 ```yaml
+# docker-compose.yml addition
 frontend:
   build:
     context: ./frontend
     dockerfile: Dockerfile
+    args:
+      - VITE_API_URL=http://localhost:8000
   ports:
     - "3000:80"       # Nginx serves the built Vite app
-  environment:
-    - VITE_API_URL=http://localhost:8000
   depends_on:
     api:
       condition: service_healthy
 ```
+
+For local dev outside Docker, set `VITE_API_URL=http://localhost:8000` in `frontend/.env.local` — Vite picks this up at dev-server startup.
 
 Streamlit service remains unchanged at port 8501 during migration. After parity is reached, the `dashboard` service is removed from `docker-compose.yml`.
 
@@ -94,12 +106,13 @@ class ScenarioRequest(BaseModel):
 ```
 
 **Logic:**
-1. Load `xgb_transition` model + metadata from registry (cached in `AppState`).
+1. Load `xgb_transition` + `xgb_regime` models and `xgb_transition` metadata from registry (cached in `AppState`).
 2. Build baseline feature vector from the latest panel row (`data/processed/panel.parquet`); fill unknowns with 0.
 3. Build scenario feature vector = baseline overridden with the 6 request fields.
-4. Score both vectors with `model.predict_proba(X)[0, 1]`.
-5. Score regime probabilities for scenario using `xgb_regime.predict_proba(X)[0]`.
-6. Compute driver deltas = top-5 features sorted by `|scenario_val - baseline_val| * feature_importance`.
+4. Score both vectors with `xgb_transition.predict_proba(X)[0, 1]` → `baseline_risk`, `scenario_risk`.
+5. Score baseline vector with `xgb_regime.predict_proba(X)[0]` → `baseline_prob_calm/elevated/turbulent`.
+6. Score scenario vector with `xgb_regime.predict_proba(X)[0]` → `prob_calm/elevated/turbulent`.
+7. Compute driver deltas = top-5 features sorted by `|scenario_val - baseline_val| * feature_importance`.
 
 **Response schema** (`ScenarioResponse`):
 ```python
@@ -244,7 +257,7 @@ Three chips side-by-side. Each: `flex: 1`, `padding: 8px 10px`, `border-radius: 
 
 ### "Why it changed" delta panel
 
-Reads from the two most recent rows in `live_state` SQLite table via existing `read_prior_state()` method on `AppState`. Exposed to the frontend through an additional field on `/current-state` response: `delta: StateDelta | null`.
+Reads from the two most recent rows in `live_state` SQLite table via existing `read_prior_state()` method on `AppState`. The `/current-state` route handler in `routes.py` calls `read_prior_state()`, computes the delta fields, and includes them in the response as `delta: StateDelta | None`. This is a change to `routes.py`, not `state.py` (which already has `read_prior_state()`).
 
 ```python
 class StateDelta(BaseModel):
@@ -296,7 +309,7 @@ Section: "When did the model get worried?"
 - SPY line: `strokeWidth: 2`, color `#42a5f5`
 - Regime band opacity: `0.08`
 - Colors: calm `#4ade80`, elevated `#fbbf24`, turbulent `#f87171`
-- VIX overlay (when toggled): secondary Y-axis, `strokeWidth: 1`, color `#94a3b8`, opacity 0.6
+- VIX overlay (when toggled): secondary Y-axis (`yAxisId="vix"`), domain `[0, 'auto']`, formatted as integer, `strokeWidth: 1`, color `#94a3b8`, opacity 0.6; axis label "VIX" on the right side
 - Hover tooltip: date + SPY close + regime label + transition risk
 
 ### Chart specs — Transition risk chart
@@ -366,9 +379,31 @@ Replay takeaway card:
 
 Vertical dashed marker at first day risk crossed `DEFAULT_THRESHOLD` (0.10). Red ✕ markers at `transition_actual == 1` days. Hover tooltip shows regime labels ("Calm"/"Elevated"/"Turbulent"), not numeric encodings.
 
+### Client-side stat computations (from `data` array in `EventReplayResponse`)
+
+All three supporting stats are computed client-side — no new schema fields needed:
+
+```ts
+const DEFAULT_THRESHOLD = 0.10  // defined in lib/constants.ts
+
+const peakRisk = Math.max(...data.map(p => p.transition_risk ?? 0))
+
+const alertDays = data.filter(p => (p.transition_risk ?? 0) > DEFAULT_THRESHOLD).length
+
+const firstCrossing = data.find(p => (p.transition_risk ?? 0) > DEFAULT_THRESHOLD)?.date ?? '—'
+
+const highStressDays = data.filter(p =>
+  p.regime_actual === 'elevated' || p.regime_actual === 'turbulent'
+).length
+```
+
+`warning_lead_days` comes directly from `EventReplayResponse.warning_lead_days`.
+
+`DEFAULT_THRESHOLD = 0.10` is a named constant in `frontend/src/lib/constants.ts`. Event Replay uses this fixed value — it is not linked to the Scenario Explorer threshold slider (which is a separate per-session exploration tool).
+
 ### Data sources
 
-- `/event-replay/{event_name}` → all chart data and hero stats (peak risk computed client-side)
+- `/event-replay/{event_name}` → chart data; all stats computed client-side as above
 
 ---
 
@@ -504,7 +539,23 @@ Regime implication: if scenario calm probability < 50%, add "The probability of 
 
 ### Threshold tuning (compact, in left col)
 
-Single slider (0.10–0.70, step 0.10). Three metric cards: Recall · False Alerts · Lead Time. One-sentence narrative below: same template as existing Streamlit implementation.
+Single slider (0.10–0.70, step 0.10). Three metric cards: Recall · False Alerts · Lead Time.
+
+Data source: `GET /model-drivers` already returns model metadata via `load_metadata("xgb_transition")`. The `threshold_sweep` key in that metadata contains a list of dicts at steps of 0.10:
+
+```python
+# Structure in model metadata (written by train_transition_model.py)
+threshold_sweep = [
+  {"threshold": 0.10, "recall": 0.54, "false_alert_rate": 0.22,
+   "alert_frequency": 0.34, "avg_lead_time_days": 33.0},
+  {"threshold": 0.20, ...},
+  ...
+]
+```
+
+The frontend reads `modelDriversResponse.threshold_sweep` (add this field to `ModelDriversResponse` in `schemas.py`), finds the matching row for the selected threshold, and renders the three cards. If `threshold_sweep` is missing or empty (older model artifacts), show a "Threshold data unavailable" message instead of crashing.
+
+**Schema addition required:** Add `threshold_sweep: list[dict] = []` to `ModelDriversResponse` in `schemas.py`, and populate it from `meta.get("threshold_sweep", [])` in the `/model-drivers` route handler.
 
 ### API interaction
 
@@ -538,10 +589,10 @@ Lightweight tooltips (shadcn/ui `Tooltip` component) on first mention of each te
 
 | File | Change |
 |---|---|
-| `src/api/main.py` | Add `CORSMiddleware` |
-| `src/api/routes.py` | Add `POST /scenario` route |
-| `src/api/schemas.py` | Add `ScenarioRequest`, `ScenarioResponse`, `DriverDelta`, `StateDelta`; add `delta: StateDelta \| None` to `CurrentStateResponse` |
-| `src/api/state.py` | Expose `read_prior_state()` output in the `/current-state` route response |
+| `src/api/main.py` | Add `CORSMiddleware`; read allowed origin from `CORS_ORIGIN` env var (default `http://localhost:3000`) so non-local deployments don't require source edits |
+| `src/api/routes.py` | (1) Update `/current-state` handler to call `read_prior_state()` and populate `delta` field; (2) Add `POST /scenario` route |
+| `src/api/schemas.py` | Add `ScenarioRequest`, `ScenarioResponse`, `DriverDelta`, `StateDelta`; add `delta: StateDelta \| None = None` to `CurrentStateResponse`; add `threshold_sweep: list[dict] = []` to `ModelDriversResponse` |
+| `src/api/state.py` | No changes needed — `read_prior_state()` already exists |
 
 All other backend files unchanged.
 
