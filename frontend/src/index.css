@@ -7,3 +7,9 @@ body {
   color: #e2e8f0;
   font-family: 'Inter', system-ui, sans-serif;
 }
+
+/* Range sliders — accent-color handles track+thumb color; just size the thumb */
+input[type="range"] {
+  cursor: pointer;
+  height: 16px;
+}

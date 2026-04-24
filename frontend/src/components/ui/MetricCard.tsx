@@ -23,13 +23,13 @@ export default function MetricCard({ label, value, subtitle, valueColor = '#f1f5
           {delta.label}
         </span>
       )}
-      <div className="text-[9px] font-bold tracking-widest uppercase mb-1.5" style={{ color: '#4a6080' }}>
+      <div className="text-[9px] font-bold tracking-widest uppercase mb-1.5" style={{ color: '#7c8fa3' }}>
         {label}
       </div>
       <div className="text-[22px] font-extrabold tracking-tight leading-none" style={{ color: valueColor }}>
         {value}
       </div>
-      {subtitle && <div className="text-[9px] mt-1" style={{ color: '#334155' }}>{subtitle}</div>}
+      {subtitle && <div className="text-[9px] mt-1" style={{ color: '#4a6080' }}>{subtitle}</div>}
     </div>
   )
 }

@@ -88,7 +88,7 @@ export default function ScenarioExplorer() {
                     step={cfg.step}
                     value={val}
                     onChange={e => setInputs(prev => ({ ...prev, [cfg.key]: parseFloat(e.target.value) }))}
-                    className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+                    className="w-full cursor-pointer"
                     style={{ accentColor: color }}
                   />
                 </div>
@@ -109,7 +109,7 @@ export default function ScenarioExplorer() {
               type="range" min={0.10} max={0.70} step={0.10}
               value={threshold}
               onChange={e => setThreshold(parseFloat(e.target.value))}
-              className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
+              className="w-full cursor-pointer"
               style={{ accentColor: '#fbbf24' }}
             />
             {sweepRow ? (

@@ -38,13 +38,13 @@ export default function RiskLineChart({ data }: RiskLineChartProps) {
           y={DEFAULT_THRESHOLD}
           stroke="#06b6d4"
           strokeDasharray="4 4"
-          label={{ value: 'Watch (10%)', fill: '#06b6d4', fontSize: 8 }}
+          label={{ value: 'Watch · 10%', fill: '#06b6d4', fontSize: 10, fontWeight: 700, position: 'insideTopRight', dx: -4, dy: -14 }}
         />
         <ReferenceLine
           y={ALERT_THRESHOLD}
           stroke="#fbbf24"
           strokeDasharray="4 4"
-          label={{ value: 'Alert (30%)', fill: '#fbbf24', fontSize: 8 }}
+          label={{ value: 'Alert · 30%', fill: '#fbbf24', fontSize: 10, fontWeight: 700, position: 'insideTopRight', dx: -4, dy: -14 }}
         />
         <Line dataKey="transition_risk" stroke="#06b6d4" strokeWidth={2} dot={false} name="Risk" />
       </LineChart>
