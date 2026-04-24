@@ -107,6 +107,9 @@ export default function CurrentState() {
                 <div className="mb-2">
                   <RegimeLegend />
                 </div>
+                <p className="text-[10px] mb-2" style={{ color: '#64748b' }}>
+                  Recent price path with market-state shading. Hover for details.
+                </p>
                 <MiniRegimeChart data={recentData.data.slice(-30)} />
               </Panel>
             ) : null}
@@ -114,9 +117,12 @@ export default function CurrentState() {
 
           <div className="space-y-4">
             <Panel title="Transition risk gauge">
-              <GaugeArc risk={data.transition_risk} />
+              <GaugeArc risk={data.transition_risk} regime={regime} />
             </Panel>
             <Panel title="What is pushing risk right now">
+              <p className="text-[10px] mb-3" style={{ color: '#64748b' }}>
+                Features currently exerting the strongest influence on the model's risk estimate.
+              </p>
               {topDrivers.slice(0, 5).map(d => (
                 <DriverBar key={d.feature} feature={d.feature} importance={d.importance} maxImportance={maxImp} positive />
               ))}
@@ -129,6 +135,17 @@ export default function CurrentState() {
 }
 
 function DeltaRows({ delta }: { delta: StateDelta }) {
+  const noMeaningfulChange =
+    Math.abs(delta.risk_delta) < 0.001 && !delta.regime_changed && !delta.top_feature_moved
+
+  if (noMeaningfulChange) {
+    return (
+      <p className="text-[11px]" style={{ color: '#64748b' }}>
+        No meaningful change since the last refresh — risk, regime, and key drivers all remained stable.
+      </p>
+    )
+  }
+
   const rows = [
     {
       icon: delta.risk_delta > 0.01 ? '📈' : delta.risk_delta < -0.01 ? '📉' : '↔️',
@@ -172,15 +189,23 @@ function DeltaRows({ delta }: { delta: StateDelta }) {
   )
 }
 
-function GaugeArc({ risk }: { risk: number }) {
+function GaugeArc({ risk, regime }: { risk: number; regime: string }) {
   const pct = Math.min(risk, 1)
   const angle = pct * 180 - 90
   const color = risk < 0.20 ? '#4ade80' : risk < 0.40 ? '#fbbf24' : '#f87171'
+  const isStressed = regime === 'elevated' || regime === 'turbulent'
   const caption =
-    risk < 0.05 ? 'Very low risk — market looks calm.' :
-    risk < 0.20 ? 'Low risk — conditions appear stable.' :
-    risk < 0.40 ? 'Moderate risk — conditions could deteriorate within the next week.' :
-    'Elevated risk — model sees meaningful stress probability.'
+    risk < 0.05
+      ? isStressed
+        ? 'Conditions are stressed, but further deterioration this week is unlikely.'
+        : 'Very low risk — conditions appear stable.'
+      : risk < 0.20
+      ? isStressed
+        ? 'Current stress is present; near-term worsening risk is low.'
+        : 'Low risk — conditions appear stable.'
+      : risk < 0.40
+      ? 'Moderate risk — conditions could worsen within the next week.'
+      : 'Elevated risk — model sees meaningful stress probability.'
 
   // cy=90 puts arc center at bottom edge so semi-circle fits in 110px height
   const cx = 80, cy = 90, r = 55
