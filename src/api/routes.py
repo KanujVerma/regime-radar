@@ -238,4 +238,5 @@ async def model_drivers(request: Request):
     return ModelDriversResponse(
         global_importance=global_imp[:20],
         local_explanation=local_exp,
+        threshold_sweep=meta.get("threshold_sweep", []),
     )

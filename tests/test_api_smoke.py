@@ -174,3 +174,15 @@ def test_read_prior_state_returns_second_row(tmp_path):
     prior = state.read_prior_state()
     assert prior is not None
     assert prior["regime"] == "calm"
+
+
+def test_model_drivers_threshold_sweep_field_present(app_with_state):
+    """threshold_sweep is always present (may be empty list if artifacts missing)."""
+    app, _ = app_with_state
+    client = TestClient(app)
+    resp = client.get("/model-drivers")
+    if resp.status_code == 503:
+        pytest.skip("No model artifacts — skipping threshold_sweep field check")
+    data = resp.json()
+    assert "threshold_sweep" in data
+    assert isinstance(data["threshold_sweep"], list)
