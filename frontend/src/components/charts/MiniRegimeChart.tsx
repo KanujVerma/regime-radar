@@ -27,7 +27,7 @@ function MiniTooltip({ active, payload, label }: TooltipProps) {
   return (
     <div style={{ background: '#0c1020', border: '1px solid #151d2e', padding: '6px 10px', borderRadius: 6, fontSize: 10 }}>
       <div style={{ color: '#64748b', marginBottom: 3 }}>{label}</div>
-      <div style={{ color: '#f1f5f9' }}>SPY {pt.close != null ? pt.close.toFixed(2) : '—'}</div>
+      <div style={{ color: '#f1f5f9' }}>SPY {pt.close != null ? `$${pt.close.toFixed(2)}` : '—'}</div>
       <div style={{ color: REGIME_COLORS[pt.regime] ?? '#94a3b8', textTransform: 'capitalize', marginTop: 2 }}>{pt.regime}</div>
     </div>
   )

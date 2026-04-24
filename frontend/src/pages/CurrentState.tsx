@@ -50,14 +50,15 @@ export default function CurrentState() {
   )
 
   const heroCards = [
-    { label: 'Market Regime', value: data.regime, color: rColor },
+    { label: 'Market Regime', value: data.regime, color: rColor, subtitle: 'Current stress level' },
     {
       label: 'Transition Risk',
       value: formatRisk(data.transition_risk),
       color: data.transition_risk > 0.40 ? '#f87171' : data.transition_risk > 0.20 ? '#fbbf24' : '#4ade80',
+      subtitle: 'Chance conditions worsen this week',
     },
-    { label: 'VIX Level', value: data.vix_level != null ? data.vix_level.toFixed(1) : '—', color: '#f1f5f9' },
-    { label: 'Trend', value: data.trend.replace('trend', ''), color: '#94a3b8' },
+    { label: 'VIX Level', value: data.vix_level != null ? data.vix_level.toFixed(1) : '—', color: '#f1f5f9', subtitle: 'Market fear gauge' },
+    { label: 'Trend', value: data.trend.replace('trend', ''), color: '#94a3b8', subtitle: 'Recent price direction' },
   ]
 
   return (
@@ -72,7 +73,7 @@ export default function CurrentState() {
         <div className="grid grid-cols-4 gap-3">
           {heroCards.map((card, i) => (
             <motion.div key={card.label} custom={i} variants={cardVariants} initial="hidden" animate="visible">
-              <MetricCard label={card.label} value={card.value} valueColor={card.color} />
+              <MetricCard label={card.label} value={card.value} valueColor={card.color} subtitle={card.subtitle} />
             </motion.div>
           ))}
         </div>
@@ -108,7 +109,7 @@ export default function CurrentState() {
                   <RegimeLegend />
                 </div>
                 <p className="text-[10px] mb-2" style={{ color: '#64748b' }}>
-                  Recent price path with market-state shading. Hover for details.
+                  Recent price path with market-state shading.
                 </p>
                 <MiniRegimeChart data={recentData.data.slice(-30)} />
               </Panel>

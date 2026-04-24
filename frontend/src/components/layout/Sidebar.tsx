@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom'
 import { Activity, Clock, Archive, BarChart2, Sliders } from 'lucide-react'
+import HelpDrawer from '../ui/HelpDrawer'
 
 const NAV = [
   {
@@ -64,11 +65,12 @@ export default function Sidebar() {
         ))}
       </nav>
 
-      <div className="px-5 py-4 border-t border-slate-800">
+      <div className="px-5 py-4 border-t border-slate-800 space-y-3">
         <div className="flex items-center gap-1.5">
           <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
           <span className="text-[9px] font-bold tracking-widest uppercase text-slate-500">Near-live data</span>
         </div>
+        <HelpDrawer />
       </div>
     </aside>
   )

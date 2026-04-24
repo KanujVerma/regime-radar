@@ -103,8 +103,22 @@ export default function EventReplay() {
 
             {/* Chart */}
             <Panel title={`${EVENTS.find(e => e.id === selected)?.label} — Transition Risk & Regime`}>
-              <div className="mb-2">
+              <div className="flex flex-wrap gap-4 items-center mb-2">
                 <RegimeLegend />
+              </div>
+              <div className="flex flex-wrap gap-4 items-center mb-3" style={{ fontSize: 10, color: '#94a3b8' }}>
+                <span className="flex items-center gap-1.5">
+                  <svg width={16} height={8}><line x1="0" y1="4" x2="16" y2="4" stroke="#06b6d4" strokeWidth={2} /></svg>
+                  Model risk score
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span style={{ color: '#f87171' }}>✕</span>
+                  Actual regime change
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <svg width={16} height={8}><line x1="0" y1="4" x2="16" y2="4" stroke="#06b6d4" strokeWidth={1.5} strokeDasharray="3 2" /></svg>
+                  First alert crossing
+                </span>
               </div>
               <EventReplayChart data={pts} />
             </Panel>

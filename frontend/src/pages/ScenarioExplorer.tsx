@@ -30,7 +30,7 @@ export default function ScenarioExplorer() {
   const sweepRow = modelData?.threshold_sweep?.find(r => Math.abs(r.threshold - threshold) < 0.05)
 
   const narrative = data
-    ? buildNarrative(inputs, data.baseline_risk, data.scenario_risk, data.driver_deltas[0]?.plain_label ?? '', data.prob_calm)
+    ? buildNarrative(inputs, data.baseline_prob_turbulent, data.prob_turbulent, data.driver_deltas[0]?.plain_label ?? '', data.prob_calm)
     : null
 
   const resetBtn = (
@@ -138,8 +138,8 @@ export default function ScenarioExplorer() {
 
           {data && (
             <>
-              <Panel title="Risk position — baseline vs scenario">
-                <RiskRail baselineRisk={data.baseline_risk} scenarioRisk={data.scenario_risk} />
+              <Panel title="Turbulent regime probability — baseline vs scenario">
+                <RiskRail baselineRisk={data.baseline_prob_turbulent} scenarioRisk={data.prob_turbulent} />
               </Panel>
 
               <Panel title="Regime probability shift">
@@ -219,16 +219,23 @@ function buildNarrative(
   topDriver: string,
   probCalm: number,
 ): string {
+  const delta = scenRisk - baseRisk
+  const direction = delta > 0.02 ? 'raises' : delta < -0.02 ? 'lowers' : 'leaves roughly unchanged'
+
   const changed = Object.keys(inputs).filter(k => {
     const cfg = SLIDER_CONFIG.find(s => s.key === k)
     return cfg && Math.abs((inputs as Record<string, number>)[k] - DEFAULT_INPUTS[k as keyof ScenarioInputs]) > cfg.step * 2
   })
+
   const changedLabel = changed.length > 0
-    ? changed.map(k => SLIDER_CONFIG.find(s => s.key === k)?.label ?? k).join(' and ')
+    ? changed.slice(0, 2).map(k => SLIDER_CONFIG.find(s => s.key === k)?.label ?? k).join(' and ')
     : 'these inputs'
 
-  let sentence = `Adjusting ${changedLabel} pushes transition risk from ${(baseRisk * 100).toFixed(0)}% to ${(scenRisk * 100).toFixed(0)}%.`
-  if (topDriver) sentence += ` The model is most sensitive to ${topDriver}.`
-  if (probCalm < 0.5) sentence += ' The probability of staying Calm drops below half.'
-  return sentence
+  const parts: string[] = [
+    `This scenario ${direction} the turbulent regime probability from ${(baseRisk * 100).toFixed(0)}% to ${(scenRisk * 100).toFixed(0)}%.`,
+  ]
+  if (changed.length > 0) parts.push(`The biggest input change is ${changedLabel}.`)
+  if (topDriver) parts.push(`The model is most sensitive to ${topDriver}.`)
+  if (probCalm < 0.4) parts.push('The probability of a calm market drops significantly under these conditions.')
+  return parts.join(' ')
 }
