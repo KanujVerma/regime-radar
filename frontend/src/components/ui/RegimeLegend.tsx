@@ -6,10 +6,15 @@ const REGIMES = [
   { key: 'turbulent', label: 'Turbulent' },
 ] as const
 
-export default function RegimeLegend() {
+interface RegimeLegendProps {
+  only?: ReadonlyArray<string>
+}
+
+export default function RegimeLegend({ only }: RegimeLegendProps = {}) {
+  const visible = only ? REGIMES.filter(r => only.includes(r.key)) : REGIMES
   return (
     <div className="flex gap-3 items-center">
-      {REGIMES.map(({ key, label }) => (
+      {visible.map(({ key, label }) => (
         <span key={key} className="flex items-center gap-1.5">
           <span style={{ color: regimeColor[key], fontSize: 11 }}>●</span>
           <span style={{ color: '#94a3b8', fontSize: 10 }}>{label}</span>

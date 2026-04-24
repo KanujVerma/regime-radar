@@ -109,7 +109,7 @@ export default function CurrentState() {
             ) : recentData && recentData.data.length > 0 ? (
               <Panel title="Last 30 Trading Days">
                 <div className="mb-2">
-                  <RegimeLegend />
+                  <RegimeLegend only={[...new Set(recentData.data.slice(-30).map(d => d.regime))]} />
                 </div>
                 <p className="text-[10px] mb-2" style={{ color: '#64748b' }}>
                   Recent price path with market-state shading.
