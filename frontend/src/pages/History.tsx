@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Topbar from '../components/layout/Topbar'
 import Panel from '../components/ui/Panel'
+import RegimeLegend from '../components/ui/RegimeLegend'
 import RegimeChart from '../components/charts/RegimeChart'
 import RiskLineChart from '../components/charts/RiskLineChart'
 import { useHistoricalState } from '../hooks/useHistoricalState'
@@ -33,9 +34,12 @@ export default function History() {
       <Topbar title="History" subtitle={`${data.start} — ${data.end}`} />
       <div className="p-5 space-y-5">
         <Panel title="What happened over time?">
-          <p className="text-[10px] mb-3" style={{ color: '#64748b' }}>
+          <p className="text-[10px] mb-2" style={{ color: '#64748b' }}>
             Shaded bands show the market regime on each day. A darker shade indicates higher stress.
           </p>
+          <div className="mb-2">
+            <RegimeLegend />
+          </div>
           <div className="flex justify-end mb-2">{toggleBtn}</div>
           <RegimeChart data={data.data} showVix={showVix} />
         </Panel>
