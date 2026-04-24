@@ -8,6 +8,7 @@ from src.api.schemas import (
     HealthResponse, CurrentStateResponse, HistoricalStateResponse,
     EventReplayResponse, ModelDriversResponse, DriverItem,
     HistoricalPoint, EventReplayPoint, TransitionRiskResponse, TransitionRiskPoint,
+    StateDelta, ScenarioRequest, ScenarioResponse, DriverDelta,
 )
 from src.utils.logging import get_logger
 
@@ -60,6 +61,20 @@ async def current_state(request: Request):
 
     drivers = [DriverItem(**d) for d in (latest.get("top_drivers") or [])]
 
+    delta = None
+    prior = app_state.read_prior_state()
+    if prior is not None:
+        risk_delta = (latest.get("transition_risk") or 0.0) - (prior.get("transition_risk") or 0.0)
+        regime_changed = latest.get("regime") != prior.get("regime")
+        top_driver = drivers[0].feature if drivers else None
+        delta = StateDelta(
+            risk_delta=risk_delta,
+            regime_changed=regime_changed,
+            prior_regime=prior.get("regime"),
+            top_feature_moved=top_driver,
+            top_feature_direction="up" if risk_delta > 0 else "down",
+        )
+
     return CurrentStateResponse(
         regime=latest.get("regime", "unknown"),
         transition_risk=latest.get("transition_risk", 0.0),
@@ -72,6 +87,7 @@ async def current_state(request: Request):
         prob_calm=latest.get("prob_calm"),
         prob_elevated=latest.get("prob_elevated"),
         prob_turbulent=latest.get("prob_turbulent"),
+        delta=delta,
     )
 
 

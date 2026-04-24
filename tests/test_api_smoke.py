@@ -123,6 +123,45 @@ def test_scenario_response_schema_exists():
     )
     assert req.vix_level == 20.0
 
+def test_current_state_delta_populated_with_two_rows(app_with_state):
+    app, state = app_with_state
+    state.write_state({
+        "as_of_ts": "2024-01-01T00:00:00+00:00",
+        "regime": "calm", "transition_risk": 0.10,
+        "trend": "uptrend", "vix_level": 15.0, "vix_chg_1d": 0.0,
+        "top_drivers": [{"feature": "vix_level", "importance": 0.4}],
+        "mode": "demo", "price_card_price": None,
+    })
+    state.write_state({
+        "as_of_ts": "2024-01-02T00:00:00+00:00",
+        "regime": "elevated", "transition_risk": 0.25,
+        "trend": "neutral", "vix_level": 22.0, "vix_chg_1d": 0.5,
+        "top_drivers": [{"feature": "vix_level", "importance": 0.4}],
+        "mode": "demo", "price_card_price": None,
+    })
+    client = TestClient(app)
+    resp = client.get("/current-state")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert data["delta"] is not None
+    assert data["delta"]["risk_delta"] == pytest.approx(0.15, abs=0.01)
+    assert data["delta"]["regime_changed"] is True
+    assert data["delta"]["prior_regime"] == "calm"
+
+def test_current_state_delta_none_with_one_row(app_with_state):
+    app, state = app_with_state
+    state.write_state({
+        "as_of_ts": "2024-01-01T00:00:00+00:00",
+        "regime": "calm", "transition_risk": 0.10,
+        "trend": "uptrend", "vix_level": 15.0, "vix_chg_1d": 0.0,
+        "top_drivers": [], "mode": "demo", "price_card_price": None,
+    })
+    client = TestClient(app)
+    resp = client.get("/current-state")
+    assert resp.status_code == 200
+    assert resp.json()["delta"] is None
+
+
 def test_read_prior_state_returns_second_row(tmp_path):
     from src.api.state import AppState
     state = AppState(db_path=str(tmp_path / "test.db"))
