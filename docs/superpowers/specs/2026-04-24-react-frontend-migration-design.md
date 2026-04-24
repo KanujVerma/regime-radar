@@ -83,10 +83,11 @@ Streamlit service remains unchanged at port 8501 during migration. After parity 
 Single addition to `src/api/main.py`:
 
 ```python
+import os
 from fastapi.middleware.cors import CORSMiddleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=[os.getenv("CORS_ORIGIN", "http://localhost:3000")],
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
