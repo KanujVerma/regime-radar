@@ -33,6 +33,12 @@ function MiniTooltip({ active, payload, label }: TooltipProps) {
   )
 }
 
+function LastDot(props: { cx?: number; cy?: number; index?: number; dataLength: number }) {
+  const { cx = 0, cy = 0, index = 0, dataLength } = props
+  if (index !== dataLength - 1) return null
+  return <circle cx={cx} cy={cy} r={3.5} fill="#06b6d4" stroke="#080b12" strokeWidth={1.5} />
+}
+
 export default function MiniRegimeChart({ data }: MiniRegimeChartProps) {
   if (data.length === 0) return null
 
@@ -41,7 +47,7 @@ export default function MiniRegimeChart({ data }: MiniRegimeChartProps) {
 
   return (
     <ResponsiveContainer width="100%" height={120}>
-      <ComposedChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
+      <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
         <XAxis dataKey="date" hide />
         <YAxis yAxisId="spy" hide />
         <Tooltip content={<MiniTooltip />} />
@@ -52,15 +58,17 @@ export default function MiniRegimeChart({ data }: MiniRegimeChartProps) {
             x1={b.start}
             x2={b.end}
             fill={REGIME_COLORS[b.regime] ?? '#64748b'}
-            fillOpacity={0.12}
+            fillOpacity={0.14}
           />
         ))}
         <Line
           yAxisId="spy"
           dataKey="close"
           stroke="#42a5f5"
-          strokeWidth={1.5}
-          dot={false}
+          strokeWidth={2}
+          dot={(props: { cx?: number; cy?: number; index?: number }) => (
+            <LastDot key={`dot-${props.index}`} {...props} dataLength={data.length} />
+          )}
           activeDot={{ r: 3, fill: '#42a5f5', strokeWidth: 0 }}
           name="SPY"
           isAnimationActive={false}

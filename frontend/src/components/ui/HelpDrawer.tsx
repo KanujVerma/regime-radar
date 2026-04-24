@@ -1,37 +1,51 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const TERMS = [
   {
     term: 'Market Regime',
-    def: 'The current broad stress state of the market — Calm, Elevated, or Turbulent. Based on clustering of volatility and momentum signals. It describes where conditions stand right now.',
+    def: 'Current broad stress state — Calm, Elevated, or Turbulent. Describes where conditions stand right now.',
   },
   {
     term: 'Transition Risk',
-    def: 'The model\'s estimated probability that market conditions will worsen within the next week. A low number means the current regime is likely to hold, not that conditions are good.',
+    def: 'Estimated probability that conditions worsen within the next week. Low risk means the current regime is likely to hold.',
   },
   {
     term: 'Watch Threshold',
-    def: 'The lower alert level. When transition risk crosses this line, conditions are worth monitoring closely. Fewer false alerts, but some real moves may be missed.',
+    def: 'Lower alert level. When risk crosses here, conditions are worth monitoring closely.',
   },
   {
     term: 'Alert Threshold',
-    def: 'The higher alert level. When risk exceeds this, the model considers conditions seriously stressed. More decisive — but may fire earlier than the peak.',
+    def: 'Higher alert level. When risk exceeds this, the model sees conditions as seriously stressed.',
   },
 ]
 
 export default function HelpDrawer() {
   const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    if (!open) return
+    function handleClick(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [open])
 
   return (
-    <>
+    <div ref={ref} style={{ position: 'relative' }}>
       <button
         onClick={() => setOpen(v => !v)}
         className="flex items-center gap-1.5 text-[9px] font-bold tracking-widest uppercase"
-        style={{ color: '#4a6080' }}
+        style={{ color: open ? '#06b6d4' : '#4a6080' }}
       >
         <span
           className="flex items-center justify-center rounded-full"
-          style={{ width: 14, height: 14, border: '1px solid #4a6080', fontSize: 9, lineHeight: 1 }}
+          style={{
+            width: 14, height: 14, fontSize: 9, lineHeight: 1,
+            border: `1px solid ${open ? '#06b6d4' : '#4a6080'}`,
+            color: open ? '#06b6d4' : '#4a6080',
+          }}
         >
           ?
         </span>
@@ -40,34 +54,32 @@ export default function HelpDrawer() {
 
       {open && (
         <div
-          className="fixed bottom-0 left-0 z-50 overflow-y-auto"
           style={{
-            width: 196,
-            maxHeight: '70vh',
-            background: '#0a0d16',
-            border: '1px solid #151d2e',
-            borderBottom: 'none',
-            borderRadius: '12px 12px 0 0',
-            padding: '16px 14px',
+            position: 'absolute',
+            bottom: 'calc(100% + 10px)',
+            left: 0,
+            width: 220,
+            background: '#0c1020',
+            border: '1px solid #1e2a3a',
+            borderRadius: 8,
+            padding: '12px 14px',
+            zIndex: 50,
+            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
           }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <span className="text-[10px] font-bold tracking-widest uppercase" style={{ color: '#4a6080' }}>
-              How to read RegimeRadar
-            </span>
-            <button onClick={() => setOpen(false)} style={{ color: '#64748b', fontSize: 14, lineHeight: 1 }}>×</button>
+          <div className="text-[9px] font-bold tracking-widest uppercase mb-3" style={{ color: '#4a6080' }}>
+            Key terms
           </div>
-
-          <div className="space-y-4">
+          <div className="space-y-3">
             {TERMS.map(({ term, def }) => (
               <div key={term}>
-                <div className="text-[10px] font-bold mb-1" style={{ color: '#94a3b8' }}>{term}</div>
+                <div className="text-[10px] font-semibold mb-0.5" style={{ color: '#94a3b8' }}>{term}</div>
                 <p className="text-[9px] leading-relaxed" style={{ color: '#64748b' }}>{def}</p>
               </div>
             ))}
           </div>
         </div>
       )}
-    </>
+    </div>
   )
 }

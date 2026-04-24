@@ -84,20 +84,23 @@ export default function CurrentState() {
           <div className="space-y-4">
             <Panel title="What this means right now">
               <p className="text-[11px] leading-relaxed mb-4" style={{ color: '#94a3b8' }}>{narrative}</p>
-              <div className="flex gap-2">
+              <div className="flex gap-2 mb-4">
                 {(['calm', 'elevated', 'turbulent'] as const).map(r => {
                   const prob = (data as unknown as Record<string, unknown>)[`prob_${r}`] as number | null
                   if (prob == null) return null
                   return <RegimeBadge key={r} regime={r} probability={prob} />
                 })}
               </div>
+              {data.delta && (
+                <>
+                  <div className="h-px mb-4" style={{ background: '#131b2a' }} />
+                  <div className="text-[9px] font-bold tracking-widest uppercase mb-3" style={{ color: '#4a6080' }}>
+                    Since last refresh
+                  </div>
+                  <DeltaRows delta={data.delta} />
+                </>
+              )}
             </Panel>
-
-            {data.delta && (
-              <Panel title="Why it changed since last refresh">
-                <DeltaRows delta={data.delta} />
-              </Panel>
-            )}
 
             {recentLoading ? (
               <Panel title="Last 30 Trading Days">
