@@ -354,17 +354,19 @@ Find the left column `<div className="space-y-4">` (around line 79). It contains
     </Panel>
   )}
 
-  <Panel title="Last 30 Trading Days">
-    {recentLoading ? (
+  {recentLoading ? (
+    <Panel title="Last 30 Trading Days">
       <div className="h-[120px] rounded" style={{ background: '#0c1020' }} />
-    ) : recentData && recentData.data.length > 0 ? (
+    </Panel>
+  ) : recentData && recentData.data.length > 0 ? (
+    <Panel title="Last 30 Trading Days">
       <MiniRegimeChart data={recentData.data} />
-    ) : null}
-  </Panel>
+    </Panel>
+  ) : null}
 </div>
 ```
 
-> Skeleton background is `#0c1020` (the `surface` token) — matches the Panel background so it blends as a quiet placeholder, not a flash of dark page-background color.
+> The Panel is only rendered when there is something to show — skeleton during load, chart when data exists, nothing on error or empty response. This prevents a titled-but-blank ghost card.
 
 - [ ] **Step 7: Verify TypeScript — no compile errors**
 
