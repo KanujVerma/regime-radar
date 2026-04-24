@@ -58,7 +58,7 @@ export default function MiniRegimeChart({ data }: MiniRegimeChartProps) {
             x1={b.start}
             x2={b.end}
             fill={REGIME_COLORS[b.regime] ?? '#64748b'}
-            fillOpacity={0.14}
+            fillOpacity={0.22}
           />
         ))}
         <Line
