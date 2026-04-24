@@ -72,28 +72,19 @@ export default function RiskRail({ baselineRisk, scenarioRisk }: RiskRailProps) 
 
         {/* Baseline marker */}
         <motion.div
-          className="absolute flex flex-col items-center"
+          className="absolute"
           style={{ top: 14, zIndex: 10 }}
           animate={{ left: `${baselineRisk * 100}%` }}
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
-          <div
-            style={{
-              transform: 'translateX(-50%)',
-              position: 'absolute',
-              top: -36,
-              textAlign: close ? 'right' : 'center',
-              right: close ? -4 : undefined,
-              left: close ? undefined : '50%',
-              marginLeft: close ? undefined : undefined,
-            }}
-          >
-            <div className="text-[10px] font-extrabold whitespace-nowrap" style={{ color: '#4ade80' }}>{bPct}</div>
-            <div className="text-[9px] font-bold whitespace-nowrap" style={{ color: '#4ade8090' }}>Baseline</div>
+          <div style={{ transform: `translateX(calc(-50% - ${close ? 24 : 0}px))`, textAlign: 'center', position: 'absolute', top: -34, whiteSpace: 'nowrap' }}>
+            <div className="text-[10px] font-extrabold" style={{ color: '#4ade80' }}>{bPct}</div>
+            <div className="text-[9px] font-bold" style={{ color: '#4ade8090' }}>Baseline</div>
           </div>
           <div
             className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[8px] font-extrabold"
             style={{
+              transform: 'translateX(-50%)',
               background: '#052e16', border: '2px solid #4ade80', color: '#4ade80',
               boxShadow: '0 0 0 3px #080b12, 0 0 10px #4ade8040',
             }}
@@ -102,25 +93,19 @@ export default function RiskRail({ baselineRisk, scenarioRisk }: RiskRailProps) 
 
         {/* Scenario marker */}
         <motion.div
-          className="absolute flex flex-col items-center"
+          className="absolute"
           style={{ top: 14, zIndex: 11 }}
           animate={{ left: `${scenarioRisk * 100}%` }}
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
-          <div
-            style={{
-              transform: 'translateX(-50%)',
-              position: 'absolute',
-              top: close ? -58 : -36,
-              textAlign: 'center',
-            }}
-          >
-            <div className="text-[10px] font-extrabold whitespace-nowrap" style={{ color: '#f87171' }}>{sPct}</div>
-            <div className="text-[9px] font-bold whitespace-nowrap" style={{ color: '#f8717190' }}>Scenario</div>
+          <div style={{ transform: `translateX(calc(-50% + ${close ? 24 : 0}px))`, textAlign: 'center', position: 'absolute', top: -34, whiteSpace: 'nowrap' }}>
+            <div className="text-[10px] font-extrabold" style={{ color: '#f87171' }}>{sPct}</div>
+            <div className="text-[9px] font-bold" style={{ color: '#f8717190' }}>Scenario</div>
           </div>
           <div
             className="w-[18px] h-[18px] rounded-full flex items-center justify-center text-[8px] font-extrabold"
             style={{
+              transform: 'translateX(-50%)',
               background: '#450a0a', border: '2px solid #f87171', color: '#f87171',
               boxShadow: '0 0 0 3px #080b12, 0 0 10px #f8717140',
             }}
