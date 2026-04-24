@@ -94,6 +94,17 @@ def test_read_prior_state_returns_none_on_empty_db(tmp_path):
     state = AppState(db_path=str(tmp_path / "test.db"))
     assert state.read_prior_state() is None
 
+def test_cors_header_present(monkeypatch, tmp_path):
+    # CORS_ORIGIN must be set before create_app() so the middleware captures it
+    monkeypatch.setenv("CORS_ORIGIN", "http://localhost:3000")
+    from src.api.state import AppState
+    state = AppState(db_path=tmp_path / "test.db")
+    app = create_app(app_state=state, start_scheduler=False)
+    client = TestClient(app)
+    resp = client.get("/health", headers={"Origin": "http://localhost:3000"})
+    assert resp.headers.get("access-control-allow-origin") == "http://localhost:3000"
+
+
 def test_read_prior_state_returns_second_row(tmp_path):
     from src.api.state import AppState
     state = AppState(db_path=str(tmp_path / "test.db"))
