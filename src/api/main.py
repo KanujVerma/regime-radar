@@ -1,6 +1,8 @@
 """FastAPI application factory for RegimeRadar."""
 from __future__ import annotations
+import os
 from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
 from src.api.routes import router
 from src.api.state import AppState
 from src.utils.logging import get_logger
@@ -19,6 +21,18 @@ def create_app(app_state: AppState | None = None, start_scheduler: bool = True) 
         title="RegimeRadar",
         description="Live Market State & Transition Risk Monitor",
         version="1.0.0",
+    )
+
+    _cors_origin = os.getenv("CORS_ORIGIN", "")
+    _allow_origins = (
+        [_cors_origin] if _cors_origin
+        else ["http://localhost:3000", "http://localhost:5173"]
+    )
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=_allow_origins,
+        allow_methods=["GET", "POST"],
+        allow_headers=["*"],
     )
 
     if app_state is None:

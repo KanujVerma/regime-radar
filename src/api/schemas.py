@@ -15,6 +15,14 @@ class DriverItem(BaseModel):
     importance: float
 
 
+class StateDelta(BaseModel):
+    risk_delta: float
+    regime_changed: bool
+    prior_regime: str | None
+    top_feature_moved: str | None
+    top_feature_direction: str | None
+
+
 class CurrentStateResponse(BaseModel):
     regime: str
     transition_risk: float
@@ -27,6 +35,7 @@ class CurrentStateResponse(BaseModel):
     prob_calm: float | None = None
     prob_elevated: float | None = None
     prob_turbulent: float | None = None
+    delta: StateDelta | None = None
 
 
 class HistoricalPoint(BaseModel):
@@ -68,6 +77,35 @@ class TransitionRiskResponse(BaseModel):
     end: str
 
 
+class DriverDelta(BaseModel):
+    feature: str
+    plain_label: str
+    delta_value: float
+
+
+class ScenarioRequest(BaseModel):
+    vix_level: float
+    vix_chg_5d: float
+    rv_20d_pct: float
+    drawdown_pct_504d: float
+    ret_20d: float
+    dist_sma50: float
+
+
+class ScenarioResponse(BaseModel):
+    baseline_risk: float
+    scenario_risk: float
+    delta: float
+    prob_calm: float
+    prob_elevated: float
+    prob_turbulent: float
+    baseline_prob_calm: float
+    baseline_prob_elevated: float
+    baseline_prob_turbulent: float
+    driver_deltas: list[DriverDelta]
+
+
 class ModelDriversResponse(BaseModel):
     global_importance: list[DriverItem]
     local_explanation: dict[str, float]
+    threshold_sweep: list[dict] = []
