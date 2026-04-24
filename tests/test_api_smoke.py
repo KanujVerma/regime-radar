@@ -186,3 +186,64 @@ def test_model_drivers_threshold_sweep_field_present(app_with_state):
     data = resp.json()
     assert "threshold_sweep" in data
     assert isinstance(data["threshold_sweep"], list)
+
+
+def test_scenario_returns_503_without_artifacts(app_with_state):
+    app, _ = app_with_state
+    client = TestClient(app)
+    payload = {
+        "vix_level": 25.0, "vix_chg_5d": 3.0, "rv_20d_pct": 0.7,
+        "drawdown_pct_504d": 0.15, "ret_20d": -0.05, "dist_sma50": -0.04,
+    }
+    resp = client.post("/scenario", json=payload)
+    # Before route exists: 404; after route exists but no artifacts: 503
+    assert resp.status_code in (404, 503)
+
+def test_scenario_response_shape(app_with_state, monkeypatch):
+    """With mocked models and panel, POST /scenario returns expected shape."""
+    import numpy as np
+    import pandas as pd
+
+    app, _ = app_with_state
+
+    FEATURES = ["vix_level", "vix_chg_5d", "rv_20d_pct",
+                "drawdown_pct_504d", "ret_20d", "dist_sma50"]
+
+    class FakeTransition:
+        feature_importances_ = np.array([0.3, 0.2, 0.1, 0.2, 0.1, 0.1])
+        def predict_proba(self, X):
+            return np.array([[0.7, 0.3]] * len(X))
+
+    class FakeRegime:
+        def predict_proba(self, X):
+            return np.array([[0.5, 0.3, 0.2]] * len(X))
+
+    fake_transition = FakeTransition()
+    fake_regime = FakeRegime()
+    panel_df = pd.DataFrame({f: [15.0] for f in FEATURES},
+                             index=pd.to_datetime(["2024-01-01"]))
+
+    import src.models.registry as reg
+    monkeypatch.setattr(reg, "artifact_exists", lambda name: True)
+    monkeypatch.setattr(reg, "load_artifact",
+        lambda name: fake_transition if "transition" in name else fake_regime)
+    monkeypatch.setattr(reg, "load_metadata", lambda name: {
+        "feature_names": FEATURES,
+        "feature_importances": fake_transition.feature_importances_.tolist(),
+    })
+    import src.api.routes as routes_mod
+    monkeypatch.setattr(routes_mod.pd, "read_parquet", lambda p: panel_df)
+
+    client = TestClient(app)
+    payload = {
+        "vix_level": 30.0, "vix_chg_5d": 5.0, "rv_20d_pct": 0.8,
+        "drawdown_pct_504d": 0.2, "ret_20d": -0.07, "dist_sma50": -0.05,
+    }
+    resp = client.post("/scenario", json=payload)
+    assert resp.status_code == 200
+    data = resp.json()
+    for field in ["baseline_risk", "scenario_risk", "delta", "prob_calm",
+                  "prob_elevated", "prob_turbulent", "baseline_prob_calm",
+                  "baseline_prob_elevated", "baseline_prob_turbulent", "driver_deltas"]:
+        assert field in data
+    assert isinstance(data["driver_deltas"], list)

@@ -240,3 +240,101 @@ async def model_drivers(request: Request):
         local_explanation=local_exp,
         threshold_sweep=meta.get("threshold_sweep", []),
     )
+
+
+FEATURE_PLAIN_LABELS = {
+    "vix_pct_504d":             "VIX relative to 2-year history",
+    "vix_level":                "Current VIX level",
+    "vix_zscore_252d":          "VIX z-score (1-year)",
+    "vix_chg_5d":               "VIX 5-day change",
+    "rv_20d_pct":               "Realized volatility percentile",
+    "drawdown_pct_504d":        "Drawdown relative to 2-year history",
+    "ret_20d":                  "20-day SPY return",
+    "momentum_20d":             "20-day momentum",
+    "dist_sma50":               "Distance from 50-day moving average",
+    "emv_level":                "Equity market volatility index",
+    "days_in_regime_lag1":      "Days in current regime (lagged)",
+    "turbulent_count_30d_lag1": "Turbulent days in past 30 days (lagged)",
+    "trend_code":               "Trend direction",
+}
+
+
+@router.post("/scenario", response_model=ScenarioResponse)
+async def scenario(request: Request, body: ScenarioRequest):
+    from src.models.registry import artifact_exists, load_artifact, load_metadata
+    from src.utils.paths import PROCESSED_DIR
+    from pathlib import Path
+    import numpy as np
+
+    for name in ("xgb_transition", "xgb_regime"):
+        if not artifact_exists(name):
+            raise HTTPException(status_code=503, detail=f"{name} artifact not found. Run bootstrap_data.py.")
+
+    transition_model = load_artifact("xgb_transition")
+    regime_model = load_artifact("xgb_regime")
+    meta = load_metadata("xgb_transition")
+    feature_names: list[str] = meta.get("feature_names", [])
+    feature_importances: list[float] = meta.get("feature_importances",
+        list(transition_model.feature_importances_))
+
+    # Build baseline vector from latest panel row
+    panel_path = Path(PROCESSED_DIR) / "panel.parquet"
+    if panel_path.exists():
+        panel = pd.read_parquet(panel_path)
+        last_row = panel.iloc[-1]
+        baseline_vec = {f: float(last_row[f]) if f in last_row.index else 0.0
+                        for f in feature_names}
+    else:
+        baseline_vec = {f: 0.0 for f in feature_names}
+
+    # Scenario vector = baseline overridden with 6 request fields
+    overrides = {
+        "vix_level": body.vix_level,
+        "vix_chg_5d": body.vix_chg_5d,
+        "rv_20d_pct": body.rv_20d_pct,
+        "drawdown_pct_504d": body.drawdown_pct_504d,
+        "ret_20d": body.ret_20d,
+        "dist_sma50": body.dist_sma50,
+    }
+    scenario_vec = {**baseline_vec, **overrides}
+
+    X_base = pd.DataFrame([baseline_vec])[feature_names].fillna(0)
+    X_scen = pd.DataFrame([scenario_vec])[feature_names].fillna(0)
+
+    baseline_risk = float(transition_model.predict_proba(X_base)[0, 1])
+    scenario_risk = float(transition_model.predict_proba(X_scen)[0, 1])
+
+    base_regime_probs = regime_model.predict_proba(X_base)[0]
+    scen_regime_probs = regime_model.predict_proba(X_scen)[0]
+
+    # Driver deltas: top-5 by |delta_val * importance|
+    imp_map = dict(zip(feature_names, feature_importances))
+    deltas = []
+    for feat in overrides:
+        if feat in imp_map:
+            delta_val = scenario_vec.get(feat, 0.0) - baseline_vec.get(feat, 0.0)
+            score = abs(delta_val * imp_map[feat])
+            deltas.append((feat, delta_val, score))
+    deltas.sort(key=lambda x: x[2], reverse=True)
+
+    driver_deltas = [
+        DriverDelta(
+            feature=feat,
+            plain_label=FEATURE_PLAIN_LABELS.get(feat, feat),
+            delta_value=round(dv, 4),
+        )
+        for feat, dv, _ in deltas[:5]
+    ]
+
+    return ScenarioResponse(
+        baseline_risk=round(baseline_risk, 4),
+        scenario_risk=round(scenario_risk, 4),
+        delta=round(scenario_risk - baseline_risk, 4),
+        prob_calm=round(float(scen_regime_probs[0]), 4),
+        prob_elevated=round(float(scen_regime_probs[1]), 4),
+        prob_turbulent=round(float(scen_regime_probs[2]), 4),
+        baseline_prob_calm=round(float(base_regime_probs[0]), 4),
+        baseline_prob_elevated=round(float(base_regime_probs[1]), 4),
+        baseline_prob_turbulent=round(float(base_regime_probs[2]), 4),
+        driver_deltas=driver_deltas,
+    )
