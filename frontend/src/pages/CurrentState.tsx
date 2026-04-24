@@ -10,6 +10,7 @@ import MetricCard from '../components/ui/MetricCard'
 import RegimeBadge from '../components/ui/RegimeBadge'
 import DriverBar from '../components/ui/DriverBar'
 import { buildCurrentStateNarrative, formatRisk } from '../lib/narratives'
+import RegimeLegend from '../components/ui/RegimeLegend'
 import { regimeColor } from '../lib/tokens'
 import { labelFor } from '../lib/featureLabels'
 
@@ -103,6 +104,9 @@ export default function CurrentState() {
               </Panel>
             ) : recentData && recentData.data.length > 0 ? (
               <Panel title="Last 30 Trading Days">
+                <div className="mb-2">
+                  <RegimeLegend />
+                </div>
                 <MiniRegimeChart data={recentData.data.slice(-30)} />
               </Panel>
             ) : null}

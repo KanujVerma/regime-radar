@@ -1,6 +1,6 @@
 import {
   ComposedChart, Line, XAxis, YAxis, ResponsiveContainer,
-  ReferenceArea, ReferenceLine,
+  ReferenceArea, ReferenceLine, Tooltip,
 } from 'recharts'
 import type { HistoricalPoint } from '../../types/api'
 import { buildRegimeBands } from '../../lib/chartUtils'
@@ -15,6 +15,24 @@ const REGIME_COLORS: Record<string, string> = {
   turbulent: '#f87171',
 }
 
+interface TooltipProps {
+  active?: boolean
+  payload?: Array<{ payload: HistoricalPoint }>
+  label?: string
+}
+
+function MiniTooltip({ active, payload, label }: TooltipProps) {
+  if (!active || !payload?.length) return null
+  const pt = payload[0].payload
+  return (
+    <div style={{ background: '#0c1020', border: '1px solid #151d2e', padding: '6px 10px', borderRadius: 6, fontSize: 10 }}>
+      <div style={{ color: '#64748b', marginBottom: 3 }}>{label}</div>
+      <div style={{ color: '#f1f5f9' }}>SPY {pt.close != null ? pt.close.toFixed(2) : '—'}</div>
+      <div style={{ color: REGIME_COLORS[pt.regime] ?? '#94a3b8', textTransform: 'capitalize', marginTop: 2 }}>{pt.regime}</div>
+    </div>
+  )
+}
+
 export default function MiniRegimeChart({ data }: MiniRegimeChartProps) {
   if (data.length === 0) return null
 
@@ -26,6 +44,7 @@ export default function MiniRegimeChart({ data }: MiniRegimeChartProps) {
       <ComposedChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 0 }}>
         <XAxis dataKey="date" hide />
         <YAxis yAxisId="spy" hide />
+        <Tooltip content={<MiniTooltip />} />
         {bands.map((b, i) => (
           <ReferenceArea
             key={i}
@@ -42,7 +61,7 @@ export default function MiniRegimeChart({ data }: MiniRegimeChartProps) {
           stroke="#42a5f5"
           strokeWidth={1.5}
           dot={false}
-          activeDot={false}
+          activeDot={{ r: 3, fill: '#42a5f5', strokeWidth: 0 }}
           name="SPY"
           isAnimationActive={false}
         />
