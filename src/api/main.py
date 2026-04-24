@@ -23,9 +23,14 @@ def create_app(app_state: AppState | None = None, start_scheduler: bool = True) 
         version="1.0.0",
     )
 
+    _cors_origin = os.getenv("CORS_ORIGIN", "")
+    _allow_origins = (
+        [_cors_origin] if _cors_origin
+        else ["http://localhost:3000", "http://localhost:5173"]
+    )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[os.getenv("CORS_ORIGIN", "http://localhost:3000")],
+        allow_origins=_allow_origins,
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
