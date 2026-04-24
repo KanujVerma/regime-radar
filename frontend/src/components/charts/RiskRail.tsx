@@ -13,6 +13,13 @@ export default function RiskRail({ baselineRisk, scenarioRisk }: RiskRailProps) 
   const deltaLabel = `${delta >= 0 ? '+' : ''}${(delta * 100).toFixed(0)}pp`
   const close = Math.abs(delta) < 0.08
 
+  function labelTransform(pct: number, side: 'left' | 'right'): string {
+    if (pct < 0.08) return 'translateX(0%)'       // near left edge — hang right
+    if (pct > 0.92) return 'translateX(-100%)'    // near right edge — hang left
+    if (close) return side === 'left' ? 'translateX(-100%)' : 'translateX(0%)'
+    return 'translateX(-50%)'                     // normal — center
+  }
+
   return (
     <div>
       {/* Numbers row */}
@@ -77,7 +84,7 @@ export default function RiskRail({ baselineRisk, scenarioRisk }: RiskRailProps) 
           animate={{ left: `${baselineRisk * 100}%` }}
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
-          <div style={{ transform: `translateX(calc(-50% - ${close ? 24 : 0}px))`, textAlign: 'center', position: 'absolute', top: -34, whiteSpace: 'nowrap' }}>
+          <div style={{ transform: labelTransform(baselineRisk, 'left'), position: 'absolute', top: -34, whiteSpace: 'nowrap' }}>
             <div className="text-[10px] font-extrabold" style={{ color: '#4ade80' }}>{bPct}</div>
             <div className="text-[9px] font-bold" style={{ color: '#4ade8090' }}>Baseline</div>
           </div>
@@ -98,7 +105,7 @@ export default function RiskRail({ baselineRisk, scenarioRisk }: RiskRailProps) 
           animate={{ left: `${scenarioRisk * 100}%` }}
           transition={{ type: 'spring', stiffness: 200, damping: 25 }}
         >
-          <div style={{ transform: `translateX(calc(-50% + ${close ? 24 : 0}px))`, textAlign: 'center', position: 'absolute', top: -34, whiteSpace: 'nowrap' }}>
+          <div style={{ transform: labelTransform(scenarioRisk, 'right'), position: 'absolute', top: -34, whiteSpace: 'nowrap' }}>
             <div className="text-[10px] font-extrabold" style={{ color: '#f87171' }}>{sPct}</div>
             <div className="text-[9px] font-bold" style={{ color: '#f8717190' }}>Scenario</div>
           </div>
