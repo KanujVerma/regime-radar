@@ -24,14 +24,18 @@ def merge_market_panel(
     Returns DataFrame with columns:
     open, high, low, close, volume, vixcls, emvoverallemv
     """
+    def _strip_tz(idx):
+        idx = pd.to_datetime(idx)
+        return idx.tz_convert(None) if idx.tz is not None else idx
+
     spy = spy_df.copy()
-    spy.index = pd.to_datetime(spy.index)
+    spy.index = _strip_tz(spy.index)
 
     vix = vix_df.copy()
-    vix.index = pd.to_datetime(vix.index)
+    vix.index = _strip_tz(vix.index)
 
     emv = emv_df.copy()
-    emv.index = pd.to_datetime(emv.index)
+    emv.index = _strip_tz(emv.index)
 
     # Align to SPY dates
     panel = spy.join(vix, how="left").join(emv, how="left")
