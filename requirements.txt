@@ -1,11 +1,9 @@
 fastapi>=0.111
 uvicorn[standard]>=0.29
-streamlit>=1.35
 pandas>=2.2
 numpy>=1.26
 scikit-learn>=1.4
 xgboost>=2.0
-plotly>=5.20
 shap>=0.45
 pyyaml>=6.0
 pydantic>=2.6
