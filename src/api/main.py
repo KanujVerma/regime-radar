@@ -24,10 +24,7 @@ def create_app(app_state: AppState | None = None, start_scheduler: bool = True) 
     )
 
     _cors_origin = os.getenv("CORS_ORIGIN", "")
-    _allow_origins = (
-        [_cors_origin] if _cors_origin
-        else ["http://localhost:3000", "http://localhost:5173"]
-    )
+    _allow_origins = [o.strip() for o in _cors_origin.split(",") if o.strip()] if _cors_origin else ["*"]
     app.add_middleware(
         CORSMiddleware,
         allow_origins=_allow_origins,
