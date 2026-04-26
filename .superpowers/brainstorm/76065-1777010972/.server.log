@@ -1,8 +1,0 @@
-{"type":"server-started","port":50578,"host":"127.0.0.1","url_host":"localhost","url":"http://localhost:50578","screen_dir":"/Users/kanuj/regime-radar/.superpowers/brainstorm/76065-1777010972"}
-{"type":"screen-added","file":"/Users/kanuj/regime-radar/.superpowers/brainstorm/76065-1777010972/app-shell.html"}
-{"type":"screen-added","file":"/Users/kanuj/regime-radar/.superpowers/brainstorm/76065-1777010972/current-state-design.html"}
-{"type":"screen-added","file":"/Users/kanuj/regime-radar/.superpowers/brainstorm/76065-1777010972/current-state-v2.html"}
-{"type":"screen-added","file":"/Users/kanuj/regime-radar/.superpowers/brainstorm/76065-1777010972/scenario-explorer.html"}
-{"type":"screen-added","file":"/Users/kanuj/regime-radar/.superpowers/brainstorm/76065-1777010972/scenario-rail.html"}
-{"type":"screen-added","file":"/Users/kanuj/regime-radar/.superpowers/brainstorm/76065-1777010972/scenario-final.html"}
-{"type":"server-stopped","reason":"idle timeout"}

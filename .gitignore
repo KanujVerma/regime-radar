@@ -2,17 +2,38 @@ __pycache__/
 *.pyc
 *.pyo
 .env
+.venv/
+venv/
+
+# Live SQLite state — ephemeral, never commit
+data/app.db
+data/app.db-shm
+data/app.db-wal
+
+# Raw data — always fetched fresh
 data/raw/*
 !data/raw/.gitkeep
-data/processed/*
-!data/processed/.gitkeep
-data/models/*
-!data/models/.gitkeep
+
+# Live-fetched parquets — ephemeral on Render, regenerated on boot
+data/processed/
+
+# data/models/ and data/snapshots/ are committed (see MODELS.md)
 data/fixtures/*
 !data/fixtures/.gitkeep
+
 .pytest_cache/
 .ruff_cache/
 *.egg-info/
 dist/
+
 .DS_Store
 .worktrees/
+
+# Dev tooling — not for public repo
+.claude-flow/
+.superpowers/
+frontend/.claude-flow/
+frontend/src/.claude-flow/
+frontend/playwright-report/
+frontend/test-results/
+frontend/playwright.config.ts
