@@ -259,6 +259,49 @@ def test_mode_is_live_when_provider_is_demo_mode(monkeypatch, tmp_path):
     assert result["mode"] == "live", f"Expected mode='live', got {result['mode']!r}"
 
 
+def test_load_from_snapshots_copies_parquets_and_sets_demo_mode(monkeypatch, tmp_path):
+    """_load_from_snapshots() must copy parquets to processed/ and force mode='demo'."""
+    import shutil
+    from src.api.state import AppState
+
+    snapshots_dir = tmp_path / "snapshots"
+    processed_dir = tmp_path / "processed"
+    snapshots_dir.mkdir()
+
+    # Create fake parquets in snapshots/
+    import pandas as pd
+    fake = pd.DataFrame({"x": [1]})
+    for name in ("spy.parquet", "vix.parquet", "emv.parquet", "panel.parquet"):
+        fake.to_parquet(snapshots_dir / name)
+
+    # Redirect SNAPSHOTS_DIR and PROCESSED_DIR to tmp locations
+    monkeypatch.setattr("src.utils.paths.SNAPSHOTS_DIR", snapshots_dir)
+    monkeypatch.setattr("src.utils.paths.PROCESSED_DIR", processed_dir)
+
+    # _do_refresh() must not actually run the pipeline — mock it to write a live state
+    def _fake_do_refresh(self):
+        self.write_state({
+            "as_of_ts": "2024-01-01T00:00:00+00:00",
+            "regime": "calm", "transition_risk": 0.1,
+            "trend": "uptrend", "vix_level": 15.0, "vix_chg_1d": 0.0,
+            "top_drivers": [], "mode": "live", "price_card_price": None,
+        })
+
+    monkeypatch.setattr(AppState, "_do_refresh", _fake_do_refresh)
+
+    state = AppState(db_path=tmp_path / "test.db")
+    state._load_from_snapshots()
+
+    # Parquets must be copied to processed/
+    for name in ("spy.parquet", "vix.parquet", "emv.parquet", "panel.parquet"):
+        assert (processed_dir / name).exists(), f"{name} not copied to processed/"
+
+    # mode must be forced to 'demo' even though _do_refresh wrote 'live'
+    result = state.read_latest_state()
+    assert result is not None
+    assert result["mode"] == "demo", f"Expected mode='demo', got {result['mode']!r}"
+
+
 def test_scenario_returns_503_without_artifacts(app_with_state, monkeypatch):
     app, _ = app_with_state
     import src.models.registry as reg

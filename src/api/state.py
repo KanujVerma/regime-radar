@@ -197,6 +197,22 @@ class AppState:
         _logger.info("State refreshed: regime=%s risk=%.3f mode=%s",
                      state["regime"], state["transition_risk"], state["mode"])
 
+    def _load_from_snapshots(self) -> None:
+        """Copy committed snapshots to processed/ and run inference, forcing mode='demo'."""
+        import shutil
+        from src.utils.paths import SNAPSHOTS_DIR, PROCESSED_DIR
+        PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+        for src_file in SNAPSHOTS_DIR.glob("*.parquet"):
+            shutil.copy2(src_file, PROCESSED_DIR / src_file.name)
+        _logger.info("Copied snapshots to processed dir, running inference from committed data")
+        self._do_refresh()
+        with self._connect() as conn:
+            conn.execute(
+                "UPDATE live_state SET mode='demo' WHERE id=(SELECT MAX(id) FROM live_state)"
+            )
+            conn.commit()
+        _logger.info("Snapshot fallback complete — mode forced to demo")
+
     def force_refresh(self) -> None:
         """Manually trigger a refresh (used by /refresh-data endpoint)."""
         self._do_refresh()
