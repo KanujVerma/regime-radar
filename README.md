@@ -50,7 +50,7 @@ Finnhub is optional and only affects the live price-card overlay on the Current 
 
 ## Why this architecture
 
-FastAPI keeps ML inference co-located with the Python data/model stack — no rewriting logic across language boundaries. Vercel gives zero-config static frontend hosting with a global CDN. Render hosts the FastAPI service on a free-tier Docker web service with automatic deploys on push to main. No external database — SQLite is used only as an ephemeral in-process cache for the latest inference result and resets on every cold boot, which is sufficient for a portfolio project.
+FastAPI keeps ML inference co-located with the Python data/model stack — no rewriting logic across language boundaries. Vercel gives zero-config static frontend hosting with a global CDN. Render hosts the FastAPI service as a Docker web service with automatic deploys on push to main. No external database — SQLite is an ephemeral in-process cache for the latest inference result; committed parquet artifacts in the repo guarantee reliable startup and a deterministic fallback on every cold boot.
 
 ---
 
@@ -94,7 +94,7 @@ VITE_API_URL  │  data/processed/ (ephemeral)   │
 - FastAPI + Uvicorn
 - XGBoost 2.x + scikit-learn (calibration, evaluation)
 - pandas, SHAP, APScheduler
-- SQLite (ephemeral live state)
+- SQLite (ephemeral inference cache)
 - yfinance, fredapi, requests
 
 ---
@@ -214,7 +214,7 @@ Walk the model forward through named historical stress events using committed sn
 - Daily granularity — no intraday signals
 - Regime labels are rule-based — they encode a specific definition of "stress" that may not match all use cases
 - The transition-risk model has modest PR-AUC (0.20) at 10% threshold — it is a signal, not a forecast
-- On Render free tier, state is ephemeral — it resets on every cold boot
+- Runtime state is ephemeral — the backend resets on every cold boot; committed parquet artifacts ensure a deterministic startup regardless
 
 ---
 
@@ -302,7 +302,7 @@ The `frontend/vercel.json` rewrite rule handles client-side routing.
 regime-radar/
 ├── src/
 │   ├── api/            FastAPI app, routes, state management
-│   ├── data/           Fetch functions (yfinance, VIX, FRED), panel merge
+│   ├── data/           Fetch functions (yfinance, FRED), panel merge
 │   ├── features/       Feature engineering (22 features)
 │   ├── labeling/       Regime and trend label builders
 │   ├── models/         Training, prediction, registry, evaluation
