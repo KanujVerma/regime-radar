@@ -1,0 +1,102 @@
+{
+  "name": "xgb_transition",
+  "saved_at": "2026-04-24T01:23:50.863088+00:00",
+  "task": "transition_risk",
+  "framing": "primary ML task \u2014 5-day regime transition-up risk",
+  "n_folds": 104,
+  "mean_roc_auc": 0.6584,
+  "mean_pr_auc": 0.204,
+  "brier_raw": 0.12543363361241922,
+  "brier_calibrated": 0.07886199354943779,
+  "ece_raw": 0.13645469786530803,
+  "ece_calibrated": 0.006118684006274583,
+  "feature_names": [
+    "ret_1d",
+    "ret_5d",
+    "ret_20d",
+    "momentum_20d",
+    "dist_sma50",
+    "rv_10d",
+    "rv_20d",
+    "rv_20d_pct",
+    "vix_level",
+    "vix_chg_1d",
+    "vix_chg_5d",
+    "vix_zscore_252d",
+    "vix_pct_504d",
+    "drawdown",
+    "drawdown_pct_504d",
+    "trend_code",
+    "emv_level",
+    "emv_chg_5d",
+    "emv_lag_5d",
+    "emv_lag_20d",
+    "days_in_regime_lag1",
+    "turbulent_count_30d_lag1"
+  ],
+  "threshold_sweep": [
+    {
+      "threshold": 0.1,
+      "recall": 0.5409,
+      "false_alert_rate": 0.3229,
+      "alert_frequency": 0.342,
+      "avg_lead_time_days": 33.5,
+      "n_events_detected": 461,
+      "n_events_total": 575
+    },
+    {
+      "threshold": 0.2,
+      "recall": 0.0922,
+      "false_alert_rate": 0.046,
+      "alert_frequency": 0.0501,
+      "avg_lead_time_days": 23.6,
+      "n_events_detected": 210,
+      "n_events_total": 575
+    },
+    {
+      "threshold": 0.3,
+      "recall": 0.007,
+      "false_alert_rate": 0.003,
+      "alert_frequency": 0.0034,
+      "avg_lead_time_days": 21.2,
+      "n_events_detected": 50,
+      "n_events_total": 575
+    },
+    {
+      "threshold": 0.4,
+      "recall": 0.0,
+      "false_alert_rate": 0.0,
+      "alert_frequency": 0.0,
+      "avg_lead_time_days": NaN,
+      "n_events_detected": 0,
+      "n_events_total": 575
+    },
+    {
+      "threshold": 0.5,
+      "recall": 0.0,
+      "false_alert_rate": 0.0,
+      "alert_frequency": 0.0,
+      "avg_lead_time_days": NaN,
+      "n_events_detected": 0,
+      "n_events_total": 575
+    },
+    {
+      "threshold": 0.6,
+      "recall": 0.0,
+      "false_alert_rate": 0.0,
+      "alert_frequency": 0.0,
+      "avg_lead_time_days": NaN,
+      "n_events_detected": 0,
+      "n_events_total": 575
+    },
+    {
+      "threshold": 0.7,
+      "recall": 0.0,
+      "false_alert_rate": 0.0,
+      "alert_frequency": 0.0,
+      "avg_lead_time_days": NaN,
+      "n_events_detected": 0,
+      "n_events_total": 575
+    }
+  ]
+}

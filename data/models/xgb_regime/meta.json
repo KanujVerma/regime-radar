@@ -1,0 +1,33 @@
+{
+  "name": "xgb_regime",
+  "saved_at": "2026-04-24T01:22:31.762609+00:00",
+  "task": "regime_classification",
+  "framing": "reference/feature-sufficiency \u2014 not the primary ML contribution",
+  "n_folds": 104,
+  "mean_macro_f1": 0.6385,
+  "mean_balanced_accuracy": 0.9262,
+  "feature_names": [
+    "ret_1d",
+    "ret_5d",
+    "ret_20d",
+    "momentum_20d",
+    "dist_sma50",
+    "rv_10d",
+    "rv_20d",
+    "rv_20d_pct",
+    "vix_level",
+    "vix_chg_1d",
+    "vix_chg_5d",
+    "vix_zscore_252d",
+    "vix_pct_504d",
+    "drawdown",
+    "drawdown_pct_504d",
+    "trend_code",
+    "emv_level",
+    "emv_chg_5d",
+    "emv_lag_5d",
+    "emv_lag_20d",
+    "days_in_regime_lag1",
+    "turbulent_count_30d_lag1"
+  ]
+}
