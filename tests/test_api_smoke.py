@@ -188,6 +188,77 @@ def test_model_drivers_threshold_sweep_field_present(app_with_state):
     assert isinstance(data["threshold_sweep"], list)
 
 
+def _make_fake_refresh_mocks(monkeypatch, tmp_path):
+    """Helper: monkeypatch all _do_refresh() deferred imports for mode-logic tests."""
+    import numpy as np
+    import pandas as pd
+
+    FEATURES = ["vix_level", "vix_chg_5d", "rv_20d_pct",
+                "drawdown_pct_504d", "ret_20d", "dist_sma50"]
+    idx = pd.to_datetime(["2024-01-01"])
+    fake_panel = pd.DataFrame({"close": [450.0], "vixcls": [18.0],
+                               "emvoverallemv": [100.0], "vix_chg_1d": [0.5]}, index=idx)
+    fake_features = pd.DataFrame({f: [1.0] for f in FEATURES}, index=idx)
+    fake_regime = pd.Series(["calm"], index=idx)
+    fake_trend = pd.Series(["uptrend"], index=idx)
+
+    monkeypatch.setattr("src.data.fetch_yfinance.fetch_spy_history",
+                        lambda **kw: fake_panel)
+    monkeypatch.setattr("src.data.fetch_vix.fetch_vix_history",
+                        lambda **kw: fake_panel)
+    monkeypatch.setattr("src.data.fetch_fred.fetch_emv",
+                        lambda **kw: fake_panel)
+    monkeypatch.setattr("src.data.merge_sources.merge_market_panel",
+                        lambda *a, **kw: fake_panel)
+    monkeypatch.setattr("src.features.build_market_features.build_features",
+                        lambda *a, **kw: fake_features)
+    monkeypatch.setattr("src.labeling.build_regime_labels.build_regime_labels",
+                        lambda *a, **kw: fake_regime)
+    monkeypatch.setattr("src.labeling.build_trend_labels.build_trend_labels",
+                        lambda *a, **kw: fake_trend)
+    monkeypatch.setattr("src.models.predict_live.predict_current_state",
+                        lambda *a, **kw: {"regime": "calm", "transition_risk": 0.1})
+    monkeypatch.setenv("PROCESSED_DIR", str(tmp_path))
+
+
+def test_mode_is_live_when_finnhub_raises(monkeypatch, tmp_path):
+    """mode should be 'live' when yfinance+FRED succeed, even if Finnhub raises."""
+    from src.api.state import AppState
+
+    _make_fake_refresh_mocks(monkeypatch, tmp_path)
+
+    class FakeProvider:
+        mode = "live"
+        def latest_quote(self, symbol):
+            raise RuntimeError("Finnhub unavailable")
+
+    monkeypatch.setattr("src.data.providers.factory.get_provider",
+                        lambda: FakeProvider())
+
+    state = AppState(db_path=tmp_path / "test.db")
+    state._do_refresh()
+    result = state.read_latest_state()
+    assert result["mode"] == "live", f"Expected mode='live', got {result['mode']!r}"
+
+
+def test_mode_is_live_when_provider_is_demo_mode(monkeypatch, tmp_path):
+    """mode should be 'live' when yfinance+FRED succeed even if provider.mode='demo'."""
+    from src.api.state import AppState
+
+    _make_fake_refresh_mocks(monkeypatch, tmp_path)
+
+    class FakeProvider:
+        mode = "demo"
+
+    monkeypatch.setattr("src.data.providers.factory.get_provider",
+                        lambda: FakeProvider())
+
+    state = AppState(db_path=tmp_path / "test.db")
+    state._do_refresh()
+    result = state.read_latest_state()
+    assert result["mode"] == "live", f"Expected mode='live', got {result['mode']!r}"
+
+
 def test_scenario_returns_503_without_artifacts(app_with_state, monkeypatch):
     app, _ = app_with_state
     import src.models.registry as reg

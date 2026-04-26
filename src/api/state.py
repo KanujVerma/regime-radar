@@ -171,15 +171,14 @@ class AppState:
         latest_features = features.iloc[-1]
         trend_latest = trend.iloc[-1] if trend is not None else "neutral"
 
-        # Optional: Finnhub price-card overlay
+        # yfinance+FRED data is always live; Finnhub is optional price-card enrichment only
+        mode = "live"
         price_card_price = None
-        mode = "demo"
         try:
             provider = get_provider()
             if provider.mode == "live":
                 q = provider.latest_quote("SPY")
                 price_card_price = q.price
-                mode = "live"
         except Exception as e:
             _logger.warning("Finnhub price-card fetch failed: %s", e)
 
