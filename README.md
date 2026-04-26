@@ -48,6 +48,25 @@ Finnhub is optional and only affects the live price-card overlay on the Current 
 
 ---
 
+## Screenshots
+
+![Current State](docs/screenshots/current-state.png)
+*Current State — live regime, transition risk gauge, VIX level, and top SHAP risk drivers.*
+
+![History](docs/screenshots/history.png)
+*History — full regime timeline with color-coded market-state bands and daily transition risk signal.*
+
+![Event Replay](docs/screenshots/event-replay.png)
+*Event Replay — COVID-19 2020: warning lead time, peak transition risk, and alert-day count.*
+
+![Scenario Explorer](docs/screenshots/scenario-explorer.png)
+*Scenario Explorer — Stress Spike preset shifts transition risk from 1% → 75%, with feature-level attribution.*
+
+![Model Drivers](docs/screenshots/model-drivers.png)
+*Model Drivers — global feature importance and today's SHAP-based local risk explanation.*
+
+---
+
 ## Why this architecture
 
 FastAPI keeps ML inference co-located with the Python data/model stack — no rewriting logic across language boundaries. Vercel gives zero-config static frontend hosting with a global CDN. Render hosts the FastAPI service as a Docker web service with automatic deploys on push to main. No external database — SQLite is an ephemeral in-process cache for the latest inference result; committed parquet artifacts in the repo guarantee reliable startup and a deterministic fallback on every cold boot.
