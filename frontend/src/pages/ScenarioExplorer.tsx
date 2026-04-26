@@ -224,7 +224,7 @@ function buildNarrative(
 
   const changed = Object.keys(inputs).filter(k => {
     const cfg = SLIDER_CONFIG.find(s => s.key === k)
-    return cfg && Math.abs((inputs as Record<string, number>)[k] - DEFAULT_INPUTS[k as keyof ScenarioInputs]) > cfg.step * 2
+    return cfg && Math.abs((inputs as Record<string, number>)[k] - (DEFAULT_INPUTS[k as keyof ScenarioInputs] ?? 0)) > cfg.step * 2
   })
 
   const changedLabel = changed.length > 0
