@@ -26,7 +26,8 @@ def merge_market_panel(
     """
     def _strip_tz(idx):
         idx = pd.to_datetime(idx)
-        return idx.tz_convert(None) if idx.tz is not None else idx
+        # Use .date to strip tz without time-of-day shift (tz_convert shifts midnight ET → 05:00 UTC)
+        return pd.DatetimeIndex(idx.date) if idx.tz is not None else idx
 
     spy = spy_df.copy()
     spy.index = _strip_tz(spy.index)
