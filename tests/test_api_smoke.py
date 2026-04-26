@@ -302,6 +302,48 @@ def test_load_from_snapshots_copies_parquets_and_sets_demo_mode(monkeypatch, tmp
     assert result["mode"] == "demo", f"Expected mode='demo', got {result['mode']!r}"
 
 
+def test_startup_warmup_calls_do_refresh(monkeypatch, tmp_path):
+    """create_app() startup must call _do_refresh() to warm up state."""
+    calls = []
+
+    from src.api.state import AppState
+    from src.api.main import create_app
+
+    def _fake_do_refresh(self):
+        calls.append("do_refresh")
+
+    monkeypatch.setattr(AppState, "_do_refresh", _fake_do_refresh)
+
+    state = AppState(db_path=tmp_path / "test.db")
+    app = create_app(app_state=state, start_scheduler=False)
+    with TestClient(app) as client:
+        client.get("/health")
+    assert "do_refresh" in calls, "startup warmup did not call _do_refresh()"
+
+
+def test_startup_warmup_falls_back_to_snapshots_on_refresh_failure(monkeypatch, tmp_path):
+    """If _do_refresh() raises on startup, _load_from_snapshots() must be called."""
+    from src.api.state import AppState
+    from src.api.main import create_app
+
+    calls = []
+
+    def _failing_refresh(self):
+        raise RuntimeError("network unavailable")
+
+    def _fake_load_snapshots(self):
+        calls.append("load_snapshots")
+
+    monkeypatch.setattr(AppState, "_do_refresh", _failing_refresh)
+    monkeypatch.setattr(AppState, "_load_from_snapshots", _fake_load_snapshots)
+
+    state = AppState(db_path=tmp_path / "test.db")
+    app = create_app(app_state=state, start_scheduler=False)
+    with TestClient(app) as client:
+        client.get("/health")
+    assert "load_snapshots" in calls, "startup did not fall back to _load_from_snapshots()"
+
+
 def test_scenario_returns_503_without_artifacts(app_with_state, monkeypatch):
     app, _ = app_with_state
     import src.models.registry as reg

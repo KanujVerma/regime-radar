@@ -44,6 +44,15 @@ def create_app(app_state: AppState | None = None, start_scheduler: bool = True) 
     @app.on_event("startup")
     async def startup():
         _logger.info("RegimeRadar API starting up")
+        try:
+            app_state._do_refresh()
+            _logger.info("Startup warmup complete — live data seeded")
+        except Exception as exc:
+            _logger.warning("Live refresh failed on startup (%s), loading committed snapshots", exc)
+            try:
+                app_state._load_from_snapshots()
+            except Exception as snap_exc:
+                _logger.error("Snapshot fallback also failed: %s", snap_exc)
         if start_scheduler:
             app_state.start_scheduler()
 
