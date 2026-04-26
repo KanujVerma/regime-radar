@@ -2,6 +2,8 @@
 
 **Live market-state monitor powered by XGBoost — classify today's equity market as Calm, Elevated, or Turbulent and quantify the weekly transition risk.**
 
+**[→ Live Demo](https://regime-radar.vercel.app/)** — React/TypeScript frontend on Vercel + FastAPI/XGBoost backend on Render. The backend runs on Render's free tier and may cold-start (15–30s) after ~15 minutes of inactivity; on cold start it falls back to committed snapshots and shows a **DEMO** badge until the live refresh completes.
+
 ---
 
 ## What is RegimeRadar?
@@ -21,13 +23,16 @@ Most public market-state dashboards are either overfitted lookback tools or blac
 
 ---
 
-## Demo notes
+## Live vs. demo mode
 
-- **Frontend (Vercel)** — globally cached, always available
-- **Backend (Render free tier)** — may experience a **15–30 second cold start** after ~15 minutes of inactivity
-- On cold start, the backend attempts a **live refresh** from yfinance + FRED; if successful, the dashboard shows current market conditions with a **LIVE** badge
-- If live refresh fails or APIs are unavailable, the backend falls back to committed model artifacts and data snapshots; the dashboard shows the last committed snapshot with a **DEMO** badge and the data's as-of date
-- Finnhub is optional and only affects the live price-card overlay on the Current State page — all regime/risk logic works without it
+| Mode | Trigger | Badge |
+|---|---|---|
+| **Live** | yfinance + FRED refresh succeeded on startup | Green **LIVE** badge |
+| **Demo** | Live refresh timed out; fell back to committed snapshots | Amber **DEMO** badge + as-of date shown |
+
+The backend always attempts a live yfinance + FRED refresh on startup. On Render's free tier this can time out on the first cold boot — in that case the backend serves committed snapshot data and flips to live a few minutes later when the scheduler completes its first background refresh.
+
+Finnhub is optional and only affects the live price-card overlay on the Current State page. All regime classification and transition-risk logic runs without it.
 
 ---
 
@@ -45,7 +50,7 @@ Most public market-state dashboards are either overfitted lookback tools or blac
 
 ## Why this architecture
 
-FastAPI keeps ML inference co-located with the Python data/model stack — no rewriting logic across language boundaries. Vercel gives zero-config static frontend hosting with a global CDN. Render hosts the FastAPI service on a free-tier Docker web service with automatic deploys on push to main. No external database — SQLite re-seeds from committed artifacts on every cold boot, which is sufficient for a portfolio project.
+FastAPI keeps ML inference co-located with the Python data/model stack — no rewriting logic across language boundaries. Vercel gives zero-config static frontend hosting with a global CDN. Render hosts the FastAPI service on a free-tier Docker web service with automatic deploys on push to main. No external database — SQLite is used only as an ephemeral in-process cache for the latest inference result and resets on every cold boot, which is sufficient for a portfolio project.
 
 ---
 
@@ -66,10 +71,10 @@ FastAPI keeps ML inference co-located with the Python data/model stack — no re
 │  CDN     │  │  data/models/ (committed)       │
 └──────────┘  │  data/snapshots/ (committed)   │
 VITE_API_URL  │  data/processed/ (ephemeral)   │
-→ Render URL  │  SQLite: ephemeral, re-seeds    │
+→ Render URL  │  SQLite: ephemeral inference cache│
               └────────────────────────────────┘
                           │
-              FRED_API_KEY → live reseed on boot
+              FRED_API_KEY → live refresh on boot
               Fallback: data/snapshots/ → data/processed/
 ```
 
@@ -223,7 +228,6 @@ Walk the model forward through named historical stress events using committed sn
 cp .env.example .env
 # Fill in FRED_API_KEY (required for live refresh)
 # FINNHUB_API_KEY is optional (price-card overlay only)
-# CORS_ORIGIN is only needed in production
 
 cd frontend
 cp .env.example .env
@@ -285,7 +289,6 @@ The `frontend/vercel.json` rewrite rule handles client-side routing.
 | Variable | Required | Value |
 |---|---|---|
 | `FRED_API_KEY` | **Yes** | From [api.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html) |
-| `CORS_ORIGIN` | **Yes** | Your Vercel URL, e.g. `https://regime-radar.vercel.app` |
 | `APP_ENV` | No | `production` |
 | `FINNHUB_API_KEY` | No | Optional price-card overlay |
 
