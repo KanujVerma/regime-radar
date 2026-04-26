@@ -1,3 +1,9 @@
+export interface HealthResponse {
+  status: string
+  mode: string
+  as_of_ts?: string | null
+}
+
 export interface DriverItem {
   feature: string
   importance: number

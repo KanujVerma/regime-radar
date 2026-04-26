@@ -1,6 +1,7 @@
 import { NavLink } from 'react-router-dom'
 import { Activity, Clock, Archive, BarChart2, Sliders } from 'lucide-react'
 import HelpDrawer from '../ui/HelpDrawer'
+import { useHealthStatus } from '../../hooks/useHealthStatus'
 
 const NAV = [
   {
@@ -21,6 +22,10 @@ const NAV = [
 ]
 
 export default function Sidebar() {
+  const health = useHealthStatus()
+  const isLive = health?.mode === 'live'
+  const isDemo = health?.mode === 'demo'
+
   return (
     <aside
       className="fixed top-0 left-0 h-full flex flex-col"
@@ -67,8 +72,24 @@ export default function Sidebar() {
 
       <div className="px-5 py-4 border-t border-slate-800 space-y-3">
         <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
-          <span className="text-[9px] font-bold tracking-widest uppercase text-slate-500">Near-live data</span>
+          {isLive && (
+            <>
+              <div className="w-1.5 h-1.5 rounded-full bg-green-400" />
+              <span className="text-[9px] font-bold tracking-widest uppercase text-green-500">Live</span>
+            </>
+          )}
+          {isDemo && (
+            <>
+              <div className="w-1.5 h-1.5 rounded-full bg-amber-400" />
+              <span className="text-[9px] font-bold tracking-widest uppercase text-amber-500">Demo</span>
+            </>
+          )}
+          {!isLive && !isDemo && (
+            <>
+              <div className="w-1.5 h-1.5 rounded-full bg-slate-600" />
+              <span className="text-[9px] font-bold tracking-widest uppercase text-slate-500">Connecting…</span>
+            </>
+          )}
         </div>
         <HelpDrawer />
       </div>

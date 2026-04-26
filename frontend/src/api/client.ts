@@ -1,5 +1,6 @@
 import type {
   CurrentStateResponse,
+  HealthResponse,
   HistoricalStateResponse,
   EventReplayResponse,
   ModelDriversResponse,
@@ -26,6 +27,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const api = {
+  health: () => get<HealthResponse>('/health'),
   currentState: () => get<CurrentStateResponse>('/current-state'),
   historicalState: (start = '2020-01-01') =>
     get<HistoricalStateResponse>(`/historical-state?start=${start}`),

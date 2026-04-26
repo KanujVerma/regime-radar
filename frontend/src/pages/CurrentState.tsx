@@ -69,6 +69,15 @@ export default function CurrentState() {
         action={refreshAction}
       />
 
+      {data.mode === 'demo' && (
+        <div
+          className="mx-5 mt-3 px-4 py-2.5 rounded text-[11px] leading-relaxed"
+          style={{ background: '#2d1f0a', border: '1px solid #92400e', color: '#fbbf24' }}
+        >
+          <strong>Demo mode</strong> — Using cached snapshot data (as of {data.as_of_ts ? new Date(data.as_of_ts).toLocaleDateString() : 'unknown'}). Live refresh unavailable.
+        </div>
+      )}
+
       <div className="p-5 space-y-5">
         <div className="grid grid-cols-4 gap-3">
           {heroCards.map((card, i) => (
