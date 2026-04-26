@@ -133,9 +133,21 @@ Total committed artifact size: ~4MB. Acceptable for a portfolio project.
 
 ### Critical: `mode` logic fix
 
-Currently in `_do_refresh()` (state.py line 176–182), `mode` is set to `"live"` only when the Finnhub price-card fetch succeeds — meaning a successful yfinance+FRED refresh with no `FINNHUB_API_KEY` still produces `mode = "demo"`. This is wrong: `mode` should reflect whether the regime data is live (from yfinance+FRED), not whether an optional price overlay is available.
+Currently in `_do_refresh()` (state.py line 176–182), `mode` is set to `"live"` only when the Finnhub price-card fetch succeeds — meaning a successful yfinance+FRED refresh with no `FINNHUB_API_KEY` still produces `mode = "demo"`. This is wrong.
 
-**Fix:** Set `mode = "live"` when yfinance+FRED refresh succeeds. Finnhub availability is a separate concern (it only affects the price card, not the mode badge).
+**Fix:** `mode` is set at the top of `_do_refresh()` to `"live"` unconditionally — the data always comes from yfinance+FRED, which is what makes it live. Finnhub is optional price-card enrichment only and has no bearing on the mode badge.
+
+```python
+# In _do_refresh(), replace the mode block:
+mode = "live"   # yfinance+FRED data is always live; Finnhub is optional enrichment only
+try:
+    provider = get_provider()
+    if provider.mode == "live":
+        q = provider.latest_quote("SPY")
+        price_card_price = q.price
+except Exception as e:
+    _logger.warning("Finnhub price-card fetch failed: %s", e)
+```
 
 ### Critical: startup warmup — try/except and market-hours bypass
 
@@ -165,9 +177,26 @@ The APScheduler background job continues as-is, refreshing during market hours. 
 Add to `src/api/state.py`:
 1. Copy all parquets from `data/snapshots/` to `data/processed/` (shutil.copy2 for each `.parquet`)
 2. Call `_do_refresh()` — the fetchers are cache-first and will immediately read the just-copied parquets from `data/processed/`, so no pipeline duplication is needed
-3. The state written by `_do_refresh()` will have `mode = "demo"` because Finnhub is not configured; the mode logic fix (see above) ensures this is correct
+3. After `_do_refresh()` writes state, **explicitly overwrite `mode` to `"demo"`** in the most recent SQLite row — because `_do_refresh()` will now set `mode = "live"` unconditionally, which is wrong for the snapshot path
 
-This method is called only when the startup live refresh fails.
+```python
+def _load_from_snapshots(self) -> None:
+    import shutil
+    SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+    PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
+    for src in SNAPSHOTS_DIR.glob("*.parquet"):
+        shutil.copy2(src, PROCESSED_DIR / src.name)
+    _logger.info("Copied snapshots to processed dir, running inference from committed data")
+    self._do_refresh()
+    # Force mode = "demo": data came from committed snapshots, not live APIs
+    with self._connect() as conn:
+        conn.execute(
+            "UPDATE live_state SET mode='demo' WHERE id=(SELECT MAX(id) FROM live_state)"
+        )
+    _logger.info("Snapshot fallback complete — mode forced to demo")
+```
+
+This method is called only when the startup live refresh fails. It does not duplicate the inference pipeline.
 
 The `data/snapshots/` path should be added as `SNAPSHOTS_DIR` constant in `src/utils/paths.py` alongside the existing `PROCESSED_DIR` and `MODELS_DIR`.
 
@@ -235,8 +264,11 @@ COPY . .
 
 EXPOSE 8000
 
+# Python-based healthcheck: python:3.11-slim does not include curl.
+# Uses stdlib urllib — no extra deps. Hardcodes port 8000 for local compose use;
+# Render uses healthCheckPath from render.yaml instead of this HEALTHCHECK.
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
-    CMD curl -f http://localhost:${PORT:-8000}/health || exit 1
+    CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')" || exit 1
 
 CMD ["sh", "-c", "uvicorn src.api.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
 ```
