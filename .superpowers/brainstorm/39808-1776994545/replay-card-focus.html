@@ -1,0 +1,43 @@
+<h2>Event Replay — Summary Card Priority</h2>
+<p class="subtitle">Each crisis window gets a summary card at the top. What's the hero metric?</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Warning Lead Time</h3>
+      <p>Make the lead-time callout the biggest number on the card. "33 days early" displayed large, with recall, false alerts, and max risk shown small beneath it.</p>
+      <p style="color:#9E9E9E;font-size:0.82rem;margin-top:8px;">Shows the model's forward-looking value first. Most compelling for a portfolio piece.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Max Transition Risk</h3>
+      <p>Peak risk reached during the window is the hero stat. Lead time, regime coverage, and alert count shown below. Useful even when there was no early warning.</p>
+      <p style="color:#9E9E9E;font-size:0.82rem;margin-top:8px;">Always available — doesn't require an early-warning signal. Works for all 3 windows.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Two hero stats side by side</h3>
+      <p>Lead time + max risk shown equally large. Additional stats (alert days, regime breakdown) in a second row beneath them.</p>
+      <p style="color:#9E9E9E;font-size:0.82rem;margin-top:8px;">More information-dense. Slightly busier but gives a fuller picture at a glance.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:24px;background:#1a1a2e;border:1px solid #2a2a4a;border-radius:8px;padding:16px;">
+  <h3 style="margin-top:0;">Supporting stats shown on all cards</h3>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:0.83rem;color:#aaa;margin-top:8px;">
+    <div>📊 Max transition risk during window</div>
+    <div>⏱ First threshold crossing date</div>
+    <div>🔔 Alert days (risk &gt; 0.10)</div>
+    <div>🎯 Regime match rate (actual vs predicted)</div>
+    <div>📅 Days in elevated + turbulent regimes</div>
+    <div>⚡ Warning lead time (if detected)</div>
+  </div>
+</div>

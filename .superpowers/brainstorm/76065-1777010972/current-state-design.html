@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RegimeRadar — Current State Page Design</title>
+<script src="/helper.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #080b12; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; padding: 24px; }
+
+  h2 { color: #f8fafc; font-size: 18px; font-weight: 600; margin-bottom: 6px; }
+  .subtitle { color: #64748b; font-size: 13px; margin-bottom: 28px; }
+
+  /* ── SHELL ── */
+  .shell {
+    display: flex;
+    height: 680px;
+    border-radius: 12px;
+    overflow: hidden;
+    border: 1px solid #1a2236;
+    font-size: 11px;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 200px;
+    background: #0a0d16;
+    border-right: 1px solid #151d2e;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .sidebar-logo {
+    padding: 18px 16px 14px;
+    border-bottom: 1px solid #151d2e;
+  }
+  .logo-mark { display: flex; align-items: center; gap: 8px; }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: #06b6d4; box-shadow: 0 0 10px #06b6d460; flex-shrink: 0; }
+  .logo-text { color: #f1f5f9; font-size: 13px; font-weight: 700; letter-spacing: -0.02em; }
+  .logo-sub { color: #2d4060; font-size: 9px; letter-spacing: 0.12em; text-transform: uppercase; margin-top: 2px; }
+
+  .nav-group { padding: 14px 10px 6px; }
+  .nav-group-label { font-size: 9px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #243048; padding: 0 6px; margin-bottom: 5px; }
+  .nav-item {
+    display: flex; align-items: center; gap: 9px;
+    padding: 7px 8px; border-radius: 7px; cursor: pointer;
+    color: #475569; font-size: 11px; font-weight: 500;
+    margin-bottom: 1px;
+    transition: all 0.15s;
+    position: relative;
+  }
+  .nav-item:hover { background: #111827; color: #7c8fa3; }
+  .nav-item.active {
+    background: linear-gradient(90deg, #061d2e 0%, #071520 100%);
+    color: #06b6d4;
+    font-weight: 600;
+  }
+  .nav-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 4px; bottom: 4px;
+    width: 2.5px; border-radius: 2px;
+    background: #06b6d4;
+    box-shadow: 0 0 6px #06b6d4;
+  }
+  .nav-icon-box { width: 16px; height: 16px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .nav-badge {
+    margin-left: auto; font-size: 8px; padding: 1px 6px; border-radius: 10px;
+    background: #061d2e; color: #06b6d4; font-weight: 700; letter-spacing: 0.04em;
+    border: 1px solid #0e3d55;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding: 12px 14px;
+    border-top: 1px solid #151d2e;
+  }
+  .mode-row { display: flex; align-items: center; gap: 6px; margin-bottom: 5px; }
+  .mode-dot { width: 6px; height: 6px; border-radius: 50%; background: #22c55e; box-shadow: 0 0 6px #22c55e80; }
+  .mode-text { font-size: 10px; color: #4ade80; font-weight: 700; letter-spacing: 0.04em; }
+  .refresh-row { font-size: 9px; color: #2d4060; }
+  .refresh-row span { color: #334155; }
+
+  /* ── MAIN ── */
+  .main {
+    flex: 1;
+    background: #080b12;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .topbar {
+    padding: 14px 20px;
+    border-bottom: 1px solid #131b2a;
+    display: flex; align-items: flex-end; justify-content: space-between;
+    background: #0a0d16;
+  }
+  .page-title { font-size: 16px; font-weight: 700; color: #f1f5f9; letter-spacing: -0.01em; }
+  .page-sub { font-size: 10px; color: #334155; margin-top: 2px; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+  .refresh-btn {
+    padding: 5px 12px; border-radius: 6px;
+    background: #061d2e; color: #06b6d4;
+    font-size: 10px; font-weight: 600;
+    border: 1px solid #0e3d55;
+    cursor: pointer;
+  }
+
+  .content {
+    flex: 1;
+    padding: 18px 20px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* ── HERO ROW ── */
+  .hero-row { display: flex; gap: 10px; }
+  .hero-card {
+    flex: 1;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #0c1020;
+    border: 1px solid #151d2e;
+    position: relative;
+    overflow: hidden;
+  }
+  .hero-card::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 10px;
+    opacity: 0;
+  }
+  .hero-card.calm { border-color: #14532d40; }
+  .hero-card.warn { border-color: #92400e40; }
+  .hero-label { font-size: 9px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #334155; margin-bottom: 5px; }
+  .hero-val { font-size: 20px; font-weight: 800; letter-spacing: -0.02em; }
+  .hero-val.calm { color: #4ade80; }
+  .hero-val.warn { color: #fbbf24; }
+  .hero-val.neutral { color: #94a3b8; }
+  .hero-sub { font-size: 9px; color: #334155; margin-top: 3px; }
+  .hero-delta {
+    position: absolute; top: 10px; right: 10px;
+    font-size: 9px; padding: 2px 6px; border-radius: 4px;
+    background: #0e3d2020; color: #4ade8090;
+  }
+
+  /* ── REGIME PILL ── */
+  .regime-pill {
+    display: inline-flex; align-items: center; gap: 5px;
+    font-size: 18px; font-weight: 800; color: #4ade80;
+    letter-spacing: -0.02em;
+  }
+  .regime-dot { width: 8px; height: 8px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 8px #4ade80; }
+
+  /* ── BODY GRID ── */
+  .body-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    flex: 1;
+  }
+  .panel {
+    padding: 14px;
+    border-radius: 10px;
+    background: #0c1020;
+    border: 1px solid #151d2e;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .panel-title {
+    font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
+    text-transform: uppercase; color: #334155;
+    padding-bottom: 8px; border-bottom: 1px solid #131b2a;
+  }
+
+  /* summary card */
+  .summary-text {
+    font-size: 12px; line-height: 1.6; color: #94a3b8;
+  }
+  .summary-text strong { color: #f1f5f9; }
+  .summary-text em { color: #fbbf24; font-style: normal; }
+
+  .prob-chips { display: flex; gap: 6px; margin-top: 4px; }
+  .prob-chip {
+    flex: 1; padding: 6px 8px; border-radius: 7px; text-align: center;
+    border: 1px solid #1e293b;
+  }
+  .prob-chip-label { font-size: 8px; text-transform: uppercase; letter-spacing: 0.08em; color: #475569; }
+  .prob-chip-val { font-size: 14px; font-weight: 700; margin-top: 2px; }
+  .prob-chip.calm { border-color: #14532d40; background: #052e1620; }
+  .prob-chip.calm .prob-chip-val { color: #4ade80; }
+  .prob-chip.elevated { border-color: #92400e40; background: #451a0320; }
+  .prob-chip.elevated .prob-chip-val { color: #fbbf24; }
+  .prob-chip.turbulent { border-color: #7f1d1d40; background: #450a0a20; }
+  .prob-chip.turbulent .prob-chip-val { color: #f87171; }
+
+  /* gauge placeholder */
+  .gauge-box {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #080b12;
+    border-radius: 8px;
+    border: 1px solid #131b2a;
+    padding: 12px;
+  }
+  .gauge-arc {
+    width: 90px; height: 45px;
+    border: 8px solid;
+    border-color: #fbbf24 #fbbf24 transparent transparent;
+    border-radius: 90px 90px 0 0;
+    position: relative;
+    margin-bottom: 6px;
+  }
+  .gauge-val { font-size: 18px; font-weight: 800; color: #fbbf24; }
+  .gauge-label { font-size: 9px; color: #475569; text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+
+  /* drivers */
+  .driver-bar-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .driver-name { width: 120px; flex-shrink: 0; color: #7c8fa3; font-size: 10px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .driver-track { flex: 1; height: 6px; background: #131b2a; border-radius: 3px; overflow: hidden; }
+  .driver-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, #0e4d6e, #06b6d4); }
+  .driver-fill.down { background: linear-gradient(90deg, #7f1d1d, #f87171); }
+  .driver-val { font-size: 9px; color: #475569; width: 28px; text-align: right; flex-shrink: 0; }
+
+  /* why changed */
+  .delta-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-bottom: 1px solid #131b2a; }
+  .delta-row:last-child { border-bottom: none; }
+  .delta-icon { font-size: 12px; width: 18px; text-align: center; flex-shrink: 0; }
+  .delta-text { flex: 1; font-size: 10px; color: #7c8fa3; line-height: 1.4; }
+  .delta-badge {
+    font-size: 9px; padding: 2px 7px; border-radius: 4px; font-weight: 600;
+    white-space: nowrap;
+  }
+  .delta-badge.up { background: #450a0a30; color: #f87171; }
+  .delta-badge.down { background: #052e1630; color: #4ade80; }
+</style>
+</head>
+<body>
+
+<h2>Design Section 2 — Current State Page</h2>
+<p class="subtitle">Executive summary layout with hero metrics, narrative, regime probs, risk gauge, drivers, and delta panel</p>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-dot"></div>
+        <div>
+          <div class="logo-text">RegimeRadar</div>
+          <div class="logo-sub">Market Monitor</div>
+        </div>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Monitor</div>
+      <div class="nav-item active">
+        <div class="nav-icon-box"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#06b6d4" stroke-width="1.5"/><circle cx="7" cy="7" r="1.5" fill="#06b6d4"/></svg></div>
+        Current State
+        <span class="nav-badge">LIVE</span>
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon-box"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,11 4,6 7,8 10,3 13,5" stroke="#475569" stroke-width="1.5" fill="none"/></svg></div>
+        History
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon-box"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#475569" stroke-width="1.5"/><polyline points="7,4.5 7,7 8.8,8.8" stroke="#475569" stroke-width="1.5"/></svg></div>
+        Event Replay
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Explore</div>
+      <div class="nav-item">
+        <div class="nav-icon-box"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="7" width="3" height="6" fill="#475569" rx="1"/><rect x="5.5" y="4.5" width="3" height="8.5" fill="#475569" rx="1"/><rect x="10" y="2" width="3" height="11" fill="#475569" rx="1"/></svg></div>
+        Model Drivers
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon-box"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5l1.3 3.5H12L9.2 7.1l1 3.4L7 8.7l-3.2 1.8 1-3.4L2 5h3.7z" stroke="#475569" stroke-width="1.2" fill="none"/></svg></div>
+        Scenario Explorer
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="mode-row">
+        <div class="mode-dot"></div>
+        <div class="mode-text">NEAR-LIVE DATA</div>
+      </div>
+      <div class="refresh-row">Last refresh: <span>4 min ago</span></div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Current State</div>
+        <div class="page-sub">Apr 24, 2026 · 09:30 EST</div>
+      </div>
+      <div class="topbar-right">
+        <div class="refresh-btn">↻ Refresh Data</div>
+      </div>
+    </div>
+
+    <div class="content">
+
+      <!-- HERO ROW -->
+      <div class="hero-row">
+        <div class="hero-card calm">
+          <div class="hero-label">Market Regime</div>
+          <div class="regime-pill"><div class="regime-dot"></div> Calm</div>
+          <div class="hero-sub">Stable conditions</div>
+          <div class="hero-delta" style="color:#4ade8060;">↔ unchanged</div>
+        </div>
+        <div class="hero-card warn">
+          <div class="hero-label">Transition Risk</div>
+          <div class="hero-val warn">24%</div>
+          <div class="hero-sub">Chance conditions worsen soon</div>
+          <div class="hero-delta" style="color:#fbbf2480;">↑ +3%</div>
+        </div>
+        <div class="hero-card">
+          <div class="hero-label">VIX Level</div>
+          <div class="hero-val neutral">18.4</div>
+          <div class="hero-sub">Market fear gauge</div>
+          <div class="hero-delta" style="color:#94a3b850;">↑ +0.6 today</div>
+        </div>
+        <div class="hero-card calm">
+          <div class="hero-label">Trend</div>
+          <div class="hero-val calm">↑ Up</div>
+          <div class="hero-sub">20-day direction</div>
+        </div>
+      </div>
+
+      <!-- BODY GRID -->
+      <div class="body-grid">
+
+        <!-- Left col: Summary + Prob chips + Why changed -->
+        <div style="display:flex;flex-direction:column;gap:10px;">
+
+          <!-- Summary narrative -->
+          <div class="panel">
+            <div class="panel-title">What this means</div>
+            <div class="summary-text">
+              SPY is in a <strong>Calm regime</strong> with <em>moderate</em> transition risk (24%). The trend is positive. VIX is at 18.4 and <strong>rising slightly</strong> — worth watching but not alarming.
+            </div>
+            <div class="prob-chips">
+              <div class="prob-chip calm"><div class="prob-chip-label">Calm</div><div class="prob-chip-val">68%</div></div>
+              <div class="prob-chip elevated"><div class="prob-chip-label">Elevated</div><div class="prob-chip-val">24%</div></div>
+              <div class="prob-chip turbulent"><div class="prob-chip-label">Turbulent</div><div class="prob-chip-val">8%</div></div>
+            </div>
+          </div>
+
+          <!-- Why it changed -->
+          <div class="panel" style="flex:1;">
+            <div class="panel-title">Why it changed</div>
+            <div class="delta-row">
+              <div class="delta-icon">📈</div>
+              <div class="delta-text">VIX rose slightly since last refresh</div>
+              <div class="delta-badge up">Risk ↑</div>
+            </div>
+            <div class="delta-row">
+              <div class="delta-icon">📉</div>
+              <div class="delta-text">Realized volatility percentile eased</div>
+              <div class="delta-badge down">Risk ↓</div>
+            </div>
+            <div class="delta-row">
+              <div class="delta-icon">↔️</div>
+              <div class="delta-text">Regime unchanged: Calm → Calm</div>
+              <div class="delta-badge" style="background:#1e293b20;color:#475569;">No change</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right col: Gauge + Drivers -->
+        <div style="display:flex;flex-direction:column;gap:10px;">
+
+          <!-- Risk gauge -->
+          <div class="panel" style="align-items:center;">
+            <div class="panel-title" style="align-self:stretch;">Transition Risk Gauge</div>
+            <div class="gauge-box">
+              <div class="gauge-arc"></div>
+              <div class="gauge-val">24%</div>
+              <div class="gauge-label">Transition Risk</div>
+            </div>
+          </div>
+
+          <!-- Drivers -->
+          <div class="panel" style="flex:1;">
+            <div class="panel-title">What's pushing risk</div>
+            <div class="driver-bar-row">
+              <div class="driver-name">VIX vs 2-yr history</div>
+              <div class="driver-track"><div class="driver-fill" style="width:78%"></div></div>
+              <div class="driver-val">0.78</div>
+            </div>
+            <div class="driver-bar-row">
+              <div class="driver-name">Market choppiness</div>
+              <div class="driver-track"><div class="driver-fill" style="width:55%"></div></div>
+              <div class="driver-val">0.55</div>
+            </div>
+            <div class="driver-bar-row">
+              <div class="driver-name">Recent drawdown</div>
+              <div class="driver-track"><div class="driver-fill" style="width:38%"></div></div>
+              <div class="driver-val">0.38</div>
+            </div>
+            <div class="driver-bar-row">
+              <div class="driver-name">20-day return</div>
+              <div class="driver-track"><div class="driver-fill down" style="width:28%"></div></div>
+              <div class="driver-val" style="color:#f87171">−0.28</div>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:16px;padding:14px;background:#0c1020;border:1px solid #151d2e;border-radius:8px;font-size:11px;color:#64748b;line-height:1.7;">
+  <strong style="color:#94a3b8;">What you're seeing:</strong><br>
+  Hero row (4 cards) → plain-English narrative + regime probability chips → "Why it changed" delta panel → risk gauge → driver bars. All data from <code style="color:#06b6d4;">/current-state</code> and <code style="color:#06b6d4;">/model-drivers</code>. The "Why it changed" panel reads from the delta between the two most recent <code style="color:#06b6d4;">live_state</code> rows — shows if risk went up or down and which feature moved most.
+</div>
+
+</body>
+</html>

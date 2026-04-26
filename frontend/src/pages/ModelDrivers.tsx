@@ -27,7 +27,7 @@ export default function ModelDrivers() {
       <Topbar title="Model Drivers" />
       <div className="p-5 space-y-5">
         <Panel title="What usually raises risk">
-          <p className="text-[10px] mb-4" style={{ color: '#64748b' }}>
+          <p className="text-[10px] mb-4" style={{ color: '#94a3b8' }}>
             These inputs have the strongest upward effect on transition risk across all historical predictions.
           </p>
           {topUp.map(d => (
@@ -38,6 +38,9 @@ export default function ModelDrivers() {
         <div className="h-px" style={{ background: '#151d2e' }} />
 
         <Panel title="Why the latest reading looks this way">
+          <p className="text-[10px] mb-4" style={{ color: '#94a3b8' }}>
+            Each feature's contribution to today's risk score — positive values push risk higher, negative values hold it down.
+          </p>
           {pushing.length > 0 || holding.length > 0 ? (
             <div className="grid grid-cols-2 gap-6">
               <div>

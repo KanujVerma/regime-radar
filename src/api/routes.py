@@ -277,18 +277,22 @@ async def scenario(request: Request, body: ScenarioRequest):
     feature_importances: list[float] = meta.get("feature_importances",
         list(transition_model.feature_importances_))
 
-    # Build baseline vector from latest panel row
+    # Build baseline vector from engineered features on latest panel row
     panel_path = Path(PROCESSED_DIR) / "panel.parquet"
     if panel_path.exists():
+        from src.features.build_market_features import build_features
+        from src.labeling.build_regime_labels import build_regime_labels
         panel = pd.read_parquet(panel_path)
-        last_row = panel.iloc[-1]
-        baseline_vec = {f: float(last_row[f]) if f in last_row.index else 0.0
+        regime = build_regime_labels(panel)
+        features_df = build_features(panel, regime_series=regime).dropna()
+        last_feat_row = features_df.iloc[-1]
+        baseline_vec = {f: float(last_feat_row[f]) if f in last_feat_row.index else 0.0
                         for f in feature_names}
     else:
         baseline_vec = {f: 0.0 for f in feature_names}
 
-    # Scenario vector = baseline overridden with 6 request fields
-    overrides = {
+    # Scenario vector = baseline overridden with request fields
+    overrides: dict[str, float] = {
         "vix_level": body.vix_level,
         "vix_chg_5d": body.vix_chg_5d,
         "rv_20d_pct": body.rv_20d_pct,
@@ -296,6 +300,10 @@ async def scenario(request: Request, body: ScenarioRequest):
         "ret_20d": body.ret_20d,
         "dist_sma50": body.dist_sma50,
     }
+    if body.days_in_regime_lag1 is not None:
+        overrides["days_in_regime_lag1"] = body.days_in_regime_lag1
+    if body.turbulent_count_30d_lag1 is not None:
+        overrides["turbulent_count_30d_lag1"] = body.turbulent_count_30d_lag1
     scenario_vec = {**baseline_vec, **overrides}
 
     X_base = pd.DataFrame([baseline_vec])[feature_names].fillna(0)

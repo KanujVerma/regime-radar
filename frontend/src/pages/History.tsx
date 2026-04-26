@@ -25,7 +25,7 @@ export default function History() {
         color: showVix ? '#06b6d4' : '#64748b',
       }}
     >
-      {showVix ? '▼ Hide VIX' : '▲ Show VIX overlay'}
+      {showVix ? '▼ Hide VIX' : '▲ Overlay VIX (fear gauge)'}
     </button>
   )
 
@@ -34,7 +34,7 @@ export default function History() {
       <Topbar title="History" subtitle={`${data.start} — ${data.end}`} />
       <div className="p-5 space-y-5">
         <Panel title="What happened over time?">
-          <p className="text-[10px] mb-2" style={{ color: '#64748b' }}>
+          <p className="text-[10px] mb-2" style={{ color: '#94a3b8' }}>
             Shaded bands show the market regime on each day. A darker shade indicates higher stress.
           </p>
           <div className="mb-2">
@@ -44,7 +44,7 @@ export default function History() {
           <RegimeChart data={data.data} showVix={showVix} />
         </Panel>
         <Panel title="When did the model get worried?">
-          <p className="text-[10px] mb-3" style={{ color: '#64748b' }}>
+          <p className="text-[10px] mb-3" style={{ color: '#94a3b8' }}>
             The line shows the model's daily estimate of the chance conditions worsen within the next week.
           </p>
           <RiskLineChart data={data.data} />

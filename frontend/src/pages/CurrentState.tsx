@@ -80,10 +80,13 @@ export default function CurrentState() {
 
         <div className="h-px" style={{ background: '#151d2e' }} />
 
-        <div className="grid gap-4" style={{ gridTemplateColumns: '1fr 320px' }}>
-          <div className="space-y-4">
+        <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: '1fr 320px' }}>
+          <div className="flex flex-col gap-4">
             <Panel title="What this means right now">
               <p className="text-[11px] leading-relaxed mb-4" style={{ color: '#94a3b8' }}>{narrative}</p>
+              <div className="text-[9px] font-bold tracking-widest uppercase mb-2" style={{ color: '#4a6080' }}>
+                Model confidence in each market state
+              </div>
               <div className="flex gap-2 mb-4">
                 {(['calm', 'elevated', 'turbulent'] as const).map(r => {
                   const prob = (data as unknown as Record<string, unknown>)[`prob_${r}`] as number | null
@@ -103,28 +106,30 @@ export default function CurrentState() {
             </Panel>
 
             {recentLoading ? (
-              <Panel title="Last 30 Trading Days">
-                <div className="h-[120px] rounded" style={{ background: '#0c1020' }} />
+              <Panel title="Last 30 Trading Days" className="flex-1 flex flex-col">
+                <div className="flex-1 rounded" style={{ background: '#080b12', minHeight: 165 }} />
               </Panel>
             ) : recentData && recentData.data.length > 0 ? (
-              <Panel title="Last 30 Trading Days">
+              <Panel title="Last 30 Trading Days" className="flex-1 flex flex-col">
                 <div className="mb-2">
-                  <RegimeLegend only={[...new Set(recentData.data.slice(-30).map(d => d.regime))]} />
+                  <RegimeLegend />
                 </div>
-                <p className="text-[10px] mb-2" style={{ color: '#64748b' }}>
+                <p className="text-[10px] mb-3" style={{ color: '#94a3b8' }}>
                   Recent price path with market-state shading.
                 </p>
-                <MiniRegimeChart data={recentData.data.slice(-30)} />
+                <div className="flex-1" style={{ minHeight: 165 }}>
+                  <MiniRegimeChart data={recentData.data.slice(-30)} height={165} />
+                </div>
               </Panel>
             ) : null}
           </div>
 
-          <div className="space-y-4">
+          <div className="flex flex-col gap-4">
             <Panel title="Transition risk gauge">
               <GaugeArc risk={data.transition_risk} regime={regime} />
             </Panel>
-            <Panel title="What is pushing risk right now">
-              <p className="text-[10px] mb-3" style={{ color: '#64748b' }}>
+            <Panel title="What is pushing risk right now" className="flex-1">
+              <p className="text-[10px] mb-3" style={{ color: '#94a3b8' }}>
                 Features currently exerting the strongest influence on the model's risk estimate.
               </p>
               {topDrivers.slice(0, 5).map(d => (
@@ -144,7 +149,7 @@ function DeltaRows({ delta }: { delta: StateDelta }) {
 
   if (noMeaningfulChange) {
     return (
-      <p className="text-[11px]" style={{ color: '#64748b' }}>
+      <p className="text-[11px]" style={{ color: '#94a3b8' }}>
         No meaningful change since the last refresh — risk, regime, and key drivers all remained stable.
       </p>
     )
@@ -239,7 +244,7 @@ function GaugeArc({ risk, regime }: { risk: number; regime: string }) {
           Transition Risk
         </text>
       </svg>
-      <p className="text-[10px] text-center mt-1 leading-relaxed" style={{ color: '#64748b', maxWidth: 220 }}>{caption}</p>
+      <p className="text-[10px] text-center mt-1 leading-relaxed" style={{ color: '#94a3b8', maxWidth: 220 }}>{caption}</p>
     </div>
   )
 }

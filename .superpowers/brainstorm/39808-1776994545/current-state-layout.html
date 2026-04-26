@@ -1,0 +1,42 @@
+<h2>Current State Page — Layout Options</h2>
+<p class="subtitle">How should the polished Current State page be organized? Each option keeps the same data; what changes is the hierarchy and flow.</p>
+
+<div class="options">
+  <div class="option" data-choice="a" onclick="toggleSelect(this)">
+    <div class="letter">A</div>
+    <div class="content">
+      <h3>Narrative-First</h3>
+      <p>A 2–3 sentence plain-English summary at the top ("The market is in an elevated regime. VIX is at 18.9, rising slightly. Transition risk is low at 0.5%.") followed by the regime pill + gauge + trend in a row, then the driver chart below.</p>
+      <p style="margin-top:8px;font-size:0.82rem;color:#9E9E9E;">Best for: users who want immediate interpretation, not just numbers. More product-like.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="b" onclick="toggleSelect(this)">
+    <div class="letter">B</div>
+    <div class="content">
+      <h3>Metrics-First with Narrative Below</h3>
+      <p>Regime pill + gauge + VIX/trend metrics in the top row (as today), then a narrative summary paragraph below that, then the driver chart. The narrative becomes secondary context rather than the lead.</p>
+      <p style="margin-top:8px;font-size:0.82rem;color:#9E9E9E;">Best for: users who want the numbers first and explanation second. Closer to current layout.</p>
+    </div>
+  </div>
+
+  <div class="option" data-choice="c" onclick="toggleSelect(this)">
+    <div class="letter">C</div>
+    <div class="content">
+      <h3>Two-Column Split</h3>
+      <p>Left column: regime pill + narrative summary + trend chip + "why did it change" delta. Right column: gauge + VIX card + mode badge. Driver chart spans full width below.</p>
+      <p style="margin-top:8px;font-size:0.82rem;color:#9E9E9E;">Best for: dense information density with clear left/right hierarchy. More dashboard-like.</p>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:28px;">
+  <h3>Shared across all options</h3>
+  <ul style="color:#ccc;line-height:1.8;">
+    <li>Mode badge renamed to <strong>NEAR-LIVE DATA</strong> (live) or <strong>DEMO MODE</strong> (demo)</li>
+    <li>Plain-English narrative auto-generated from regime + risk + trend values</li>
+    <li>"No feature driver data" fallback replaced with a proper explanation</li>
+    <li>Regime class probabilities shown if available (calm 12% / elevated 81% / turbulent 7%)</li>
+    <li>Delta panel: how risk changed since last refresh</li>
+  </ul>
+</div>

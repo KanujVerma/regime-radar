@@ -90,6 +90,8 @@ class ScenarioRequest(BaseModel):
     drawdown_pct_504d: float
     ret_20d: float
     dist_sma50: float
+    days_in_regime_lag1: float | None = None
+    turbulent_count_30d_lag1: float | None = None
 
 
 class ScenarioResponse(BaseModel):

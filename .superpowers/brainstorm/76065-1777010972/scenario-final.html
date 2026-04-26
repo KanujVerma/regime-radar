@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RegimeRadar — Scenario Explorer Final</title>
+<script src="/helper.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #080b12; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; padding: 24px; font-size: 11px; }
+  h2 { color: #f8fafc; font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { color: #64748b; font-size: 12px; margin-bottom: 20px; }
+
+  .shell {
+    display: flex; height: 780px;
+    border-radius: 12px; overflow: hidden;
+    border: 1px solid #1a2236;
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar { width: 196px; flex-shrink: 0; background: #0a0d16; border-right: 1px solid #151d2e; display: flex; flex-direction: column; }
+  .sidebar-logo { padding: 18px 16px 14px; border-bottom: 1px solid #151d2e; }
+  .logo-mark { display: flex; align-items: center; gap: 8px; }
+  .logo-dot { width: 8px; height: 8px; border-radius: 50%; background: #06b6d4; box-shadow: 0 0 10px #06b6d460; }
+  .logo-text { color: #f1f5f9; font-size: 13px; font-weight: 700; letter-spacing: -0.02em; }
+  .logo-sub { color: #243048; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; margin-top: 2px; }
+  .nav-group { padding: 14px 10px 6px; }
+  .nav-group-label { font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #1e3050; padding: 0 6px; margin-bottom: 5px; }
+  .nav-item { display: flex; align-items: center; gap: 9px; padding: 7px 8px; border-radius: 7px; color: #475569; font-size: 11px; font-weight: 500; margin-bottom: 1px; position: relative; }
+  .nav-item.active { background: linear-gradient(90deg,#061d2e,#070f1c); color: #06b6d4; font-weight: 600; }
+  .nav-item.active::before { content:''; position:absolute; left:0; top:5px; bottom:5px; width:2.5px; border-radius:2px; background:#06b6d4; box-shadow:0 0 6px #06b6d4; }
+  .nav-icon-box { width: 15px; height: 15px; display:flex; align-items:center; justify-content:center; flex-shrink:0; }
+  .sidebar-footer { margin-top:auto; padding:12px 14px; border-top:1px solid #151d2e; }
+  .mode-row { display:flex; align-items:center; gap:6px; margin-bottom:4px; }
+  .mode-dot { width:6px; height:6px; border-radius:50%; background:#22c55e; box-shadow:0 0 6px #22c55e80; }
+  .mode-text { font-size:10px; color:#4ade80; font-weight:700; letter-spacing:.04em; }
+  .refresh-row { font-size:9px; color:#243048; }
+  .refresh-row span { color:#334155; }
+
+  /* ── MAIN ── */
+  .main { flex:1; background:#080b12; display:flex; flex-direction:column; overflow:hidden; min-width:0; }
+  .topbar { padding:16px 22px; border-bottom:1px solid #131b2a; background:#0a0d16; display:flex; align-items:flex-end; justify-content:space-between; flex-shrink:0; }
+  .page-title { font-size:17px; font-weight:700; color:#f1f5f9; letter-spacing:-0.02em; }
+  .page-sub { font-size:10px; color:#2d4060; margin-top:3px; }
+  .reset-btn { padding:5px 12px; border-radius:6px; background:#0f172a; color:#94a3b8; font-size:10px; font-weight:600; border:1px solid #1e293b; cursor:pointer; }
+
+  .explorer-body { flex:1; display:grid; grid-template-columns:276px 1fr; overflow:hidden; min-height:0; }
+
+  /* ── LEFT CONTROLS ── */
+  .controls-panel {
+    background: #0a0d16; border-right: 1px solid #151d2e;
+    overflow-y: auto; padding: 16px 14px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .ctrl-section-title { font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #2d4060; margin-bottom: 10px; }
+  .divider-h { height: 1px; background: #131b2a; flex-shrink: 0; }
+
+  /* Presets */
+  .presets-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .preset-btn { padding: 7px 8px; border-radius: 7px; border: 1px solid #1e293b; background: #0f172a; color: #7c8fa3; font-size: 10px; font-weight: 600; text-align: center; cursor: pointer; }
+  .preset-btn.calm-p  { border-color: #14532d40; color: #4ade8090; }
+  .preset-btn.chop-p  { border-color: #92400e40; color: #fbbf2490; }
+  .preset-btn.spike-p { border-color: #7f1d1d40; color: #f8717190; }
+  .preset-btn.curr-p  { border-color: #0e3d5560; color: #06b6d490; }
+
+  /* Sliders */
+  .slider-group { display: flex; flex-direction: column; gap: 11px; }
+  .slider-row { display: flex; flex-direction: column; gap: 3px; }
+  .slider-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 6px; }
+  .slider-label { font-size: 10px; font-weight: 600; color: #94a3b8; }
+  .slider-hint { font-size: 9px; color: #2d4060; line-height: 1.4; margin-top: 1px; }
+  .slider-val { font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+  .slider-track { height: 4px; background: #131b2a; border-radius: 2px; position: relative; margin-top: 5px; }
+  .slider-fill-base { height: 100%; background: linear-gradient(90deg, #0e4d6e, #06b6d4); border-radius: 2px; }
+  .slider-fill-warn { height: 100%; background: linear-gradient(90deg, #92400e, #fbbf24); border-radius: 2px; }
+  .slider-fill-red  { height: 100%; background: linear-gradient(90deg, #7f1d1d, #f87171); border-radius: 2px; }
+  .slider-thumb { width: 12px; height: 12px; border-radius: 50%; position: absolute; top: 50%; transform: translate(-50%,-50%); }
+  .slider-range { display: flex; justify-content: space-between; margin-top: 3px; }
+  .slider-range span { font-size: 8px; color: #1e3050; }
+
+  /* Threshold (compact) */
+  .thresh-slider-row { display: flex; flex-direction: column; gap: 3px; margin-bottom: 10px; }
+  .thresh-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .thresh-card { padding: 8px 10px; border-radius: 7px; background: #080b12; border: 1px solid #131b2a; text-align: center; }
+  .thresh-lbl { font-size: 8px; text-transform: uppercase; letter-spacing: .1em; color: #2d4060; margin-bottom: 3px; }
+  .thresh-val { font-size: 14px; font-weight: 800; color: #94a3b8; }
+  .thresh-val.accent { color: #06b6d4; }
+
+  /* ── RIGHT RESPONSE ── */
+  .response-panel { overflow-y: auto; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+  .panel { padding: 14px 16px; border-radius: 10px; background: #0c1020; border: 1px solid #151d2e; }
+  .panel-title { font-size: 9px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: #2d4060; margin-bottom: 12px; padding-bottom: 8px; border-bottom: 1px solid #131b2a; }
+
+  /* ── RISK RAIL PANEL ── */
+  .rail-numbers { display: flex; align-items: baseline; gap: 8px; margin-bottom: 18px; }
+  .rn-item { display: flex; flex-direction: column; gap: 2px; }
+  .rn-lbl { font-size: 8px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; }
+  .rn-val { font-size: 26px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .rn-val.base { color: #4ade80; }
+  .rn-val.scen { color: #f87171; }
+  .rn-sep { font-size: 20px; color: #1e293b; padding: 0 6px; align-self: center; margin-bottom: 4px; }
+  .rn-delta { align-self: center; margin-left: 2px; font-size: 12px; font-weight: 700; color: #f87171; opacity: 0.75; }
+
+  .rail-outer { position: relative; padding-top: 32px; padding-bottom: 28px; }
+  .rail-track {
+    height: 8px; border-radius: 4px;
+    background: linear-gradient(to right,
+      #166534 0%, #15803d 18%,
+      #a16207 28%, #d97706 44%,
+      #b45309 56%, #991b1b 100%
+    );
+  }
+
+  /* Threshold lines */
+  .t-marker {
+    position: absolute; top: 0;
+    display: flex; flex-direction: column; align-items: center;
+    transform: translateX(-50%);
+  }
+  .t-label {
+    font-size: 8px; font-weight: 700; padding: 2px 6px; border-radius: 3px;
+    white-space: nowrap; margin-bottom: 3px;
+  }
+  .t-line {
+    width: 1px; height: 42px;
+  }
+
+  /* Position dots */
+  .p-marker {
+    position: absolute; top: 50%; transform: translate(-50%, -50%);
+    display: flex; flex-direction: column; align-items: center;
+    z-index: 10;
+  }
+  .p-above { position: absolute; top: -30px; text-align: center; }
+  .p-above-val { font-size: 10px; font-weight: 800; }
+  .p-above-lbl { font-size: 8px; font-weight: 600; margin-top: 1px; }
+  .p-dot {
+    width: 16px; height: 16px; border-radius: 50%;
+    border: 2px solid; display: flex; align-items: center; justify-content: center;
+    font-size: 7px; font-weight: 800;
+    box-shadow: 0 0 0 3px #0c1020;
+    position: relative; z-index: 2;
+  }
+
+  /* Delta bridge */
+  .p-bridge {
+    position: absolute; top: 50%; transform: translateY(-50%);
+    height: 1px; border-top: 1px dashed #f8717130; pointer-events: none;
+  }
+
+  /* Zone labels */
+  .rail-zones { display: flex; position: absolute; bottom: 0; left: 0; right: 0; }
+
+  /* ── REGIME BARS ── */
+  .regime-bars { display: flex; flex-direction: column; gap: 8px; }
+  .regime-row { display: flex; align-items: center; gap: 10px; }
+  .regime-lbl { width: 68px; flex-shrink: 0; font-size: 10px; font-weight: 600; }
+  .regime-lbl.calm { color: #4ade80; }
+  .regime-lbl.elevated { color: #fbbf24; }
+  .regime-lbl.turbulent { color: #f87171; }
+  .regime-tracks { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .regime-track { height: 5px; background: #131b2a; border-radius: 3px; overflow: hidden; }
+  .regime-fill { height: 100%; border-radius: 3px; }
+  .regime-pcts { width: 70px; text-align: right; }
+  .regime-pct-line { font-size: 9px; }
+  .regime-legend { display: flex; gap: 14px; margin-bottom: 10px; }
+  .regime-legend-item { display: flex; align-items: center; gap: 5px; font-size: 9px; color: #334155; }
+  .regime-legend-swatch { width: 20px; height: 4px; border-radius: 2px; }
+
+  /* ── NARRATIVE ── */
+  .narrative-text { font-size: 12px; line-height: 1.75; color: #7c8fa3; }
+  .narrative-text strong { color: #d1dae6; }
+  .narrative-text em { color: #fbbf24; font-style: normal; font-weight: 600; }
+
+  /* ── DRIVER DELTAS ── */
+  .driver-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; border-bottom: 1px solid #111827; }
+  .driver-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .driver-name { flex: 1; font-size: 10px; color: #7c8fa3; }
+  .driver-bar-wrap { width: 80px; height: 4px; background: #131b2a; border-radius: 2px; overflow: hidden; }
+  .driver-bar-fill { height: 100%; border-radius: 2px; background: linear-gradient(90deg,#0e4d6e,#06b6d4); }
+  .driver-val { font-size: 9px; color: #06b6d4; font-weight: 700; width: 32px; text-align: right; }
+</style>
+</head>
+<body>
+
+<h2>Scenario Explorer — Final Combined Layout</h2>
+<p class="subtitle">Left: all controls · Right: risk rail → regime bars → narrative → driver deltas</p>
+
+<div class="shell">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-mark">
+        <div class="logo-dot"></div>
+        <div><div class="logo-text">RegimeRadar</div><div class="logo-sub">Market Monitor</div></div>
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Monitor</div>
+      <div class="nav-item">
+        <div class="nav-icon-box"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#475569" stroke-width="1.5"/><circle cx="7" cy="7" r="1.8" fill="#475569"/></svg></div>
+        Current State
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon-box"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><polyline points="1,11 4,6 7,8 10,3 13,5" stroke="#475569" stroke-width="1.5" fill="none"/></svg></div>
+        History
+      </div>
+      <div class="nav-item">
+        <div class="nav-icon-box"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><circle cx="7" cy="7" r="4.5" stroke="#475569" stroke-width="1.5"/><polyline points="7,4.5 7,7 8.8,8.8" stroke="#475569" stroke-width="1.5"/></svg></div>
+        Event Replay
+      </div>
+    </div>
+    <div class="nav-group">
+      <div class="nav-group-label">Explore</div>
+      <div class="nav-item">
+        <div class="nav-icon-box"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="7" width="3" height="6" fill="#475569" rx="1"/><rect x="5.5" y="4.5" width="3" height="8.5" fill="#475569" rx="1"/><rect x="10" y="2" width="3" height="11" fill="#475569" rx="1"/></svg></div>
+        Model Drivers
+      </div>
+      <div class="nav-item active">
+        <div class="nav-icon-box"><svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M7 1.5l1.3 3.5H12L9.2 7.1l1 3.4L7 8.7l-3.2 1.8 1-3.4L2 5h3.7z" stroke="#06b6d4" stroke-width="1.2" fill="none"/></svg></div>
+        Scenario Explorer
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="mode-row"><div class="mode-dot"></div><div class="mode-text">NEAR-LIVE DATA</div></div>
+      <div class="refresh-row">Last refresh: <span>4 min ago</span></div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+    <div class="topbar">
+      <div>
+        <div class="page-title">Scenario Explorer</div>
+        <div class="page-sub">Adjust inputs and see how transition risk responds — in real time</div>
+      </div>
+      <div class="reset-btn">↺ Reset to current market</div>
+    </div>
+
+    <div class="explorer-body">
+
+      <!-- ── LEFT CONTROLS ── -->
+      <div class="controls-panel">
+
+        <!-- Presets -->
+        <div>
+          <div class="ctrl-section-title">Quick scenarios</div>
+          <div class="presets-grid">
+            <div class="preset-btn curr-p">📍 Current</div>
+            <div class="preset-btn calm-p">🌤 Calm</div>
+            <div class="preset-btn chop-p">⚡ Choppy</div>
+            <div class="preset-btn spike-p">🔴 Stress Spike</div>
+          </div>
+        </div>
+
+        <div class="divider-h"></div>
+
+        <!-- Sliders -->
+        <div>
+          <div class="ctrl-section-title">Manual inputs</div>
+          <div class="slider-group">
+
+            <div class="slider-row">
+              <div class="slider-header">
+                <div><div class="slider-label">VIX Level</div><div class="slider-hint">Market fear gauge — higher = more fear</div></div>
+                <div class="slider-val" style="color:#f87171">28.5</div>
+              </div>
+              <div class="slider-track">
+                <div class="slider-fill-red" style="width:42%"></div>
+                <div class="slider-thumb" style="left:42%;background:#f87171;box-shadow:0 0 6px #f8717150;"></div>
+              </div>
+              <div class="slider-range"><span>5</span><span>80</span></div>
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-header">
+                <div><div class="slider-label">VIX 5-day Change</div><div class="slider-hint">How fast fear is rising or falling</div></div>
+                <div class="slider-val" style="color:#f87171">+4.2</div>
+              </div>
+              <div class="slider-track">
+                <div class="slider-fill-red" style="width:64%"></div>
+                <div class="slider-thumb" style="left:64%;background:#f87171;box-shadow:0 0 6px #f8717150;"></div>
+              </div>
+              <div class="slider-range"><span>−15</span><span>+15</span></div>
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-header">
+                <div><div class="slider-label">Realized Vol Percentile</div><div class="slider-hint">How unusually jumpy the market has been</div></div>
+                <div class="slider-val" style="color:#fbbf24">0.72</div>
+              </div>
+              <div class="slider-track">
+                <div class="slider-fill-warn" style="width:72%"></div>
+                <div class="slider-thumb" style="left:72%;background:#fbbf24;box-shadow:0 0 6px #fbbf2450;"></div>
+              </div>
+              <div class="slider-range"><span>0.0</span><span>1.0</span></div>
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-header">
+                <div><div class="slider-label">Drawdown</div><div class="slider-hint">How far prices have fallen from a recent high</div></div>
+                <div class="slider-val" style="color:#06b6d4">0.18</div>
+              </div>
+              <div class="slider-track">
+                <div class="slider-fill-base" style="width:18%"></div>
+                <div class="slider-thumb" style="left:18%;background:#06b6d4;box-shadow:0 0 6px #06b6d450;"></div>
+              </div>
+              <div class="slider-range"><span>0.0</span><span>1.0</span></div>
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-header">
+                <div><div class="slider-label">20-day Return</div><div class="slider-hint">Recent price performance</div></div>
+                <div class="slider-val" style="color:#f87171">−4.2%</div>
+              </div>
+              <div class="slider-track">
+                <div class="slider-fill-red" style="width:26%"></div>
+                <div class="slider-thumb" style="left:26%;background:#f87171;box-shadow:0 0 6px #f8717150;"></div>
+              </div>
+              <div class="slider-range"><span>−30%</span><span>+30%</span></div>
+            </div>
+
+            <div class="slider-row">
+              <div class="slider-header">
+                <div><div class="slider-label">Distance from SMA-50</div><div class="slider-hint">How far price is from its 50-day average</div></div>
+                <div class="slider-val" style="color:#f87171">−3.1%</div>
+              </div>
+              <div class="slider-track">
+                <div class="slider-fill-red" style="width:33%"></div>
+                <div class="slider-thumb" style="left:33%;background:#f87171;box-shadow:0 0 6px #f8717150;"></div>
+              </div>
+              <div class="slider-range"><span>−15%</span><span>+15%</span></div>
+            </div>
+
+          </div>
+        </div>
+
+        <div class="divider-h"></div>
+
+        <!-- Threshold tuning -->
+        <div>
+          <div class="ctrl-section-title">Alert threshold</div>
+          <div class="thresh-slider-row">
+            <div class="slider-header">
+              <div class="slider-label">Threshold</div>
+              <div class="slider-val" style="color:#06b6d4">0.10</div>
+            </div>
+            <div class="slider-track" style="margin-top:6px;">
+              <div class="slider-fill-base" style="width:14%"></div>
+              <div class="slider-thumb" style="left:14%;background:#06b6d4;box-shadow:0 0 6px #06b6d450;"></div>
+            </div>
+            <div class="slider-range"><span>0.10</span><span>0.70</span></div>
+          </div>
+          <div class="thresh-cards">
+            <div class="thresh-card"><div class="thresh-lbl">Recall</div><div class="thresh-val accent">54%</div></div>
+            <div class="thresh-card"><div class="thresh-lbl">False Alerts</div><div class="thresh-val">22%</div></div>
+            <div class="thresh-card"><div class="thresh-lbl">Lead Time</div><div class="thresh-val accent">33d</div></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ── RIGHT RESPONSE ── -->
+      <div class="response-panel">
+
+        <!-- RISK RAIL PANEL -->
+        <div class="panel">
+          <div class="panel-title">Baseline vs scenario risk</div>
+
+          <!-- Numbers row — no redundant pill, delta is inline -->
+          <div class="rail-numbers">
+            <div class="rn-item">
+              <div class="rn-lbl" style="color:#166534;">Baseline</div>
+              <div class="rn-val base">18%</div>
+            </div>
+            <div class="rn-sep">→</div>
+            <div class="rn-item">
+              <div class="rn-lbl" style="color:#7f1d1d;">Scenario</div>
+              <div class="rn-val scen">47%</div>
+            </div>
+            <div class="rn-delta">+29pp</div>
+          </div>
+
+          <!-- Rail -->
+          <div class="rail-outer">
+            <div class="rail-track"></div>
+
+            <!-- Watch threshold at 10% -->
+            <div class="t-marker" style="left:10%;top:0;">
+              <div class="t-label" style="background:#061d2e;color:#06b6d4;border:1px solid #0e3d5540;">Watch · 10%</div>
+              <div class="t-line" style="background:repeating-linear-gradient(to bottom,#06b6d4 0,#06b6d4 3px,transparent 3px,transparent 6px);"></div>
+            </div>
+
+            <!-- Alert threshold at 30% -->
+            <div class="t-marker" style="left:30%;top:0;">
+              <div class="t-label" style="background:#45180320;color:#fbbf24;border:1px solid #92400e40;">Alert · 30%</div>
+              <div class="t-line" style="background:repeating-linear-gradient(to bottom,#fbbf24 0,#fbbf24 3px,transparent 3px,transparent 6px);"></div>
+            </div>
+
+            <!-- Baseline dot -->
+            <div class="p-marker" style="left:18%;top:4px;">
+              <div class="p-above">
+                <div class="p-above-val" style="color:#4ade80;">18%</div>
+                <div class="p-above-lbl" style="color:#166534;">baseline</div>
+              </div>
+              <div class="p-dot" style="background:#052e16;border-color:#4ade80;color:#4ade80;box-shadow:0 0 0 3px #0c1020,0 0 10px #4ade8030;">B</div>
+            </div>
+
+            <!-- Scenario dot -->
+            <div class="p-marker" style="left:47%;top:4px;">
+              <div class="p-above">
+                <div class="p-above-val" style="color:#f87171;">47%</div>
+                <div class="p-above-lbl" style="color:#7f1d1d;">scenario</div>
+              </div>
+              <div class="p-dot" style="background:#450a0a;border-color:#f87171;color:#f87171;box-shadow:0 0 0 3px #0c1020,0 0 10px #f8717130;">S</div>
+            </div>
+
+            <!-- Dashed bridge -->
+            <div class="p-bridge" style="left:18%;width:29%;top:4px;"></div>
+
+            <!-- Zone labels below -->
+            <div style="position:absolute;bottom:0;left:0;right:0;font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;">
+              <span style="position:absolute;left:5%;transform:translateX(-50%);color:#15803d;">Low</span>
+              <span style="position:absolute;left:37%;transform:translateX(-50%);color:#d97706;">Moderate</span>
+              <span style="position:absolute;left:63%;transform:translateX(-50%);color:#f87171;">Elevated</span>
+              <span style="position:absolute;left:86%;transform:translateX(-50%);color:#991b1b;">High Stress</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- REGIME PROBABILITY SHIFT -->
+        <div class="panel">
+          <div class="panel-title">Regime probability shift</div>
+          <div class="regime-legend">
+            <div class="regime-legend-item"><div class="regime-legend-swatch" style="background:#1e293b;"></div>Baseline</div>
+            <div class="regime-legend-item"><div class="regime-legend-swatch" style="background:#06b6d420;border:1px solid #334155;"></div>→ Scenario</div>
+          </div>
+          <div class="regime-bars">
+            <div class="regime-row">
+              <div class="regime-lbl calm">Calm</div>
+              <div class="regime-tracks">
+                <div class="regime-track"><div class="regime-fill" style="width:74%;background:#166534;opacity:0.5;"></div></div>
+                <div class="regime-track"><div class="regime-fill" style="width:42%;background:#4ade80;"></div></div>
+              </div>
+              <div class="regime-pcts">
+                <div class="regime-pct-line" style="color:#334155;">74%</div>
+                <div class="regime-pct-line" style="color:#4ade80;font-weight:700;">→ 42%</div>
+              </div>
+            </div>
+            <div class="regime-row">
+              <div class="regime-lbl elevated">Elevated</div>
+              <div class="regime-tracks">
+                <div class="regime-track"><div class="regime-fill" style="width:20%;background:#92400e;opacity:0.5;"></div></div>
+                <div class="regime-track"><div class="regime-fill" style="width:38%;background:#fbbf24;"></div></div>
+              </div>
+              <div class="regime-pcts">
+                <div class="regime-pct-line" style="color:#334155;">20%</div>
+                <div class="regime-pct-line" style="color:#fbbf24;font-weight:700;">→ 38%</div>
+              </div>
+            </div>
+            <div class="regime-row">
+              <div class="regime-lbl turbulent">Turbulent</div>
+              <div class="regime-tracks">
+                <div class="regime-track"><div class="regime-fill" style="width:6%;background:#7f1d1d;opacity:0.5;"></div></div>
+                <div class="regime-track"><div class="regime-fill" style="width:20%;background:#f87171;"></div></div>
+              </div>
+              <div class="regime-pcts">
+                <div class="regime-pct-line" style="color:#334155;">6%</div>
+                <div class="regime-pct-line" style="color:#f87171;font-weight:700;">→ 20%</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- PLAIN-ENGLISH NARRATIVE -->
+        <div class="panel">
+          <div class="panel-title">What this scenario means</div>
+          <div class="narrative-text">
+            Raising VIX to 28.5 with <em>fast-rising fear</em> (+4.2 over 5 days), elevated choppiness (72nd percentile), and a recent −4.2% return pushes transition risk from <strong>18%</strong> to <em>47%</em>. The model is most sensitive to the <strong>VIX spike</strong> combined with the rapid rise in fear — this combination historically precedes elevated regimes. The probability of staying Calm roughly halves.
+          </div>
+        </div>
+
+        <!-- WHAT CHANGED MOST -->
+        <div class="panel">
+          <div class="panel-title">What changed the most</div>
+          <div class="driver-row">
+            <div class="driver-name">VIX level (18.4 → 28.5)</div>
+            <div class="driver-bar-wrap"><div class="driver-bar-fill" style="width:85%"></div></div>
+            <div class="driver-val">+0.85</div>
+          </div>
+          <div class="driver-row">
+            <div class="driver-name">VIX 5-day change (0.0 → +4.2)</div>
+            <div class="driver-bar-wrap"><div class="driver-bar-fill" style="width:72%"></div></div>
+            <div class="driver-val">+0.72</div>
+          </div>
+          <div class="driver-row">
+            <div class="driver-name">Realized vol (50th → 72nd pct)</div>
+            <div class="driver-bar-wrap"><div class="driver-bar-fill" style="width:48%"></div></div>
+            <div class="driver-val">+0.48</div>
+          </div>
+          <div class="driver-row">
+            <div class="driver-name">20-day return (+2% → −4.2%)</div>
+            <div class="driver-bar-wrap"><div class="driver-bar-fill" style="width:38%"></div></div>
+            <div class="driver-val">+0.38</div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+<div style="margin-top:14px;padding:12px 16px;background:#0c1020;border:1px solid #151d2e;border-radius:8px;line-height:1.8;color:#475569;font-size:11px;">
+  <strong style="color:#7c8fa3;">Changes from previous versions:</strong>
+  Risk rail replaces only the old cards block · +29pp shown inline next to numbers (no redundant pill) · "High Stress" replaces "Extreme" · Slider thumb and fill colors are context-sensitive (cyan=calm, amber=elevated, red=stressed) · All 4 right-column panels present · Threshold section compacted into left col
+</div>
+</body>
+</html>

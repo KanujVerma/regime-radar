@@ -97,8 +97,8 @@ export default function EventReplay() {
             )}
 
             {/* Methodology note */}
-            <p className="text-[10px] italic" style={{ color: '#64748b' }}>
-              Replay metrics are computed from out-of-fold predictions — each day in this window was scored by a model that did not train on that day.
+            <p className="text-[10px] italic" style={{ color: '#94a3b8' }}>
+              These metrics use backtested predictions. Each day was scored by a model that had never seen that day during training — so these reflect true out-of-sample performance, not hindsight.
             </p>
 
             {/* Chart */}

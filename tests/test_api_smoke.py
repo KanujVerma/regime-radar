@@ -188,16 +188,17 @@ def test_model_drivers_threshold_sweep_field_present(app_with_state):
     assert isinstance(data["threshold_sweep"], list)
 
 
-def test_scenario_returns_503_without_artifacts(app_with_state):
+def test_scenario_returns_503_without_artifacts(app_with_state, monkeypatch):
     app, _ = app_with_state
+    import src.models.registry as reg
+    monkeypatch.setattr(reg, "artifact_exists", lambda name: False)
     client = TestClient(app)
     payload = {
         "vix_level": 25.0, "vix_chg_5d": 3.0, "rv_20d_pct": 0.7,
         "drawdown_pct_504d": 0.15, "ret_20d": -0.05, "dist_sma50": -0.04,
     }
     resp = client.post("/scenario", json=payload)
-    # Before route exists: 404; after route exists but no artifacts: 503
-    assert resp.status_code in (404, 503)
+    assert resp.status_code == 503
 
 def test_scenario_response_shape(app_with_state, monkeypatch):
     """With mocked models and panel, POST /scenario returns expected shape."""
@@ -220,8 +221,13 @@ def test_scenario_response_shape(app_with_state, monkeypatch):
 
     fake_transition = FakeTransition()
     fake_regime = FakeRegime()
-    panel_df = pd.DataFrame({f: [15.0] for f in FEATURES},
-                             index=pd.to_datetime(["2024-01-01"]))
+
+    # Feature row for the baseline vector (last row of feature panel)
+    fake_features = pd.DataFrame(
+        {f: [15.0] for f in FEATURES},
+        index=pd.to_datetime(["2024-01-01"]),
+    )
+    fake_regime_series = pd.Series(["calm"], index=fake_features.index, name="regime")
 
     import src.models.registry as reg
     monkeypatch.setattr(reg, "artifact_exists", lambda name: True)
@@ -231,8 +237,15 @@ def test_scenario_response_shape(app_with_state, monkeypatch):
         "feature_names": FEATURES,
         "feature_importances": fake_transition.feature_importances_.tolist(),
     })
+
+    # Mock pipeline at source modules so build_features doesn't need real OHLCV
+    monkeypatch.setattr("src.labeling.build_regime_labels.build_regime_labels",
+                        lambda panel: fake_regime_series)
+    monkeypatch.setattr("src.features.build_market_features.build_features",
+                        lambda panel, **kw: fake_features)
+
     import src.api.routes as routes_mod
-    monkeypatch.setattr(routes_mod.pd, "read_parquet", lambda p: panel_df)
+    monkeypatch.setattr(routes_mod.pd, "read_parquet", lambda p: fake_features)
 
     client = TestClient(app)
     payload = {

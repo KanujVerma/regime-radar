@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RegimeRadar — Risk Rail Detail</title>
+<script src="/helper.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #080b12; color: #e2e8f0; font-family: 'Inter', system-ui, sans-serif; padding: 32px; font-size: 11px; }
+  h2 { color: #f8fafc; font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+  .subtitle { color: #64748b; font-size: 12px; margin-bottom: 28px; }
+
+  .panel {
+    padding: 20px 22px;
+    border-radius: 12px;
+    background: #0c1020;
+    border: 1px solid #151d2e;
+    max-width: 720px;
+    margin-bottom: 20px;
+  }
+  .panel-title {
+    font-size: 9px; font-weight: 700; letter-spacing: .12em;
+    text-transform: uppercase; color: #2d4060;
+    margin-bottom: 18px; padding-bottom: 10px;
+    border-bottom: 1px solid #131b2a;
+  }
+
+  /* ── RISK RAIL ── */
+  .risk-rail-wrap { position: relative; padding: 28px 0 40px; }
+
+  /* Zone track */
+  .rail-track {
+    height: 10px;
+    border-radius: 5px;
+    background: linear-gradient(
+      to right,
+      #14532d 0%,
+      #166534 20%,
+      #92400e 30%,
+      #d97706 45%,
+      #b45309 55%,
+      #7f1d1d 68%,
+      #991b1b 100%
+    );
+    position: relative;
+    box-shadow: 0 0 20px #06b6d408;
+  }
+
+  /* Zone labels below track */
+  .zone-labels {
+    display: flex;
+    position: absolute;
+    bottom: 0;
+    left: 0; right: 0;
+  }
+  .zone-label {
+    font-size: 8px; font-weight: 700; letter-spacing: .08em;
+    text-transform: uppercase;
+    position: absolute; bottom: 0;
+    transform: translateX(-50%);
+  }
+
+  /* Threshold markers on track */
+  .threshold-marker {
+    position: absolute;
+    top: -18px;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+  .threshold-line {
+    width: 1.5px;
+    height: 46px;
+    margin-top: 18px;
+  }
+  .threshold-label {
+    font-size: 8px; font-weight: 700; letter-spacing: .06em;
+    white-space: nowrap;
+    padding: 2px 6px; border-radius: 3px;
+  }
+
+  /* Position markers (baseline + scenario) */
+  .position-marker {
+    position: absolute;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 10;
+  }
+  .marker-dot {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    border: 2px solid;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 8px; font-weight: 800;
+    box-shadow: 0 0 0 3px #080b12;
+  }
+  .marker-label {
+    font-size: 9px; font-weight: 700;
+    white-space: nowrap;
+    margin-top: 5px;
+  }
+  .marker-val {
+    font-size: 10px; font-weight: 800;
+    white-space: nowrap;
+  }
+  .marker-above {
+    position: absolute;
+    top: -36px;
+    display: flex; flex-direction: column; align-items: center; gap: 1px;
+  }
+
+  /* Arrow connector between markers */
+  .delta-arrow {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex; align-items: center;
+    pointer-events: none;
+  }
+  .delta-line {
+    height: 2px;
+    background: linear-gradient(90deg, #4ade8040, #f8717140);
+    border-radius: 1px;
+  }
+  .delta-label {
+    position: absolute;
+    top: -18px;
+    font-size: 9px; font-weight: 700;
+    padding: 2px 7px; border-radius: 4px;
+    white-space: nowrap;
+  }
+
+  /* ── COMPACT COMPARISON NUMBERS ── */
+  .cmp-strip { display: flex; align-items: center; gap: 0; margin-bottom: 20px; }
+  .cmp-item { flex: 1; }
+  .cmp-label { font-size: 9px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #2d4060; margin-bottom: 4px; }
+  .cmp-val { font-size: 28px; font-weight: 800; letter-spacing: -0.04em; line-height: 1; }
+  .cmp-val.baseline { color: #4ade80; }
+  .cmp-val.scenario { color: #f87171; }
+  .cmp-sep { color: #1e293b; font-size: 24px; padding: 0 16px; align-self: center; }
+  .delta-pill {
+    padding: 4px 14px; border-radius: 20px;
+    background: #450a0a30; border: 1px solid #7f1d1d40;
+    color: #f87171; font-size: 13px; font-weight: 800;
+    align-self: center; margin-left: 16px;
+  }
+
+  /* ── NOTE BOX ── */
+  .note {
+    margin-top: 14px; padding: 10px 14px;
+    border-radius: 7px; background: #080b12;
+    border: 1px solid #131b2a;
+    font-size: 10px; color: #64748b; line-height: 1.6;
+  }
+  .note em { color: #fbbf24; font-style: normal; }
+  .note strong { color: #94a3b8; }
+
+  /* ── CONTEXT ── */
+  .context-note {
+    padding: 14px 16px; border-radius: 8px;
+    background: #0c1020; border: 1px solid #151d2e;
+    max-width: 720px; font-size: 11px; color: #475569; line-height: 1.7;
+  }
+  .context-note strong { color: #7c8fa3; }
+  .context-note code { color: #06b6d4; }
+</style>
+</head>
+<body>
+
+<h2>Risk Zone Rail — Scenario Explorer Component</h2>
+<p class="subtitle">Compact before-vs-after strip showing baseline and scenario positions on the same zoned scale</p>
+
+<!-- MAIN PANEL -->
+<div class="panel">
+  <div class="panel-title">Risk position — baseline vs scenario</div>
+
+  <!-- Compact number comparison -->
+  <div class="cmp-strip">
+    <div class="cmp-item">
+      <div class="cmp-label">Baseline</div>
+      <div class="cmp-val baseline">18%</div>
+    </div>
+    <div class="cmp-sep">→</div>
+    <div class="cmp-item">
+      <div class="cmp-label">Scenario</div>
+      <div class="cmp-val scenario">47%</div>
+    </div>
+    <div class="delta-pill">+29pp</div>
+  </div>
+
+  <!-- RISK RAIL -->
+  <div class="risk-rail-wrap">
+
+    <!-- Gradient zone track -->
+    <div class="rail-track"></div>
+
+    <!-- Threshold markers -->
+    <div class="threshold-marker" style="left: 10%;">
+      <div class="threshold-label" style="background:#061d2e;color:#06b6d4;border:1px solid #0e3d55;">Watch · 10%</div>
+      <div class="threshold-line" style="background: repeating-linear-gradient(to bottom, #06b6d4 0px, #06b6d4 4px, transparent 4px, transparent 8px);"></div>
+    </div>
+
+    <div class="threshold-marker" style="left: 30%;">
+      <div class="threshold-label" style="background:#451a0320;color:#fbbf24;border:1px solid #92400e40;">Alert · 30%</div>
+      <div class="threshold-line" style="background: repeating-linear-gradient(to bottom, #fbbf24 0px, #fbbf24 4px, transparent 4px, transparent 8px);"></div>
+    </div>
+
+    <!-- Baseline marker -->
+    <div class="position-marker" style="left: 18%; top: 5px;">
+      <div class="marker-above">
+        <div class="marker-val" style="color:#4ade80;">18%</div>
+        <div class="marker-label" style="color:#4ade8090;">Baseline</div>
+      </div>
+      <div class="marker-dot" style="background:#052e16;border-color:#4ade80;color:#4ade80;box-shadow:0 0 0 3px #080b12,0 0 10px #4ade8040;">B</div>
+    </div>
+
+    <!-- Scenario marker -->
+    <div class="position-marker" style="left: 47%; top: 5px;">
+      <div class="marker-above">
+        <div class="marker-val" style="color:#f87171;">47%</div>
+        <div class="marker-label" style="color:#f8717190;">Scenario</div>
+      </div>
+      <div class="marker-dot" style="background:#450a0a;border-color:#f87171;color:#f87171;box-shadow:0 0 0 3px #080b12,0 0 10px #f8717140;">S</div>
+    </div>
+
+    <!-- Delta arrow between markers -->
+    <div class="delta-arrow" style="left:18%;width:29%;">
+      <div class="delta-line" style="width:100%;"></div>
+      <div class="delta-label" style="left:50%;transform:translateX(-50%);background:#1e293b20;color:#f87171;border:1px solid #7f1d1d30;">+29pp ↑</div>
+    </div>
+
+    <!-- Zone labels -->
+    <div style="position:absolute;bottom:0;left:0;right:0;">
+      <span style="position:absolute;left:5%;transform:translateX(-50%);font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#166534;">Low</span>
+      <span style="position:absolute;left:18%;transform:translateX(-50%);font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#4ade80;opacity:0.6;">←B</span>
+      <span style="position:absolute;left:38%;transform:translateX(-50%);font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#fbbf24;">Moderate</span>
+      <span style="position:absolute;left:47%;transform:translateX(-50%);font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f87171;opacity:0.6;">S→</span>
+      <span style="position:absolute;left:65%;transform:translateX(-50%);font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#f87171;">Elevated</span>
+      <span style="position:absolute;left:85%;transform:translateX(-50%);font-size:8px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:#991b1b;">Extreme</span>
+    </div>
+
+  </div>
+
+  <div class="note">
+    Your scenario moves risk from the <strong>Low zone</strong> (18%) into the <em>Moderate zone</em> (47%) — crossing the <em>Watch threshold</em> and approaching the <em>Alert threshold</em>. The model is most sensitive to the VIX spike and rising fear combination.
+  </div>
+</div>
+
+<!-- WHERE THIS SITS IN THE PAGE -->
+<div class="context-note">
+  <strong>Where this lives in the Scenario Explorer:</strong><br>
+  This rail replaces the top "Baseline vs scenario risk" panel. It's the first thing visible in the right column — compact, reads instantly, and all the detail (regime probs, narrative, driver deltas) follows below it. Total height ~180px. No extra chart needed. The <code>B</code> and <code>S</code> markers animate via Framer Motion on each API response — smooth slide rather than jump.
+</div>
+
+</body>
+</html>

@@ -81,6 +81,8 @@ export interface ScenarioRequest {
   drawdown_pct_504d: number
   ret_20d: number
   dist_sma50: number
+  days_in_regime_lag1?: number
+  turbulent_count_30d_lag1?: number
 }
 
 export interface ScenarioResponse {

@@ -1,18 +1,26 @@
 import {
   ComposedChart, Line, XAxis, YAxis, ResponsiveContainer,
-  ReferenceArea, ReferenceLine, Tooltip,
+  ReferenceLine, ReferenceDot, Tooltip,
 } from 'recharts'
 import type { HistoricalPoint } from '../../types/api'
 import { buildRegimeBands } from '../../lib/chartUtils'
 
 interface MiniRegimeChartProps {
   data: HistoricalPoint[]
+  height?: number
 }
 
 const REGIME_COLORS: Record<string, string> = {
   calm: '#4ade80',
   elevated: '#fbbf24',
-  turbulent: '#f87171',
+  turbulent: '#ef4444',
+}
+
+// RGBA variants for CSS gradient (immune to SVG fill-opacity rendering quirks)
+const REGIME_CSS: Record<string, string> = {
+  calm: 'rgba(74, 222, 128, 0.10)',
+  elevated: 'rgba(251, 191, 36, 0.10)',
+  turbulent: 'rgba(248, 113, 113, 0.10)',
 }
 
 interface TooltipProps {
@@ -33,55 +41,75 @@ function MiniTooltip({ active, payload, label }: TooltipProps) {
   )
 }
 
-function LastDot(props: { cx?: number; cy?: number; index?: number; dataLength: number }) {
-  const { cx = 0, cy = 0, index = 0, dataLength } = props
-  if (index !== dataLength - 1) return null
-  return <circle cx={cx} cy={cy} r={3.5} fill="#06b6d4" stroke="#080b12" strokeWidth={1.5} />
+function buildCssGradient(bands: ReturnType<typeof buildRegimeBands>, data: HistoricalPoint[]): string {
+  const total = data.length - 1
+  if (total <= 0) return 'transparent'
+
+  const stops: string[] = []
+  for (const b of bands) {
+    const startIdx = data.findIndex(d => d.date === b.start)
+    const endIdx = data.findIndex(d => d.date === b.end)
+    const startPct = ((startIdx / total) * 100).toFixed(2)
+    const endPct = ((endIdx / total) * 100).toFixed(2)
+    const color = REGIME_CSS[b.regime] ?? 'rgba(100,116,139,0.15)'
+    stops.push(`${color} ${startPct}%`, `${color} ${endPct}%`)
+  }
+
+  return `linear-gradient(to right, ${stops.join(', ')})`
 }
 
-export default function MiniRegimeChart({ data }: MiniRegimeChartProps) {
+export default function MiniRegimeChart({ data, height = 120 }: MiniRegimeChartProps) {
   if (data.length === 0) return null
 
   const bands = buildRegimeBands(data)
-  const todayDate = data[data.length - 1].date
+  const last = data[data.length - 1]
+  const gradient = buildCssGradient(bands, data)
 
   return (
-    <ResponsiveContainer width="100%" height={120}>
-      <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
-        <XAxis dataKey="date" hide />
-        <YAxis yAxisId="spy" hide />
-        <Tooltip content={<MiniTooltip />} />
-        {bands.map((b, i) => (
-          <ReferenceArea
-            key={i}
+    // chart margin is right:8, left:0 — right:8px matches that offset
+    <div style={{ position: 'relative' }}>
+      <div style={{
+        position: 'absolute', inset: '4px 8px 0 0',
+        background: gradient,
+        borderRadius: 2,
+        pointerEvents: 'none',
+      }} />
+      <ResponsiveContainer width="100%" height={height}>
+        <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
+          <XAxis dataKey="date" hide />
+          <YAxis yAxisId="spy" hide />
+          <Tooltip content={<MiniTooltip />} />
+          <Line
             yAxisId="spy"
-            x1={b.start}
-            x2={b.end}
-            fill={REGIME_COLORS[b.regime] ?? '#64748b'}
-            fillOpacity={b.regime === 'turbulent' ? 0.35 : b.regime === 'elevated' ? 0.20 : 0.14}
+            dataKey="close"
+            stroke="#42a5f5"
+            strokeWidth={2}
+            dot={false}
+            activeDot={{ r: 3, fill: '#42a5f5', strokeWidth: 0 }}
+            name="SPY"
+            isAnimationActive={false}
           />
-        ))}
-        <Line
-          yAxisId="spy"
-          dataKey="close"
-          stroke="#42a5f5"
-          strokeWidth={2}
-          dot={(props: { cx?: number; cy?: number; index?: number }) => (
-            <LastDot key={`dot-${props.index}`} {...props} dataLength={data.length} />
+          <ReferenceLine
+            yAxisId="spy"
+            x={last.date}
+            stroke="#06b6d4"
+            strokeWidth={1}
+            strokeDasharray="3 3"
+            label={{ value: 'Today', position: 'insideTopRight', fill: '#06b6d4', fontSize: 8 }}
+          />
+          {last.close != null && (
+            <ReferenceDot
+              yAxisId="spy"
+              x={last.date}
+              y={last.close}
+              r={3.5}
+              fill="#06b6d4"
+              stroke="#080b12"
+              strokeWidth={1.5}
+            />
           )}
-          activeDot={{ r: 3, fill: '#42a5f5', strokeWidth: 0 }}
-          name="SPY"
-          isAnimationActive={false}
-        />
-        <ReferenceLine
-          yAxisId="spy"
-          x={todayDate}
-          stroke="#06b6d4"
-          strokeWidth={1}
-          strokeDasharray="3 3"
-          label={{ value: 'Today', position: 'insideTopRight', fill: '#06b6d4', fontSize: 8 }}
-        />
-      </ComposedChart>
-    </ResponsiveContainer>
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
   )
 }

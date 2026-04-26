@@ -42,10 +42,16 @@ export const SLIDER_CONFIG: SliderConfig[] = [
   },
 ]
 
-export type ScenarioInputs = Record<SliderConfig['key'], number>
+export type ScenarioInputs = Record<SliderConfig['key'], number> & {
+  days_in_regime_lag1?: number
+  turbulent_count_30d_lag1?: number
+}
 
 export const PRESETS: Record<string, ScenarioInputs> = {
-  calm:   { vix_level: 13, vix_chg_5d: -1.0, rv_20d_pct: 0.25, drawdown_pct_504d: 0.02, ret_20d: 0.03, dist_sma50: 0.02 },
-  choppy: { vix_level: 22, vix_chg_5d:  2.0, rv_20d_pct: 0.65, drawdown_pct_504d: 0.08, ret_20d: -0.01, dist_sma50: -0.01 },
-  stress: { vix_level: 35, vix_chg_5d:  6.0, rv_20d_pct: 0.85, drawdown_pct_504d: 0.20, ret_20d: -0.08, dist_sma50: -0.06 },
+  // calm: quiet bull market — low vol, long streak in calm regime
+  calm:   { vix_level: 13, vix_chg_5d: -1.0, rv_20d_pct: 0.20, drawdown_pct_504d: 0.02, ret_20d: 0.03, dist_sma50: 0.02, days_in_regime_lag1: 60, turbulent_count_30d_lag1: 0 },
+  // choppy: elevated stress, meaningful turbulent probability
+  choppy: { vix_level: 28, vix_chg_5d:  4.0, rv_20d_pct: 0.90, drawdown_pct_504d: 0.50, ret_20d: -0.05, dist_sma50: -0.04, days_in_regime_lag1: 8, turbulent_count_30d_lag1: 8 },
+  // stress: severe spike — high vol, deep drawdown, fresh turbulent entry
+  stress: { vix_level: 45, vix_chg_5d: 10.0, rv_20d_pct: 0.95, drawdown_pct_504d: 0.70, ret_20d: -0.15, dist_sma50: -0.10, days_in_regime_lag1: 2, turbulent_count_30d_lag1: 3 },
 }

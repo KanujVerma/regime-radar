@@ -80,7 +80,7 @@ export default function ScenarioExplorer() {
                     <span className="text-[10px] font-semibold" style={{ color: '#94a3b8' }}>{cfg.label}</span>
                     <span className="text-[10px] font-bold" style={{ color }}>{val.toFixed(cfg.step < 0.1 ? 2 : 1)}</span>
                   </div>
-                  <p className="text-[9px] mb-1.5" style={{ color: '#64748b' }}>{cfg.helper}</p>
+                  <p className="text-[9px] mb-1.5" style={{ color: '#94a3b8' }}>{cfg.helper}</p>
                   <input
                     type="range"
                     min={cfg.min}
@@ -115,9 +115,9 @@ export default function ScenarioExplorer() {
             {sweepRow ? (
               <div className="grid grid-cols-3 gap-2 mt-3">
                 {[
-                  { label: 'Recall', value: `${(sweepRow.recall * 100).toFixed(0)}%` },
-                  { label: 'False Alerts', value: `${(sweepRow.false_alert_rate * 100).toFixed(0)}%` },
-                  { label: 'Lead Time', value: `${sweepRow.avg_lead_time_days.toFixed(0)}d` },
+                  { label: 'Crises caught', value: `${(sweepRow.recall * 100).toFixed(0)}%` },
+                  { label: 'False alarms', value: `${(sweepRow.false_alert_rate * 100).toFixed(0)}%` },
+                  { label: 'Avg warning', value: `${sweepRow.avg_lead_time_days.toFixed(0)}d` },
                 ].map(m => (
                   <div key={m.label} className="rounded-lg p-2 text-center" style={{ background: '#080b12', border: '1px solid #151d2e' }}>
                     <div className="text-[8px] tracking-wide uppercase" style={{ color: '#4a6080' }}>{m.label}</div>
@@ -126,7 +126,7 @@ export default function ScenarioExplorer() {
                 ))}
               </div>
             ) : (
-              <p className="text-[9px] mt-2" style={{ color: '#64748b' }}>Threshold data unavailable</p>
+              <p className="text-[9px] mt-2" style={{ color: '#94a3b8' }}>Threshold data unavailable</p>
             )}
           </div>
         </div>
@@ -138,11 +138,11 @@ export default function ScenarioExplorer() {
 
           {data && (
             <>
-              <Panel title="Turbulent regime probability — baseline vs scenario">
+              <Panel title="Chance of severe market stress — current vs your scenario">
                 <RiskRail baselineRisk={data.baseline_prob_turbulent} scenarioRisk={data.prob_turbulent} />
               </Panel>
 
-              <Panel title="Regime probability shift">
+              <Panel title="How each market state shifts under your scenario">
                 {(['calm', 'elevated', 'turbulent'] as const).map(r => {
                   const base = data[`baseline_prob_${r}` as keyof typeof data] as number
                   const scen = data[`prob_${r}` as keyof typeof data] as number
@@ -191,7 +191,7 @@ export default function ScenarioExplorer() {
               )}
 
               <Panel title="What changed the most">
-                <p className="text-[10px] mb-3" style={{ color: '#64748b' }}>Biggest input shifts driving the scenario difference</p>
+                <p className="text-[10px] mb-3" style={{ color: '#94a3b8' }}>Biggest input shifts driving the scenario difference</p>
                 {data.driver_deltas.map(d => (
                   <div key={d.feature} className="flex justify-between items-center mb-2">
                     <span className="text-[10px]" style={{ color: '#94a3b8' }}>{d.plain_label}</span>

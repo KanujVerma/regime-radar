@@ -74,7 +74,7 @@ export default function HelpDrawer() {
             {TERMS.map(({ term, def }) => (
               <div key={term}>
                 <div className="text-[10px] font-semibold mb-0.5" style={{ color: '#94a3b8' }}>{term}</div>
-                <p className="text-[9px] leading-relaxed" style={{ color: '#64748b' }}>{def}</p>
+                <p className="text-[9px] leading-relaxed" style={{ color: '#94a3b8' }}>{def}</p>
               </div>
             ))}
           </div>
