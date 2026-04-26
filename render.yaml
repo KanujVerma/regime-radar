@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: regime-radar-api
+    runtime: docker
+    dockerfilePath: Dockerfile.api
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: FRED_API_KEY
+        sync: false
+      - key: CORS_ORIGIN
+        sync: false
+      - key: APP_ENV
+        value: production
+      - key: FINNHUB_API_KEY
+        sync: false
