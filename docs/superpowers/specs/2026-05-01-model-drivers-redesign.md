@@ -35,7 +35,7 @@ The primary audience is a visitor who does not already know XGBoost or SHAP. Eve
 │                         │ + "always vs. today" note    │
 ├────────────────────────────────────────────────────────┤
 │ WHAT WOULD RAISE RISK FURTHER (full-width, purple)     │
-│ 3 forward-looking plain-English bullets                │
+│ 3 conditional, cautious plain-English bullets          │
 ├────────────────────────────────────────────────────────┤
 │ ▸ Model reliability and threshold tradeoffs [collapsed]│
 │   Threshold table + plain-English reading guide        │
@@ -80,12 +80,19 @@ Derives bullets from `local_explanation`:
 - `pushing` = entries with `value > 0`, sorted by `|value|` desc, top 3
 - `holding` = entries with `value < 0`, sorted by `|value|` desc, top 3
 
-Each bullet is a short plain-English sentence using `labelFor(feature)`. The sentence structure should be natural, not a label dump. For example:
+Each bullet is a short, cautious, descriptive plain-English sentence using `labelFor(feature)`. The sentence must describe what is happening — not assert causation or imply certainty about what it means.
 
-- "SPY pulled back from its 2-year high" — not "drawdown_from_52w_high: +62%"
-- "Day-to-day price swings are low" — not "realized_vol_5d: −25%"
+Good:
+- "SPY has pulled back from recent highs"
+- "Day-to-day price swings are low"
+- "Recent stress days have been limited"
 
-Sentence templates live in `frontend/src/lib/featureLabels.ts` alongside the existing `labelFor()` map. Add a `sentenceFor(feature, direction: 'up' | 'down'): string` function that returns a complete plain-English sentence for the top drivers.
+Avoid:
+- Causal claims ("this is definitively an early sign of stress")
+- Deterministic language ("this guarantees a shift is becoming likely")
+- Strong interpretive framing ("conditions are deteriorating")
+
+Sentence templates live in `frontend/src/lib/featureLabels.ts` alongside the existing `labelFor()` map. Add a `sentenceFor(feature, direction: 'up' | 'down'): string` function that returns a short descriptive sentence for the top drivers. Each sentence should describe the observable fact, not its implication.
 
 If `local_explanation` is empty, show a short fallback message ("Today's SHAP values are unavailable — showing global importance instead") and skip the push/pull section.
 
@@ -97,12 +104,15 @@ Reuses existing `DriverBar` component. Shows top 5 by importance. Below the bars
 
 ### 5. "What would raise risk further" block
 
-Static per-feature content derived from `topPushingFeature` (the highest-SHAP feature today). Three bullets:
-1. If `realized_vol` or `vix` family: "More day-to-day volatility — if realized vol climbs past its historical median, it becomes the model's strongest signal"
-2. If `drawdown` family: "A deeper pullback from recent highs"
-3. General: "More frequent stress days in the next few weeks — a pickup here would push the trailing-month count higher"
+Derived from `topPushingFeature` (the highest-SHAP feature today). Three bullets, framed as conditional observations — not forecasts.
 
-These are conditionally rendered based on which features appear in `pushing`. If pushing is empty, render the three generic bullets above.
+Use framing like "Risk would likely rise if…" or "The model would become more concerned if…":
+
+1. If `realized_vol` or `vix` family: "Risk would likely rise if day-to-day volatility continues to climb"
+2. If `drawdown` family: "The model would become more concerned if the pullback from recent highs deepens"
+3. General: "Risk would likely rise if high-stress days become more frequent over the next few weeks"
+
+These must read as descriptive and conditional, not as predictions or guarantees. Rendered based on which features appear in `pushing`. If pushing is empty, render the three generic bullets above.
 
 ### 6. Reliability accordion (collapsed by default)
 
@@ -122,23 +132,27 @@ The headline is chosen based on the current regime state. Add a small lookup in 
 
 ```ts
 const DRIVER_HEADLINES: Record<string, string> = {
-  calm:      "Markets just turned calm — but the model isn't ready to stand down",
-  elevated:  "Elevated stress — the model is watching several warning signs",
-  turbulent: "Turbulent conditions — the model sees significant risk signals",
+  calm:      "Conditions improved, but the model is still cautious",
+  elevated:  "Elevated conditions — the model is watching several factors",
+  turbulent: "Turbulent conditions — the model is registering significant stress signals",
 }
 ```
 
-Keyed on `regime.toLowerCase()`. If the regime just transitioned (determined by comparing `data.regime` on current state vs. prior state — already available via `data.delta.regime_changed`), prepend "Just shifted: " to provide context. This is optional polish; if it adds complexity, skip it for v1.
+Keyed on `regime.toLowerCase()`. Headlines are deliberately measured — professional and product-like, not theatrical. Do not append transition-specific phrases to the headline; that belongs in the narrative body instead.
 
 ### `buildDriversNarrative` function
 
-Signature: `buildDriversNarrative(regime: string, risk: number, topPushing: string[], topHolding: string[]): string`
+Signature: `buildDriversNarrative(regime: string, risk: number, topPushing: string[], topHolding: string[], priorRegime?: string | null): string`
 
 Logic:
-1. Open with regime + state summary (e.g., "After a stretch of elevated stress, conditions shifted to calm today")
-2. If risk > 0.40: note what the model is watching (top pushing feature in plain English)
-3. If risk < 0.20 and regime is calm: affirm stability ("Conditions look genuinely quiet — the model sees few stress signals")
-4. Close with why risk is not lower/higher: reference top holding feature if risk is elevated
+1. **Opening sentence** — describe current conditions:
+   - If `priorRegime` is provided and differs from `regime`: "After a period of [priorRegime] conditions, the market has shifted to [regime] today." Only use this phrasing when `priorRegime` is explicitly passed and confirmed different — never infer it.
+   - Otherwise: "The market is currently in a [regime] state." (Safe generic fallback.)
+2. If `risk > 0.40`: add a second sentence noting the top pushing feature in plain English, framed cautiously ("The model is watching [plain-English label], which has been a factor in recent readings.")
+3. If `risk < 0.20` and regime is calm: add "The model sees few notable stress signals at this time."
+4. If `topHolding` is non-empty and risk is elevated: add a closing sentence referencing what is keeping conditions from worsening ("At the same time, [plain-English label] is providing some offset.")
+
+The `priorRegime` argument is only passed when `data.delta.regime_changed === true` and `data.delta.prior_regime` is a non-null string. The caller is responsible for this check — the function must not access `data.delta` directly.
 
 Uses `labelFor()` for all feature references. No raw feature keys in output. No SHAP/XGBoost terminology.
 
