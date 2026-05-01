@@ -79,4 +79,10 @@ describe('buildDriversNarrative', () => {
     expect(result).toContain('positive 20-day momentum')
     expect(result).toContain('low realized volatility')
   })
+
+  it('uses correct article "an" for elevated regime', () => {
+    const result = buildDriversNarrative('elevated', 0.30, [], [])
+    expect(result).toContain('in an elevated state')
+    expect(result).not.toContain('in a elevated')
+  })
 })

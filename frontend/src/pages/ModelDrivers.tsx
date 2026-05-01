@@ -58,11 +58,11 @@ function buildForwardBullets(topPushingFeature: string | undefined): string[] {
 
 export default function ModelDrivers() {
   const { data, loading, error } = useModelDrivers()
-  const { data: stateData, loading: stateLoading } = useCurrentState()
+  const { data: stateData, loading: stateLoading, error: stateError } = useCurrentState()
   const [reliabilityOpen, setReliabilityOpen] = useState(false)
 
   if (loading || stateLoading) return <div className="p-6 text-slate-500 text-sm">Loading…</div>
-  if (error) return <div className="p-6 text-red-400 text-sm">{error}</div>
+  if (error || stateError) return <div className="p-6 text-red-400 text-sm">{error ?? stateError}</div>
   if (!data) return null
 
   const regime = (stateData?.regime ?? 'unknown').toLowerCase()

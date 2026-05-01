@@ -77,10 +77,11 @@ export function buildDriversNarrative(
   const priorLower = priorRegime?.toLowerCase()
 
   // 1. Opening — only use transition phrasing when prior regime is explicitly different
+  const article = /^[aeiou]/i.test(regimeLower) ? 'an' : 'a'
   const opening =
     priorLower && priorLower !== regimeLower
       ? `After a period of ${priorLower} conditions, the market has shifted to ${regimeLower} today.`
-      : `The market is currently in a ${regimeLower} state.`
+      : `The market is currently in ${article} ${regimeLower} state.`
 
   // 2. Pushing sentence — synthesize up to 2 fragments into natural copy
   let middle = ''
