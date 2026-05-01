@@ -142,6 +142,7 @@ class AppState:
 
     def _do_refresh(self) -> None:
         """Core refresh: fetch latest daily data from yfinance+FRED, re-score."""
+        import time
         from src.data.fetch_yfinance import fetch_spy_history
         from src.data.fetch_vix import fetch_vix_history
         from src.data.fetch_fred import fetch_emv
@@ -155,12 +156,26 @@ class AppState:
 
         processed = Path(PROCESSED_DIR)
 
+        # Evict cache files older than 12 hours so each new trading day pulls fresh data.
+        # Without this, snapshot copies seeded by _load_from_snapshots() would be reused
+        # forever and the scheduler would appear "live" but serve stale data.
+        _CACHE_TTL_SECS = 12 * 3600
+        for fname in ("spy.parquet", "vix.parquet", "emv.parquet"):
+            p = processed / fname
+            if p.exists() and (time.time() - p.stat().st_mtime) > _CACHE_TTL_SECS:
+                p.unlink()
+                _logger.info("Evicted stale cache: %s", fname)
+
         # Fetch fresh data (yfinance+FRED are the authoritative sources)
         spy = fetch_spy_history(start="1993-01-01", cache_path=processed / "spy.parquet")
         vix = fetch_vix_history(start="1990-01-01", cache_path=processed / "vix.parquet")
         emv = fetch_emv(start="1985-01-01", cache_path=processed / "emv.parquet")
 
         panel = merge_market_panel(spy, vix, emv)
+        # Persist the merged panel so /historical-state always reflects current data.
+        processed.mkdir(parents=True, exist_ok=True)
+        panel.to_parquet(processed / "panel.parquet")
+
         regime = build_regime_labels(panel)
         trend = build_trend_labels(panel)
         features = build_features(panel, regime_series=regime)
@@ -203,7 +218,9 @@ class AppState:
         from src.utils.paths import SNAPSHOTS_DIR, PROCESSED_DIR
         PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
         for src_file in SNAPSHOTS_DIR.glob("*.parquet"):
-            shutil.copy2(src_file, PROCESSED_DIR / src_file.name)
+            dest = PROCESSED_DIR / src_file.name
+            shutil.copy2(src_file, dest)
+            dest.touch()  # reset mtime so the 12h TTL in _do_refresh doesn't evict immediately
         _logger.info("Copied snapshots to processed dir, running inference from committed data")
         self._do_refresh()
         with self._connect() as conn:
