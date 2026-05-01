@@ -29,8 +29,9 @@ describe('sentenceFor', () => {
   it('returns tightened down sentence for trend_code', () => {
     expect(sentenceFor('trend_code', 'down')).toBe("SPY's recent trend remains positive")
   })
-  it('falls back to feature key for unknown features', () => {
-    expect(sentenceFor('unknown_feature_xyz', 'up')).toBe('unknown_feature_xyz')
+  it('falls back to generic plain-English for unknown features', () => {
+    expect(sentenceFor('unknown_feature_xyz', 'up')).toBe('An additional factor is contributing to elevated risk')
+    expect(sentenceFor('unknown_feature_xyz', 'down')).toBe('An additional factor is helping to limit risk')
   })
 })
 
@@ -39,7 +40,7 @@ describe('narrativeFragmentFor', () => {
     expect(narrativeFragmentFor('drawdown_pct_504d', 'up')).toBe('a pullback from the 2-year high')
   })
   it('returns noun phrase for emv_level up', () => {
-    expect(narrativeFragmentFor('emv_level', 'up')).toBe('a rising equity market volatility index')
+    expect(narrativeFragmentFor('emv_level', 'up')).toBe('a firmer volatility backdrop')
   })
   it('returns noun phrase for ret_20d down', () => {
     expect(narrativeFragmentFor('ret_20d', 'down')).toBe('positive 20-day momentum')
@@ -47,7 +48,8 @@ describe('narrativeFragmentFor', () => {
   it('returns noun phrase for rv_20d down', () => {
     expect(narrativeFragmentFor('rv_20d', 'down')).toBe('low realized volatility')
   })
-  it('falls back to lowercase label for unknown features', () => {
-    expect(narrativeFragmentFor('unknown_xyz', 'up')).toBe('unknown_xyz')
+  it('falls back to generic plain-English for unknown features', () => {
+    expect(narrativeFragmentFor('unknown_xyz', 'up')).toBe('elevated market conditions')
+    expect(narrativeFragmentFor('unknown_xyz', 'down')).toBe('stable market conditions')
   })
 })

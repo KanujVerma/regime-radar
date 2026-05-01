@@ -109,7 +109,7 @@ export default function CurrentState() {
                   <div className="text-[9px] font-bold tracking-widest uppercase mb-3" style={{ color: '#4a6080' }}>
                     Since last refresh
                   </div>
-                  <DeltaRows delta={data.delta} />
+                  <DeltaRows delta={data.delta} currentRegime={data.regime} />
                 </>
               )}
             </Panel>
@@ -152,7 +152,7 @@ export default function CurrentState() {
   )
 }
 
-function DeltaRows({ delta }: { delta: StateDelta }) {
+function DeltaRows({ delta, currentRegime }: { delta: StateDelta; currentRegime: string }) {
   const noMeaningfulChange =
     Math.abs(delta.risk_delta) < 0.001 && !delta.regime_changed && !delta.top_feature_moved
 
@@ -172,7 +172,7 @@ function DeltaRows({ delta }: { delta: StateDelta }) {
       positive: delta.risk_delta < 0,
     },
     delta.regime_changed && delta.prior_regime
-      ? { icon: '🔄', text: `Regime shifted from ${delta.prior_regime} to current`, badge: 'Changed', positive: false }
+      ? { icon: '🔄', text: `Regime shifted from ${delta.prior_regime} to ${currentRegime}`, badge: 'Changed', positive: false }
       : null,
     delta.top_feature_moved
       ? {
@@ -209,7 +209,7 @@ function DeltaRows({ delta }: { delta: StateDelta }) {
 
 function GaugeArc({ risk, regime }: { risk: number; regime: string }) {
   const pct = Math.min(risk, 1)
-  const angle = pct * 180 - 90
+  const angle = pct * 180 - 180
   const color = risk < 0.20 ? '#4ade80' : risk < 0.40 ? '#fbbf24' : '#f87171'
   const isStressed = regime === 'elevated' || regime === 'turbulent'
   const caption =

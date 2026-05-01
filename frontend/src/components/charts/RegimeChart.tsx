@@ -16,6 +16,30 @@ const REGIME_COLORS: Record<string, string> = {
   turbulent: '#f87171',
 }
 
+interface TooltipProps {
+  active?: boolean
+  payload?: Array<{ payload: HistoricalPoint; name: string; value: number }>
+  label?: string
+}
+
+function RegimeTooltip({ active, payload, label }: TooltipProps) {
+  if (!active || !payload?.length) return null
+  const pt = payload[0].payload
+  return (
+    <div style={{ background: '#0c1020', border: '1px solid #151d2e', padding: '6px 10px', borderRadius: 6, fontSize: 10 }}>
+      <div style={{ color: '#64748b', marginBottom: 4 }}>{label}</div>
+      {payload.map(p => (
+        <div key={p.name} style={{ color: '#f1f5f9', marginBottom: 2 }}>{p.name}: {typeof p.value === 'number' ? p.value.toFixed(2) : p.value}</div>
+      ))}
+      {pt.regime && (
+        <div style={{ color: REGIME_COLORS[pt.regime] ?? '#94a3b8', textTransform: 'capitalize', marginTop: 4, fontWeight: 700 }}>
+          {pt.regime}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function RegimeChart({ data, showVix }: RegimeChartProps) {
   const bands = buildRegimeBands(data)
 
@@ -48,10 +72,7 @@ export default function RegimeChart({ data, showVix }: RegimeChartProps) {
             label={{ value: 'VIX', angle: -90, position: 'insideRight', fill: '#64748b', fontSize: 9 }}
           />
         )}
-        <Tooltip
-          contentStyle={{ background: '#0c1020', border: '1px solid #151d2e', fontSize: 10 }}
-          labelStyle={{ color: '#94a3b8' }}
-        />
+        <Tooltip content={<RegimeTooltip />} wrapperStyle={{ pointerEvents: 'none' }} />
         {bands.map((b, i) => (
           <ReferenceArea
             key={i}

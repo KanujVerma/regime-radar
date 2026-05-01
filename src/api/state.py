@@ -137,8 +137,20 @@ class AppState:
         _logger.info("Running scheduled data refresh")
         try:
             self._do_refresh()
+            self._sync_snapshots()
         except Exception as e:
             _logger.error("Refresh job failed: %s", e)
+
+    def _sync_snapshots(self) -> None:
+        """Copy current processed parquets back to snapshots/ so demo fallback stays current."""
+        import shutil
+        from src.utils.paths import SNAPSHOTS_DIR, PROCESSED_DIR
+        SNAPSHOTS_DIR.mkdir(parents=True, exist_ok=True)
+        for fname in ("spy.parquet", "vix.parquet", "emv.parquet", "panel.parquet"):
+            src = PROCESSED_DIR / fname
+            if src.exists():
+                shutil.copy2(src, SNAPSHOTS_DIR / fname)
+        _logger.debug("Snapshots synced from processed/")
 
     def _do_refresh(self) -> None:
         """Core refresh: fetch latest daily data from yfinance+FRED, re-score."""
@@ -207,6 +219,9 @@ class AppState:
             "top_drivers": [],  # populated by model_drivers endpoint
             "mode": mode,
             "price_card_price": price_card_price,
+            "prob_calm": result.get("prob_calm"),
+            "prob_elevated": result.get("prob_elevated"),
+            "prob_turbulent": result.get("prob_turbulent"),
         }
         self.write_state(state)
         _logger.info("State refreshed: regime=%s risk=%.3f mode=%s",

@@ -49,11 +49,19 @@ def predict_current_state(
     else:
         transition_cal = transition_raw
 
-    latest_regime = regime_smoothed.iloc[-1]
+    latest_probs = regime_probs[-1]
+    # Use raw-probability argmax so the regime label is always consistent with
+    # the displayed confidence percentages. smooth_live introduces a 2-day lag
+    # that causes the label to contradict the probabilities (e.g. "elevated"
+    # while showing 78% calm confidence).
+    latest_regime = REGIME_NAMES[int(latest_probs.argmax())]
     latest_risk = float(transition_cal[-1])
 
     return {
         "regime": latest_regime,
         "transition_risk": round(latest_risk, 4),
         "regime_history": regime_smoothed.iloc[-5:].tolist(),
+        "prob_calm": round(float(latest_probs[0]), 4),
+        "prob_elevated": round(float(latest_probs[1]), 4),
+        "prob_turbulent": round(float(latest_probs[2]), 4),
     }

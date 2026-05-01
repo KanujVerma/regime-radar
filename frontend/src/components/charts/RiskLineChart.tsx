@@ -33,6 +33,7 @@ export default function RiskLineChart({ data }: RiskLineChartProps) {
           formatter={(v: unknown) => [`${(Number(v) * 100).toFixed(1)}%`, 'Risk']}
           contentStyle={{ background: '#0c1020', border: '1px solid #151d2e', fontSize: 10 }}
           labelStyle={{ color: '#94a3b8' }}
+          wrapperStyle={{ pointerEvents: 'none' }}
         />
         <ReferenceLine
           y={DEFAULT_THRESHOLD}

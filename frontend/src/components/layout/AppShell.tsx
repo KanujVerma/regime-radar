@@ -5,7 +5,7 @@ export default function AppShell() {
   return (
     <div className="min-h-screen" style={{ background: '#080b12' }}>
       <Sidebar />
-      <main style={{ marginLeft: 196, minHeight: '100vh' }}>
+      <main style={{ marginLeft: 196, minHeight: '100vh', overflowX: 'hidden' }}>
         <Outlet />
       </main>
     </div>

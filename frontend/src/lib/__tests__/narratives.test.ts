@@ -45,7 +45,7 @@ describe('buildDriversNarrative', () => {
   it('combines two pushing fragments naturally', () => {
     const result = buildDriversNarrative('elevated', 0.63, ['drawdown_pct_504d', 'emv_level'], [])
     expect(result).toContain('pullback from the 2-year high')
-    expect(result).toContain('rising equity market volatility index')
+    expect(result).toContain('firmer volatility backdrop')
   })
 
   it('includes pushing sentence when risk is exactly 0.40', () => {

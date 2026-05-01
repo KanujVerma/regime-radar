@@ -11,9 +11,9 @@ import type { ThresholdSweepRow } from '../types/api'
 
 const VOL_FEATURES = new Set([
   'rv_20d', 'rv_20d_pct', 'vix_level', 'vix_pct_504d',
-  'vix_zscore_252d', 'vix_chg_5d', 'emv_level',
+  'vix_zscore_252d', 'vix_chg_5d', 'emv_level', 'emv_lag_20d',
 ])
-const DRAWDOWN_FEATURES = new Set(['drawdown_pct_504d'])
+const DRAWDOWN_FEATURES = new Set(['drawdown_pct_504d', 'drawdown'])
 const STRESS_FEATURES = new Set(['turbulent_count_30d_lag1', 'days_in_regime_lag1'])
 const TREND_FEATURES = new Set(['trend_code', 'momentum_20d', 'ret_20d', 'dist_sma50'])
 
@@ -60,6 +60,7 @@ export default function ModelDrivers() {
   const { data, loading, error } = useModelDrivers()
   const { data: stateData, loading: stateLoading, error: stateError } = useCurrentState()
   const [reliabilityOpen, setReliabilityOpen] = useState(false)
+  const [reliabilityHover, setReliabilityHover] = useState(false)
 
   if (loading || stateLoading) return <div className="p-6 text-slate-500 text-sm">Loading…</div>
   if (error || stateError) return <div className="p-6 text-red-400 text-sm">{error ?? stateError}</div>
@@ -192,13 +193,13 @@ export default function ModelDrivers() {
               What always drives the model most
             </div>
             <p style={{ color: '#4a5568', fontSize: 9, marginBottom: 10, lineHeight: 1.5 }}>
-              Average influence across all historical periods — not just today.
+              Relative importance across all historical periods — top 5 factors shown. Bars are proportional to each other, not a percentage breakdown.
             </p>
             {topImportance.map(d => (
               <DriverBar key={d.feature} feature={d.feature} importance={d.importance} maxImportance={maxImp} positive labelWidth={120} />
             ))}
             <p style={{ color: '#4a5568', fontSize: 9, marginTop: 10, lineHeight: 1.5 }}>
-              Left panel shows <em>what is happening today</em>. This panel shows <em>what the model generally relies on most</em>.
+              Left panel shows <em>what is driving the model today</em>. This panel shows <em>what the model typically relies on most</em>.
             </p>
           </div>
         </div>
@@ -210,7 +211,7 @@ export default function ModelDrivers() {
           </div>
           {forwardBullets.map((b, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
-              <span style={{ color: '#a78bfa', flexShrink: 0, fontWeight: 700 }}>→</span>
+              <span style={{ color: '#a78bfa', flexShrink: 0, fontWeight: 700, fontSize: 10, lineHeight: 1.55, marginTop: 1 }}>→</span>
               <span style={{ color: '#c4b5fd', fontSize: 10, lineHeight: 1.55 }}>{b}</span>
             </div>
           ))}
@@ -221,21 +222,34 @@ export default function ModelDrivers() {
           <div>
             <button
               onClick={() => setReliabilityOpen(o => !o)}
+              onMouseEnter={() => setReliabilityHover(true)}
+              onMouseLeave={() => setReliabilityHover(false)}
+              aria-expanded={reliabilityOpen}
               className="w-full text-left"
               style={{
-                background: '#080b12',
-                border: '1px solid #151d2e',
+                background: reliabilityOpen ? '#0c1028' : reliabilityHover ? '#0c1520' : '#080b12',
+                border: `1px solid ${reliabilityOpen || reliabilityHover ? '#1e3a5f' : '#1a2540'}`,
                 borderRadius: reliabilityOpen ? '6px 6px 0 0' : 6,
-                padding: '9px 14px',
+                padding: '10px 14px',
                 cursor: 'pointer',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 12,
+                transition: 'background 0.15s, border-color 0.15s',
               }}
             >
-              <div style={{ color: '#94a3b8', fontSize: 10, fontWeight: 600 }}>
-                {reliabilityOpen ? '▾' : '▸'} Model reliability and threshold tradeoffs
+              <div>
+                <div style={{ color: reliabilityHover ? '#f1f5f9' : '#cbd5e1', fontSize: 10, fontWeight: 600, transition: 'color 0.15s' }}>
+                  Model reliability and threshold tradeoffs
+                </div>
+                <div style={{ color: reliabilityHover ? '#64748b' : '#4a5568', fontSize: 9, marginTop: 2, transition: 'color 0.15s' }}>
+                  How often does flagging at different risk levels catch regime shifts?
+                </div>
               </div>
-              <div style={{ color: '#4a5568', fontSize: 9, marginTop: 2 }}>
-                How often does flagging at different risk levels actually catch regime shifts?
-              </div>
+              <span style={{ color: reliabilityHover ? '#94a3b8' : '#64748b', fontSize: 14, flexShrink: 0, transition: 'color 0.15s' }}>
+                {reliabilityOpen ? '▾' : '▸'}
+              </span>
             </button>
             {reliabilityOpen && <ReliabilityTable rows={data.threshold_sweep} />}
           </div>

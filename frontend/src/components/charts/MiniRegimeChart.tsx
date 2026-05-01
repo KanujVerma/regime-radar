@@ -18,9 +18,9 @@ const REGIME_COLORS: Record<string, string> = {
 
 // RGBA variants for CSS gradient (immune to SVG fill-opacity rendering quirks)
 const REGIME_CSS: Record<string, string> = {
-  calm: 'rgba(74, 222, 128, 0.10)',
-  elevated: 'rgba(251, 191, 36, 0.10)',
-  turbulent: 'rgba(248, 113, 113, 0.10)',
+  calm: 'rgba(74, 222, 128, 0.18)',
+  elevated: 'rgba(251, 191, 36, 0.18)',
+  turbulent: 'rgba(248, 113, 113, 0.18)',
 }
 
 interface TooltipProps {
