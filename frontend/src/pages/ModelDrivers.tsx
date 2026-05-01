@@ -14,27 +14,54 @@ const VOL_FEATURES = new Set([
   'vix_zscore_252d', 'vix_chg_5d', 'emv_level',
 ])
 const DRAWDOWN_FEATURES = new Set(['drawdown_pct_504d'])
+const STRESS_FEATURES = new Set(['turbulent_count_30d_lag1', 'days_in_regime_lag1'])
+const TREND_FEATURES = new Set(['trend_code', 'momentum_20d', 'ret_20d', 'dist_sma50'])
 
 function buildForwardBullets(topPushingFeature: string | undefined): string[] {
-  const b1 = VOL_FEATURES.has(topPushingFeature ?? '')
-    ? 'Risk would likely rise if day-to-day volatility continues to climb'
-    : DRAWDOWN_FEATURES.has(topPushingFeature ?? '')
-    ? 'The model would become more concerned if the pullback from recent highs deepens'
-    : 'Risk would likely rise if market stress indicators continue to rise'
+  const f = topPushingFeature ?? ''
 
-  const b2 = b1.includes('pullback')
-    ? 'Risk would likely rise if day-to-day volatility increases'
-    : 'The model would become more concerned if the pullback from recent highs deepens'
-
-  return [b1, b2, 'Risk would likely rise if high-stress days become more frequent over the next few weeks']
+  if (VOL_FEATURES.has(f)) {
+    return [
+      'Risk would likely rise if day-to-day volatility continues to climb',
+      'The model would become more concerned if the pullback from recent highs deepens',
+      'Risk would likely rise if high-stress days become more frequent over the next few weeks',
+    ]
+  }
+  if (DRAWDOWN_FEATURES.has(f)) {
+    return [
+      'The model would become more concerned if the pullback from recent highs deepens',
+      'Risk would likely rise if day-to-day volatility increases',
+      'Risk would likely rise if high-stress days become more frequent over the next few weeks',
+    ]
+  }
+  if (STRESS_FEATURES.has(f)) {
+    return [
+      'Risk would likely rise if high-stress days become more frequent over the next few weeks',
+      'Risk would likely rise if day-to-day volatility continues to climb',
+      'The model would become more concerned if the pullback from recent highs deepens',
+    ]
+  }
+  if (TREND_FEATURES.has(f)) {
+    return [
+      'Risk would likely rise if recent price momentum continues to weaken',
+      'Risk would likely rise if day-to-day volatility picks up',
+      'The model would become more concerned if high-stress days start to accumulate',
+    ]
+  }
+  // generic fallback
+  return [
+    'Risk would likely rise if market volatility continues to increase',
+    'The model would become more concerned if the pullback from recent highs deepens',
+    'Risk would likely rise if high-stress days become more frequent over the next few weeks',
+  ]
 }
 
 export default function ModelDrivers() {
   const { data, loading, error } = useModelDrivers()
-  const { data: stateData } = useCurrentState()
+  const { data: stateData, loading: stateLoading } = useCurrentState()
   const [reliabilityOpen, setReliabilityOpen] = useState(false)
 
-  if (loading) return <div className="p-6 text-slate-500 text-sm">Loading…</div>
+  if (loading || stateLoading) return <div className="p-6 text-slate-500 text-sm">Loading…</div>
   if (error) return <div className="p-6 text-red-400 text-sm">{error}</div>
   if (!data) return null
 
@@ -168,7 +195,7 @@ export default function ModelDrivers() {
               Average influence across all historical periods — not just today.
             </p>
             {topImportance.map(d => (
-              <DriverBar key={d.feature} feature={d.feature} importance={d.importance} maxImportance={maxImp} positive />
+              <DriverBar key={d.feature} feature={d.feature} importance={d.importance} maxImportance={maxImp} positive labelWidth={120} />
             ))}
             <p style={{ color: '#4a5568', fontSize: 9, marginTop: 10, lineHeight: 1.5 }}>
               Left panel shows <em>what is happening today</em>. This panel shows <em>what the model generally relies on most</em>.

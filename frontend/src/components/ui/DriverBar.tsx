@@ -5,14 +5,15 @@ interface DriverBarProps {
   importance: number
   maxImportance: number
   positive?: boolean
+  labelWidth?: number
 }
 
-export default function DriverBar({ feature, importance, maxImportance, positive = true }: DriverBarProps) {
+export default function DriverBar({ feature, importance, maxImportance, positive = true, labelWidth = 180 }: DriverBarProps) {
   const pct = maxImportance > 0 ? (importance / maxImportance) * 100 : 0
   const color = positive ? '#06b6d4' : '#f87171'
   return (
     <div className="flex items-center gap-3 mb-2">
-      <div className="text-[10px] text-right shrink-0" style={{ width: 180, color: '#94a3b8' }}>
+      <div className="text-[10px] text-right shrink-0" style={{ width: labelWidth, color: '#94a3b8' }}>
         {labelFor(feature)}
       </div>
       <div className="flex-1 rounded-full h-1.5 overflow-hidden" style={{ background: '#151d2e' }}>
