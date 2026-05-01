@@ -13,6 +13,5 @@ export default defineConfig({
       'tests/smoke/**', // Exclude Playwright smoke tests
       'playwright.config.ts',
     ],
-    allowOnly: false,
   },
 });
