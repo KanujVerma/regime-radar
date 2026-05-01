@@ -43,7 +43,7 @@ Finnhub is optional and only affects the live price-card overlay on the Current 
 | **Current State** | Live regime, transition risk gauge, probability distribution across all three states, key risk drivers, 30-day mini chart |
 | **History** | Full regime timeline with VIX overlay from 2020 onward |
 | **Event Replay** | Walk the model through named historical events (2020 COVID crash, 2022 rate shock, etc.) |
-| **Model Drivers** | Global feature importance, current local explanation, threshold/recall tradeoff table |
+| **Model Drivers** | Plain-English case brief explaining today's reading, push/pull panel showing what is driving risk today vs. what the model generally relies on most, forward-looking risk conditions, and a collapsible reliability/threshold tradeoff table |
 | **Scenario Explorer** | Adjust individual feature inputs with sliders and see how regime probabilities and risk shift in real time |
 
 ---
@@ -63,7 +63,7 @@ Finnhub is optional and only affects the live price-card overlay on the Current 
 *Scenario Explorer — Stress Spike preset shifts transition risk from 1% → 75%, with feature-level attribution.*
 
 ![Model Drivers](docs/screenshots/model-drivers.png)
-*Model Drivers — global feature importance and today's SHAP-based local risk explanation.*
+*Model Drivers — plain-English case brief, today's top push/pull drivers, global importance bars, and forward-looking risk conditions.*
 
 ---
 
