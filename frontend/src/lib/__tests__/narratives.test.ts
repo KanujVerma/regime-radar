@@ -48,6 +48,11 @@ describe('buildDriversNarrative', () => {
     expect(result).toContain('rising equity market volatility index')
   })
 
+  it('includes pushing sentence when risk is exactly 0.40', () => {
+    const result = buildDriversNarrative('elevated', 0.40, ['drawdown_pct_504d'], [])
+    expect(result).toContain('pullback from the 2-year high')
+  })
+
   it('does NOT include pushing sentence when pushing features are empty', () => {
     const result = buildDriversNarrative('elevated', 0.63, [], [])
     expect(result).not.toContain('keeping the model cautious')

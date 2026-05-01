@@ -85,7 +85,7 @@ export function buildDriversNarrative(
   // 2. Pushing sentence — synthesize up to 2 fragments into natural copy
   let middle = ''
   const pushFragments = topPushing.slice(0, 2).map(f => narrativeFragmentFor(f, 'up'))
-  if (risk > 0.40 && pushFragments.length > 0) {
+  if (risk >= 0.40 && pushFragments.length > 0) {
     const pushStr = pushFragments.length === 2
       ? `${cap(pushFragments[0])} and ${pushFragments[1]}`
       : cap(pushFragments[0])
@@ -93,6 +93,8 @@ export function buildDriversNarrative(
     middle = ` ${pushStr} ${verb} keeping the model cautious.`
   } else if (risk < 0.20 && regimeLower === 'calm') {
     middle = ' The model sees few notable stress signals at this time.'
+  } else if (middle === '' && regimeLower !== 'calm') {
+    middle = ' The model is monitoring conditions for signs of change.'
   }
 
   // 3. Holding offset — synthesize up to 2 fragments
