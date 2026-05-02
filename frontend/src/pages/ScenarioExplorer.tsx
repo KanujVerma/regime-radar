@@ -455,7 +455,7 @@ export default function ScenarioExplorer() {
                 })}
 
                 {positiveDrivers.some(d => REGIME_HISTORY_FEATURES.has(d.feature)) && (
-                  <p className="text-[9px] mb-3" style={{ color: '#3a5070' }}>
+                  <p className="text-[9px] mb-3" style={{ color: '#64748b' }}>
                     Regime history features reflect the crisis context loaded by this preset — not visible sliders.
                   </p>
                 )}

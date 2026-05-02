@@ -22,7 +22,7 @@ export const SLIDER_CONFIG: SliderConfig[] = [
   },
   {
     key: 'rv_20d_pct', label: 'Realized Vol Percentile',
-    helper: 'How unusual recent volatility is vs. the past 2 years — 0.70 means jumpier than 70% of recent days',
+    helper: 'How unusual recent volatility is vs. the past 2 years',
     min: 0, max: 1, step: 0.01, calmMax: 0.40, stressMin: 0.70,
   },
   {
