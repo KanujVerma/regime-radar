@@ -25,16 +25,22 @@ export default function ScenarioExplorer() {
   const { data, loading, error } = useScenario(inputs)
   const { data: modelData } = useModelDrivers()
 
-  // Capture actual current-market feature values from the first successful response
-  // so "Reset to current market" sets sliders to today's real values, not hardcoded defaults.
-  const currentMarketRef = useRef<ScenarioInputs | null>(null)
+  // Seed sliders with actual current-market values on first load and store for reset.
+  const [currentMarketInputs, setCurrentMarketInputs] = useState<ScenarioInputs | null>(null)
+  const seededRef = useRef(false)
   useEffect(() => {
-    if (data?.baseline_inputs && !currentMarketRef.current) {
-      currentMarketRef.current = { ...DEFAULT_INPUTS, ...data.baseline_inputs } as ScenarioInputs
+    if (data?.baseline_inputs && !seededRef.current) {
+      seededRef.current = true
+      const marketInputs = { ...DEFAULT_INPUTS, ...data.baseline_inputs } as ScenarioInputs
+      setCurrentMarketInputs(marketInputs)
+      setInputs(marketInputs)
     }
   }, [data])
 
-  const reset = useCallback(() => setInputs(currentMarketRef.current ?? DEFAULT_INPUTS), [])
+  const reset = useCallback(
+    () => setInputs(currentMarketInputs ?? DEFAULT_INPUTS),
+    [currentMarketInputs],
+  )
 
   const sweepRow = modelData?.threshold_sweep?.find(r => Math.abs(r.threshold - threshold) < 0.05)
 
