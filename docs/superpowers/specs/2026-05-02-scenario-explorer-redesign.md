@@ -12,7 +12,7 @@
 
 ## Pre-implementation verification notes
 
-These facts were confirmed by reading the live code before writing this spec. Implementers should not re-verify them; they are stated for clarity.
+These were verified while drafting the spec and are included here for clarity.
 
 ### `baseline_inputs` is confirmed to exist
 
@@ -80,7 +80,16 @@ interface ProbabilityTripodProps {
 - Each tile shows: `baseline%` (dimmed, small) → `scenario%` (large, bold) and the delta in pp (e.g., `+14pp`, `-14pp`, `no change` if |delta| < 0.5pp)
 - A thin (4px) progress bar at the bottom of each tile fills to `scenario%` width using the tile's color
 - The **dominant** tile (highest `scenario` value) gets a 1.5px solid border in its main color instead of the default muted border, and a small `DOMINANT` pill label (7px uppercase, same color, top-right corner of the tile)
-- Use `framer-motion` `<motion.div>` animated via `animate={{ width: \`${scenarioPct}%\` }}` for the bar fill with `transition={{ type: 'spring', stiffness: 200, damping: 25 }}`
+- Animate the bar fill width with framer-motion:
+  ```tsx
+  const scenarioPct = (scenarioValue * 100).toFixed(1) + '%'
+  // ...
+  <motion.div
+    animate={{ width: scenarioPct }}
+    transition={{ type: 'spring', stiffness: 200, damping: 25 }}
+    style={{ height: '100%', borderRadius: 2, background: tileColor }}
+  />
+  ```
 
 **Dominant logic:**
 ```ts
@@ -157,7 +166,7 @@ export function detectScenarioCharacter(inputs: ScenarioInputs): ScenarioCharact
 }
 ```
 
-Requires both conditions (not just one) to avoid false positives.
+Requires both conditions (not just one) to avoid false positives. `detectScenarioCharacter` is descriptive flavor only — it adds narrative color to the verdict sentence but does not override the tripod-based severity tier. A "sharp-shock" character can only appear inside an `elevated` or `strongly-elevated` tier; it never changes which tier fires.
 
 **Step 3 — Generate verdict** (`buildScenarioVerdict` signature above takes `topDriverLabel` only; character is passed separately via the full signature below):
 
@@ -444,7 +453,7 @@ After implementation, manually verify these cases in the browser:
 | Click "Calm Recovery" | Calm tile dominant; verdict badge = "Calm"; threshold status shows green |
 | Click "Volatility Pickup" | Calm and elevated tiles show tension; verdict badge = "Mild stress" |
 | Click "Growth Scare" | Elevated tile dominant; verdict = "Elevated stress" |
-| Click "Panic Shock" | Elevated ~95%+ dominant; turbulent slightly higher than calm_recovery; verdict = "High stress" |
+| Click "Panic Shock" | Elevated ~95%+ dominant; turbulent slightly higher than calm_recovery; verdict = "High stress" or "Elevated + turbulent" depending on actual turbulent share |
 | Click "Slow Deterioration" | Similar non-calm to Panic Shock; verdict sentence mentions "slow deterioration" or "grinding" |
 | Panic Shock vs Slow Deterioration | Tripod values may be similar; but verdict sentences are clearly distinct in character |
 | Raise VIX to 35, keep ret_20d positive | If ret_20d delta < 0 conditions met: offsetting factor renders; otherwise it does not |
