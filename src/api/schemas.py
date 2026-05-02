@@ -105,6 +105,7 @@ class ScenarioResponse(BaseModel):
     baseline_prob_elevated: float
     baseline_prob_turbulent: float
     driver_deltas: list[DriverDelta]
+    baseline_inputs: dict[str, float]
 
 
 class ModelDriversResponse(BaseModel):

@@ -334,6 +334,9 @@ async def scenario(request: Request, body: ScenarioRequest):
         for feat, dv, _ in deltas[:5]
     ]
 
+    slider_features = ["vix_level", "vix_chg_5d", "rv_20d_pct", "drawdown_pct_504d", "ret_20d", "dist_sma50"]
+    baseline_inputs = {f: round(baseline_vec.get(f, 0.0), 4) for f in slider_features}
+
     return ScenarioResponse(
         baseline_risk=round(baseline_risk, 4),
         scenario_risk=round(scenario_risk, 4),
@@ -345,4 +348,5 @@ async def scenario(request: Request, body: ScenarioRequest):
         baseline_prob_elevated=round(float(base_regime_probs[1]), 4),
         baseline_prob_turbulent=round(float(base_regime_probs[2]), 4),
         driver_deltas=driver_deltas,
+        baseline_inputs=baseline_inputs,
     )

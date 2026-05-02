@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 import Topbar from '../components/layout/Topbar'
 import Panel from '../components/ui/Panel'
@@ -25,7 +25,16 @@ export default function ScenarioExplorer() {
   const { data, loading, error } = useScenario(inputs)
   const { data: modelData } = useModelDrivers()
 
-  const reset = useCallback(() => setInputs(DEFAULT_INPUTS), [])
+  // Capture actual current-market feature values from the first successful response
+  // so "Reset to current market" sets sliders to today's real values, not hardcoded defaults.
+  const currentMarketRef = useRef<ScenarioInputs | null>(null)
+  useEffect(() => {
+    if (data?.baseline_inputs && !currentMarketRef.current) {
+      currentMarketRef.current = { ...DEFAULT_INPUTS, ...data.baseline_inputs } as ScenarioInputs
+    }
+  }, [data])
+
+  const reset = useCallback(() => setInputs(currentMarketRef.current ?? DEFAULT_INPUTS), [])
 
   const sweepRow = modelData?.threshold_sweep?.find(r => Math.abs(r.threshold - threshold) < 0.05)
 

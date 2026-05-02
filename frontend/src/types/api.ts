@@ -102,4 +102,5 @@ export interface ScenarioResponse {
   baseline_prob_elevated: number
   baseline_prob_turbulent: number
   driver_deltas: DriverDelta[]
+  baseline_inputs: Record<string, number>
 }
