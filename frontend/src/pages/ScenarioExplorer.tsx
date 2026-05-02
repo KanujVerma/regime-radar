@@ -14,13 +14,18 @@ const DEFAULT_INPUTS: ScenarioInputs = {
   drawdown_pct_504d: 0.05, ret_20d: 0.01, dist_sma50: 0.01,
 }
 
-const PRESET_BUTTONS = [
+const STANDARD_PRESETS = [
   { id: 'calm_recovery',      icon: '🌤', label: 'Calm Recovery',      desc: 'Low vol, long calm streak' },
   { id: 'volatility_pickup',  icon: '📈', label: 'Volatility Pickup',  desc: 'VIX rising, still near highs' },
   { id: 'growth_scare',       icon: '📉', label: 'Growth Scare',       desc: 'Moderate selloff, vol elevated' },
-  { id: 'panic_shock',        icon: '⚡', label: 'Panic Shock',        desc: 'Sharp VIX spike, deep drawdown' },
+  { id: 'panic_shock',        icon: '⚡', label: 'Panic Shock',        desc: 'Sharp VIX spike, early crisis signal' },
   { id: 'slow_deterioration', icon: '🐌', label: 'Slow Deterioration', desc: 'Grinding lower, no single spike' },
 ]
+
+const CRISIS_PRESET = {
+  id: 'crisis_peak', icon: '🔴', label: 'Crisis Peak',
+  desc: 'Already 2 weeks into sustained turbulence',
+}
 
 const SLIDER_KEYS_FOR_SENSITIVITY = [
   'vix_level', 'vix_chg_5d', 'rv_20d_pct', 'drawdown_pct_504d', 'ret_20d', 'dist_sma50',
@@ -131,7 +136,7 @@ export default function ScenarioExplorer() {
           {/* Presets */}
           <Panel title="Quick scenarios">
             <div className="flex flex-col gap-2">
-              {PRESET_BUTTONS.map(p => (
+              {STANDARD_PRESETS.map(p => (
                 <button
                   key={p.id}
                   onClick={() => setInputs(PRESETS[p.id])}
@@ -144,6 +149,25 @@ export default function ScenarioExplorer() {
                   <div className="text-[9px] mt-0.5" style={{ color: '#475569' }}>{p.desc}</div>
                 </button>
               ))}
+
+              <div style={{ height: 1, background: '#1a0a0a', margin: '2px 0' }} />
+              <div
+                className="text-[7px] font-bold tracking-widest uppercase"
+                style={{ color: '#5a2020' }}
+              >
+                Sustained Crisis
+              </div>
+
+              <button
+                onClick={() => setInputs(PRESETS[CRISIS_PRESET.id])}
+                className="text-left px-3 py-2 rounded-lg w-full"
+                style={{ background: '#0e0505', border: '1px solid #3d1212' }}
+              >
+                <div className="text-[11px] font-semibold" style={{ color: '#94a3b8' }}>
+                  {CRISIS_PRESET.icon} {CRISIS_PRESET.label}
+                </div>
+                <div className="text-[9px] mt-0.5" style={{ color: '#475569' }}>{CRISIS_PRESET.desc}</div>
+              </button>
             </div>
           </Panel>
 
@@ -318,6 +342,16 @@ export default function ScenarioExplorer() {
                 >
                   {verdict.sentence}
                 </p>
+
+                {/* Labeler-vs-model context — shown when turbulent is present but not dominant */}
+                {data.prob_turbulent >= 0.01 && data.prob_turbulent < 0.50 && (
+                  <p
+                    className="text-[9px] leading-relaxed mb-2"
+                    style={{ color: '#4a6080' }}
+                  >
+                    The model weighs regime persistence — turbulent becomes dominant only after stress accumulates over multiple days, not from a single shock.
+                  </p>
+                )}
 
                 {/* Secondary stats */}
                 <div className="flex items-center gap-4 mb-2">

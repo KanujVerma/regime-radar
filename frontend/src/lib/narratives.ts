@@ -124,22 +124,24 @@ export interface ScenarioVerdictResult {
   sentence: string
 }
 
-type SeverityTier = 'calm' | 'stress-building' | 'elevated' | 'strongly-elevated' | 'turbulent-emerging'
+type SeverityTier = 'calm' | 'stress-building' | 'elevated' | 'strongly-elevated' | 'turbulent-emerging' | 'turbulent-dominant'
 
 function getSeverityTier(probCalm: number, probTurbulent: number): SeverityTier {
   if (probCalm >= 0.70)                          return 'calm'
   if (probCalm >= 0.40)                          return 'stress-building'
+  if (probTurbulent >= 0.50)                     return 'turbulent-dominant'
   if (probCalm >= 0.15 && probTurbulent < 0.02)  return 'elevated'
   if (probCalm < 0.15  && probTurbulent < 0.02)  return 'strongly-elevated'
   return 'turbulent-emerging'
 }
 
 const BADGE_STYLES: Record<SeverityTier, Pick<ScenarioVerdictResult, 'badgeLabel' | 'badgeColor' | 'badgeBg' | 'badgeBorder'>> = {
-  'calm':               { badgeLabel: 'Calm',                 badgeColor: '#4ade80', badgeBg: '#0f2a1a', badgeBorder: '#14532d' },
-  'stress-building':    { badgeLabel: 'Mild stress',          badgeColor: '#06b6d4', badgeBg: '#051820', badgeBorder: '#0e3d55' },
-  'elevated':           { badgeLabel: 'Elevated stress',      badgeColor: '#fbbf24', badgeBg: '#1a1505', badgeBorder: '#78350f' },
-  'strongly-elevated':  { badgeLabel: 'High stress',          badgeColor: '#f97316', badgeBg: '#1a0c03', badgeBorder: '#7c2d12' },
-  'turbulent-emerging': { badgeLabel: 'Elevated + turbulent', badgeColor: '#f87171', badgeBg: '#1a0505', badgeBorder: '#7f1d1d' },
+  'calm':                { badgeLabel: 'Calm',                 badgeColor: '#4ade80', badgeBg: '#0f2a1a', badgeBorder: '#14532d' },
+  'stress-building':     { badgeLabel: 'Mild stress',          badgeColor: '#06b6d4', badgeBg: '#051820', badgeBorder: '#0e3d55' },
+  'elevated':            { badgeLabel: 'Elevated stress',      badgeColor: '#fbbf24', badgeBg: '#1a1505', badgeBorder: '#78350f' },
+  'strongly-elevated':   { badgeLabel: 'High stress',          badgeColor: '#f97316', badgeBg: '#1a0c03', badgeBorder: '#7c2d12' },
+  'turbulent-emerging':  { badgeLabel: 'Elevated + turbulent', badgeColor: '#f87171', badgeBg: '#1a0505', badgeBorder: '#7f1d1d' },
+  'turbulent-dominant':  { badgeLabel: 'Turbulent',            badgeColor: '#f87171', badgeBg: '#2d0a0a', badgeBorder: '#991b1b' },
 }
 
 function getSentence(tier: SeverityTier, topDriverLabel: string, character: ScenarioCharacter): string {
@@ -158,6 +160,8 @@ function getSentence(tier: SeverityTier, topDriverLabel: string, character: Scen
       return `Calm has largely left the picture under this scenario. Elevated conditions are heavily dominant — ${topDriverLabel} is driving the stress reading.`
     case 'turbulent-emerging':
       return `Turbulent risk is beginning to emerge alongside elevated stress. ${topDriverLabel} is pushing conditions toward a more severe stress classification.`
+    case 'turbulent-dominant':
+      return `This resembles a crisis already underway. Turbulent conditions are the dominant regime — ${topDriverLabel} and sustained stress history are both driving this classification.`
   }
 }
 

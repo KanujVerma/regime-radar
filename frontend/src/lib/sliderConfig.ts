@@ -22,12 +22,12 @@ export const SLIDER_CONFIG: SliderConfig[] = [
   },
   {
     key: 'rv_20d_pct', label: 'Realized Vol Percentile',
-    helper: 'How unusually jumpy the market has been',
+    helper: 'How unusual recent volatility is vs. the past 2 years — 0.70 means jumpier than 70% of recent days',
     min: 0, max: 1, step: 0.01, calmMax: 0.40, stressMin: 0.70,
   },
   {
-    key: 'drawdown_pct_504d', label: 'Drawdown',
-    helper: 'How far prices have fallen from a recent high',
+    key: 'drawdown_pct_504d', label: 'Drawdown Severity',
+    helper: 'Percentile rank of today\'s pullback vs. the past 2 years — 0.80 means worse than 80% of recent trading days',
     min: 0, max: 1, step: 0.01, calmMax: 0.10, stressMin: 0.30,
   },
   {
@@ -72,5 +72,10 @@ export const PRESETS: Record<string, ScenarioInputs> = {
     vix_level: 28, vix_chg_5d: 1.0, rv_20d_pct: 0.78,
     drawdown_pct_504d: 0.45, ret_20d: -0.08, dist_sma50: -0.06,
     days_in_regime_lag1: 25, turbulent_count_30d_lag1: 6,
+  },
+  crisis_peak: {
+    vix_level: 38, vix_chg_5d: 6.0, rv_20d_pct: 0.92,
+    drawdown_pct_504d: 0.95, ret_20d: -0.10, dist_sma50: -0.08,
+    days_in_regime_lag1: 14, turbulent_count_30d_lag1: 30,
   },
 }

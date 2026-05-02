@@ -174,11 +174,24 @@ describe('buildScenarioVerdict', () => {
     expect(result.badgeColor).toBe('#f97316')
   })
 
-  it('returns Elevated + turbulent when probTurbulent >= 0.02', () => {
+  it('returns Elevated + turbulent when probTurbulent is between 0.02 and 0.50', () => {
     const result = buildScenarioVerdict(0.10, 0.87, 0.03, 'VIX Level')
     expect(result.badgeLabel).toBe('Elevated + turbulent')
     expect(result.sentence).toContain('Turbulent risk')
     expect(result.badgeColor).toBe('#f87171')
+  })
+
+  it('returns Turbulent badge when probTurbulent >= 0.50 (turbulent-dominant)', () => {
+    const result = buildScenarioVerdict(0.001, 0.38, 0.62, 'Drawdown Severity')
+    expect(result.badgeLabel).toBe('Turbulent')
+    expect(result.sentence).toContain('crisis already underway')
+    expect(result.sentence).toContain('Drawdown Severity')
+    expect(result.badgeColor).toBe('#f87171')
+  })
+
+  it('turbulent-dominant takes priority over strongly-elevated when turbulent >= 0.50', () => {
+    const result = buildScenarioVerdict(0.001, 0.49, 0.51, 'VIX Level')
+    expect(result.badgeLabel).toBe('Turbulent')
   })
 
   it('all badge styles are populated (no undefined colors)', () => {
@@ -188,6 +201,7 @@ describe('buildScenarioVerdict', () => {
       [0.30, 0.68, 0.015],
       [0.05, 0.94, 0.01],
       [0.10, 0.87, 0.03],
+      [0.001, 0.38, 0.62],
     ]
     cases.forEach(([pc, pe, pt]) => {
       const r = buildScenarioVerdict(pc, pe, pt, 'VIX')
