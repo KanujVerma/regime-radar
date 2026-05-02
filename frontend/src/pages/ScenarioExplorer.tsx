@@ -29,8 +29,14 @@ export default function ScenarioExplorer() {
 
   const sweepRow = modelData?.threshold_sweep?.find(r => Math.abs(r.threshold - threshold) < 0.05)
 
+  // Use 1 - prob_calm ("non-calm probability") as the headline stress metric.
+  // prob_turbulent alone stays near-zero even under extreme scenarios — the regime
+  // classifier routes most stressed states through "elevated", not "turbulent".
+  const baselineStress = data ? 1 - data.baseline_prob_calm : 0
+  const scenarioStress = data ? 1 - data.prob_calm : 0
+
   const narrative = data
-    ? buildNarrative(inputs, data.baseline_prob_turbulent, data.prob_turbulent, data.driver_deltas[0]?.plain_label ?? '', data.prob_calm)
+    ? buildNarrative(inputs, baselineStress, scenarioStress, data.driver_deltas[0]?.plain_label ?? '', data.prob_calm)
     : null
 
   const resetBtn = (
@@ -138,8 +144,8 @@ export default function ScenarioExplorer() {
 
           {data && (
             <>
-              <Panel title="Chance of severe market stress — current vs your scenario">
-                <RiskRail baselineRisk={data.baseline_prob_turbulent} scenarioRisk={data.prob_turbulent} />
+              <Panel title="Chance of market stress (elevated + turbulent) — current vs your scenario">
+                <RiskRail baselineRisk={baselineStress} scenarioRisk={scenarioStress} />
               </Panel>
 
               <Panel title="How each market state shifts under your scenario">
@@ -232,7 +238,7 @@ function buildNarrative(
     : 'these inputs'
 
   const parts: string[] = [
-    `This scenario ${direction} the turbulent regime probability from ${(baseRisk * 100).toFixed(0)}% to ${(scenRisk * 100).toFixed(0)}%.`,
+    `This scenario ${direction} the chance of non-calm conditions from ${(baseRisk * 100).toFixed(0)}% to ${(scenRisk * 100).toFixed(0)}%.`,
   ]
   if (changed.length > 0) parts.push(`The biggest input change is ${changedLabel}.`)
   if (topDriver) parts.push(`The model is most sensitive to ${topDriver}.`)
