@@ -15,7 +15,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 from src.utils.config import get_config, get_app_settings
 from src.utils.logging import get_logger
-from src.utils.calendar import is_market_open
 from src.utils.paths import PROCESSED_DIR
 
 _logger = get_logger(__name__)
@@ -131,8 +130,9 @@ class AppState:
 
     def _refresh_job(self) -> None:
         """Scheduled job: refresh yfinance+FRED data and re-score."""
-        if not is_market_open():
-            _logger.debug("Market closed — skipping refresh")
+        from zoneinfo import ZoneInfo
+        if datetime.now(ZoneInfo("America/New_York")).weekday() >= 5:
+            _logger.debug("Weekend — skipping refresh")
             return
         _logger.info("Running scheduled data refresh")
         try:
@@ -229,7 +229,7 @@ class AppState:
 
     def _load_from_snapshots(self) -> None:
         """Copy committed snapshots to processed/ and run inference, forcing mode='demo'."""
-        import shutil
+        import os, time, shutil
         from src.utils.paths import SNAPSHOTS_DIR, PROCESSED_DIR
         PROCESSED_DIR.mkdir(parents=True, exist_ok=True)
         for src_file in SNAPSHOTS_DIR.glob("*.parquet"):
@@ -238,6 +238,15 @@ class AppState:
             dest.touch()  # reset mtime so the 12h TTL in _do_refresh doesn't evict immediately
         _logger.info("Copied snapshots to processed dir, running inference from committed data")
         self._do_refresh()
+        # Age raw files so the next scheduled refresh evicts and re-fetches live data.
+        # Without this, dest.touch() above makes files appear fresh for 12h and the
+        # scheduler would keep serving snapshot data even after a successful live fetch.
+        stale_time = time.time() - (13 * 3600)
+        for fname in ("spy.parquet", "vix.parquet", "emv.parquet"):
+            p = PROCESSED_DIR / fname
+            if p.exists():
+                os.utime(p, (stale_time, stale_time))
+        _logger.debug("Raw data files aged — next scheduled refresh will fetch live data")
         with self._connect() as conn:
             conn.execute(
                 "UPDATE live_state SET mode='demo' WHERE id=(SELECT MAX(id) FROM live_state)"
