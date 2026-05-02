@@ -111,3 +111,81 @@ export function buildDriversNarrative(
 
   return `${opening}${middle}${offset}`.trim()
 }
+
+import type { ScenarioInputs } from './sliderConfig'
+
+export type ScenarioCharacter = 'sharp-shock' | 'slow-grind' | 'neutral'
+
+export interface ScenarioVerdictResult {
+  badgeLabel: string
+  badgeColor: string
+  badgeBg: string
+  badgeBorder: string
+  sentence: string
+}
+
+type SeverityTier = 'calm' | 'stress-building' | 'elevated' | 'strongly-elevated' | 'turbulent-emerging'
+
+function getSeverityTier(probCalm: number, probTurbulent: number): SeverityTier {
+  if (probCalm >= 0.70)                          return 'calm'
+  if (probCalm >= 0.40)                          return 'stress-building'
+  if (probCalm >= 0.15 && probTurbulent < 0.02)  return 'elevated'
+  if (probCalm < 0.15  && probTurbulent < 0.02)  return 'strongly-elevated'
+  return 'turbulent-emerging'
+}
+
+const BADGE_STYLES: Record<SeverityTier, Pick<ScenarioVerdictResult, 'badgeLabel' | 'badgeColor' | 'badgeBg' | 'badgeBorder'>> = {
+  'calm':               { badgeLabel: 'Calm',                 badgeColor: '#4ade80', badgeBg: '#0f2a1a', badgeBorder: '#14532d' },
+  'stress-building':    { badgeLabel: 'Mild stress',          badgeColor: '#06b6d4', badgeBg: '#051820', badgeBorder: '#0e3d55' },
+  'elevated':           { badgeLabel: 'Elevated stress',      badgeColor: '#fbbf24', badgeBg: '#1a1505', badgeBorder: '#78350f' },
+  'strongly-elevated':  { badgeLabel: 'High stress',          badgeColor: '#f97316', badgeBg: '#1a0c03', badgeBorder: '#7c2d12' },
+  'turbulent-emerging': { badgeLabel: 'Elevated + turbulent', badgeColor: '#f87171', badgeBg: '#1a0505', badgeBorder: '#7f1d1d' },
+}
+
+function getSentence(tier: SeverityTier, topDriverLabel: string, character: ScenarioCharacter): string {
+  switch (tier) {
+    case 'calm':
+      return 'Conditions remain calm under this scenario. The model sees no meaningful stress signal.'
+    case 'stress-building':
+      return `Calm is still the most likely outcome, but stress conditions are starting to build. ${topDriverLabel} is the main factor weighing on the model.`
+    case 'elevated':
+      if (character === 'sharp-shock')
+        return 'This looks like a sharp stress event — elevated conditions are dominant. Calm has receded but turbulent probability remains contained.'
+      if (character === 'slow-grind')
+        return `This scenario is mostly Elevated rather than Turbulent — more of a slow deterioration than a sudden shock. ${topDriverLabel} is the primary driver.`
+      return 'This scenario is mostly Elevated rather than Turbulent. Calm has receded and elevated conditions are dominant.'
+    case 'strongly-elevated':
+      return `Calm has largely left the picture under this scenario. Elevated conditions are heavily dominant — ${topDriverLabel} is driving the stress reading.`
+    case 'turbulent-emerging':
+      return `Turbulent risk is beginning to emerge alongside elevated stress. ${topDriverLabel} is pushing conditions toward a more severe stress classification.`
+  }
+}
+
+export function detectScenarioCharacter(inputs: ScenarioInputs): ScenarioCharacter {
+  if (inputs.vix_chg_5d >= 5 && inputs.ret_20d <= -0.07) return 'sharp-shock'
+  if (inputs.vix_chg_5d <= 2 && inputs.drawdown_pct_504d >= 0.25) return 'slow-grind'
+  return 'neutral'
+}
+
+export function buildScenarioVerdict(
+  probCalm: number,
+  probElevated: number,
+  probTurbulent: number,
+  topDriverLabel: string,
+  character: ScenarioCharacter = 'neutral',
+): ScenarioVerdictResult {
+  if (!isFinite(probCalm) || !isFinite(probElevated) || !isFinite(probTurbulent)) {
+    return {
+      badgeLabel: 'Unavailable',
+      badgeColor: '#475569',
+      badgeBg: '#0c1020',
+      badgeBorder: '#1e293b',
+      sentence: 'Scenario data is not available yet.',
+    }
+  }
+  const tier = getSeverityTier(probCalm, probTurbulent)
+  return {
+    ...BADGE_STYLES[tier],
+    sentence: getSentence(tier, topDriverLabel, character),
+  }
+}
