@@ -43,8 +43,8 @@ Finnhub is optional and only affects the live price-card overlay on the Current 
 | **Current State** | Live regime, transition risk gauge, probability distribution across all three states, key risk drivers, 30-day mini chart |
 | **History** | Full regime timeline with VIX overlay from 2020 onward |
 | **Event Replay** | Walk the model through named historical events (2020 COVID crash, 2022 rate shock, etc.) |
-| **Model Drivers** | Plain-English case brief explaining today's reading, push/pull panel showing what is driving risk today vs. what the model generally relies on most, forward-looking risk conditions, and a collapsible reliability/threshold tradeoff table |
-| **Scenario Explorer** | Adjust individual feature inputs with sliders and see how regime probabilities and risk shift in real time |
+| **Model Drivers** | Narrative-first layout: plain-English case brief explaining today's reading, push/pull panel (today's top drivers vs. global importance), forward-looking risk conditions, and a collapsible reliability/threshold tradeoff table |
+| **Scenario Explorer** | Six named presets (Calm Recovery → Crisis Peak) plus manual sliders across 6 features. Each scenario shows a probability tripod (Calm / Elevated / Turbulent baseline vs. scenario), a verdict badge, and driver attribution |
 
 ---
 
@@ -60,10 +60,10 @@ Finnhub is optional and only affects the live price-card overlay on the Current 
 *Event Replay — COVID-19 2020: warning lead time, peak transition risk, and alert-day count.*
 
 ![Scenario Explorer](docs/screenshots/scenario-explorer.png)
-*Scenario Explorer — Stress Spike preset shifts transition risk from 1% → 75%, with feature-level attribution.*
+*Scenario Explorer — Crisis Peak preset: "Turbulent" verdict badge, probability tripod showing 62% turbulent-dominant, and regime-history tags on the driver panel.*
 
 ![Model Drivers](docs/screenshots/model-drivers.png)
-*Model Drivers — plain-English case brief, today's top push/pull drivers, global importance bars, and forward-looking risk conditions.*
+*Model Drivers — narrative case brief, push/pull panel, global importance bars, and forward-looking risk conditions.*
 
 ---
 
@@ -209,15 +209,25 @@ The dashboard default displays the raw probability. The Model Drivers page shows
 
 ## Scenario Explorer
 
-Adjust any of the six key feature inputs with sliders and see the model re-score in real time:
+Six named presets span the full stress spectrum:
 
-- `vix_level`, `vix_chg_5d` — implied volatility and recent momentum
-- `rv_20d_pct` — realized volatility percentile vs. 2-year history
-- `drawdown_pct_504d` — drawdown vs. 2-year history
-- `ret_20d` — 20-day return
-- `dist_sma50` — distance from 50-day moving average
+| Preset | Character |
+|---|---|
+| Calm Recovery | Low VIX, positive momentum, 60 days in calm regime |
+| Volatility Pickup | VIX rising fast, moderate drawdown |
+| Growth Scare | Elevated VIX, negative momentum, growing drawdown |
+| Panic Shock | Sharp VIX spike, severe drawdown, early crisis signal |
+| Slow Deterioration | Grinding drawdown, persistent elevated regime |
+| **Crisis Peak** | 2+ weeks of sustained turbulence, high repeat-stress count |
 
-The response shows baseline vs. scenario risk, delta, and which features drove the change.
+Each scenario runs against six slider inputs: `vix_level`, `vix_chg_5d`, `rv_20d_pct` (realized vol percentile), `drawdown_pct_504d` (drawdown percentile vs. 2-year history), `ret_20d`, and `dist_sma50`. Sensitivity dots on each slider indicate which features are most important to the model.
+
+The output shows:
+- **Verdict badge** (Calm → Mild stress → Elevated → High stress → Elevated + turbulent → Turbulent) with a plain-English sentence
+- **Probability tripod** — three tiles showing baseline vs. scenario probability for each regime class, with animated deltas
+- **Driver panel** — which features moved the needle, with `regime history` tags on the two lag features
+
+The Crisis Peak preset is designed to show turbulent-dominant output. It sets `turbulent_count_30d_lag1=30` and `days_in_regime_lag1=14`, which the model requires to push turbulent probability above 50%. This reflects a key design property of the model: a single-day shock moves the XGBoost output toward elevated, not turbulent — turbulence requires accumulated persistence signals over multiple days.
 
 ---
 
