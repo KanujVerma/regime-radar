@@ -27,6 +27,8 @@ const CRISIS_PRESET = {
   desc: 'Already 2 weeks into sustained turbulence',
 }
 
+const REGIME_HISTORY_FEATURES = new Set(['turbulent_count_30d_lag1', 'days_in_regime_lag1'])
+
 const SLIDER_KEYS_FOR_SENSITIVITY = [
   'vix_level', 'vix_chg_5d', 'rv_20d_pct', 'drawdown_pct_504d', 'ret_20d', 'dist_sma50',
 ] as const
@@ -109,6 +111,10 @@ export default function ScenarioExplorer() {
         : 'Turbulent')
     : null
 
+  const dominantProb = data
+    ? (dominant === 'Calm' ? data.prob_calm : dominant === 'Turbulent' ? data.prob_turbulent : data.prob_elevated)
+    : null
+
   const positiveDrivers = data?.driver_deltas.filter(d => d.delta_value > 0) ?? []
   const offsetDriver = (
     data?.driver_deltas?.length &&
@@ -160,13 +166,19 @@ export default function ScenarioExplorer() {
 
               <button
                 onClick={() => setInputs(PRESETS[CRISIS_PRESET.id])}
-                className="text-left px-3 py-2 rounded-lg w-full"
-                style={{ background: '#0e0505', border: '1px solid #3d1212' }}
+                className="text-left py-2 rounded-lg w-full"
+                style={{
+                  background: '#0e0505',
+                  border: '1px solid #7f1d1d',
+                  borderLeft: '3px solid #f87171',
+                  paddingLeft: 10,
+                  paddingRight: 12,
+                }}
               >
-                <div className="text-[11px] font-semibold" style={{ color: '#94a3b8' }}>
+                <div className="text-[11px] font-semibold" style={{ color: '#fca5a5' }}>
                   {CRISIS_PRESET.icon} {CRISIS_PRESET.label}
                 </div>
-                <div className="text-[9px] mt-0.5" style={{ color: '#475569' }}>{CRISIS_PRESET.desc}</div>
+                <div className="text-[9px] mt-0.5" style={{ color: '#6b3030' }}>{CRISIS_PRESET.desc}</div>
               </button>
             </div>
           </Panel>
@@ -355,12 +367,14 @@ export default function ScenarioExplorer() {
 
                 {/* Secondary stats */}
                 <div className="flex items-center gap-4 mb-2">
-                  <span className="text-[9px]" style={{ color: '#64748b' }}>
-                    Non-calm:{' '}
-                    <span className="font-semibold">
-                      {((1 - data.prob_calm) * 100).toFixed(0)}%
+                  {dominant && dominantProb != null && (
+                    <span className="text-[9px]" style={{ color: '#64748b' }}>
+                      {dominant}:{' '}
+                      <span className="font-semibold">
+                        {(dominantProb * 100).toFixed(0)}%
+                      </span>
                     </span>
-                  </span>
+                  )}
                   {baselineStress != null && (
                     <span className="text-[9px]" style={{ color: '#64748b' }}>
                       Δ{' '}
@@ -404,6 +418,7 @@ export default function ScenarioExplorer() {
                 {positiveDrivers.map((d, i) => {
                   const baselineVal = data.baseline_inputs?.[d.feature] ?? null
                   const scenarioVal = baselineVal != null ? baselineVal + d.delta_value : null
+                  const isContextFeature = REGIME_HISTORY_FEATURES.has(d.feature)
                   return (
                     <div key={d.feature} className="flex items-start gap-2.5 mb-3">
                       <span
@@ -413,8 +428,18 @@ export default function ScenarioExplorer() {
                         #{i + 1}
                       </span>
                       <div className="flex-1">
-                        <div className="text-[10px] font-semibold" style={{ color: '#94a3b8' }}>
-                          {d.plain_label}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] font-semibold" style={{ color: '#94a3b8' }}>
+                            {d.plain_label}
+                          </span>
+                          {isContextFeature && (
+                            <span
+                              className="text-[7px] font-bold px-1.5 py-0.5 rounded"
+                              style={{ background: '#0d1a2e', color: '#3a6080', border: '1px solid #1e3a5f' }}
+                            >
+                              regime history
+                            </span>
+                          )}
                         </div>
                         {baselineVal != null && scenarioVal != null && (
                           <div className="text-[9px] mt-0.5" style={{ color: '#475569' }}>
@@ -428,6 +453,12 @@ export default function ScenarioExplorer() {
                     </div>
                   )
                 })}
+
+                {positiveDrivers.some(d => REGIME_HISTORY_FEATURES.has(d.feature)) && (
+                  <p className="text-[9px] mb-3" style={{ color: '#3a5070' }}>
+                    Regime history features reflect the crisis context loaded by this preset — not visible sliders.
+                  </p>
+                )}
 
                 {offsetDriver && (
                   <div className="mt-1 pt-3" style={{ borderTop: '1px solid #151d2e' }}>

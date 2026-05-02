@@ -185,7 +185,7 @@ describe('buildScenarioVerdict', () => {
     const result = buildScenarioVerdict(0.001, 0.38, 0.62, 'Drawdown Severity')
     expect(result.badgeLabel).toBe('Turbulent')
     expect(result.sentence).toContain('crisis already underway')
-    expect(result.sentence).toContain('Drawdown Severity')
+    expect(result.sentence).toContain('repeated recent turbulence')
     expect(result.badgeColor).toBe('#f87171')
   })
 

@@ -161,7 +161,7 @@ function getSentence(tier: SeverityTier, topDriverLabel: string, character: Scen
     case 'turbulent-emerging':
       return `Turbulent risk is beginning to emerge alongside elevated stress. ${topDriverLabel} is pushing conditions toward a more severe stress classification.`
     case 'turbulent-dominant':
-      return `This resembles a crisis already underway. Turbulent conditions are the dominant regime — ${topDriverLabel} and sustained stress history are both driving this classification.`
+      return `This resembles a crisis already underway. Turbulent conditions are now dominant — supported by both current stress signals and a history of repeated recent turbulence.`
   }
 }
 
