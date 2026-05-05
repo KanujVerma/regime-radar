@@ -252,6 +252,23 @@ class AppState:
                 "UPDATE live_state SET mode='demo' WHERE id=(SELECT MAX(id) FROM live_state)"
             )
             conn.commit()
+        # Fix as_of_ts to reflect the last data date, not the inference run time.
+        # Without this the banner says "as of <today>" while graph data ends at <yesterday>.
+        try:
+            import pandas as pd
+            panel_path = PROCESSED_DIR / "panel.parquet"
+            if panel_path.exists():
+                _panel = pd.read_parquet(panel_path)
+                data_as_of = _panel.index[-1].isoformat()
+                with self._connect() as conn:
+                    conn.execute(
+                        "UPDATE live_state SET as_of_ts=? WHERE id=(SELECT MAX(id) FROM live_state)",
+                        (data_as_of,),
+                    )
+                    conn.commit()
+                _logger.debug("Demo as_of_ts set to last data date: %s", data_as_of)
+        except Exception as e:
+            _logger.warning("Could not fix demo as_of_ts: %s", e)
         _logger.info("Snapshot fallback complete — mode forced to demo")
 
     def force_refresh(self) -> None:
