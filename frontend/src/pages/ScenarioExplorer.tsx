@@ -66,8 +66,6 @@ const DRIVER_INTERP: Record<string, { raisesRisk: string; lowersRisk: string }> 
   },
 }
 
-const REGIME_HISTORY_FEATURES = new Set(['turbulent_count_30d_lag1', 'days_in_regime_lag1'])
-
 const SLIDER_KEYS_FOR_SENSITIVITY = [
   'vix_level', 'vix_chg_5d', 'rv_20d_pct', 'drawdown_pct_504d', 'ret_20d', 'dist_sma50',
 ] as const
