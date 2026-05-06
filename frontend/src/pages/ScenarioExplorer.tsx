@@ -56,6 +56,14 @@ const DRIVER_INTERP: Record<string, { raisesRisk: string; lowersRisk: string }> 
     raisesRisk: 'Price is stretched below its 50-day average — adding to the stress signal.',
     lowersRisk: 'Price remains above its 50-day average — a stabilizing factor.',
   },
+  turbulent_count_30d_lag1: {
+    raisesRisk: 'Stress has been persistent recently — the market has had more high-pressure days than usual over the past month, and that sustained pattern adds weight to the current reading.',
+    lowersRisk: 'The recent past has been relatively quiet — few high-stress days in the last month, which offsets some of the current pressure.',
+  },
+  days_in_regime_lag1: {
+    raisesRisk: 'The current conditions have been running for a while — sustained regimes tend to reinforce themselves, which deepens the model\'s conviction.',
+    lowersRisk: 'These are relatively new conditions — the regime hasn\'t had time to entrench, which keeps the model\'s reading more tentative.',
+  },
 }
 
 const REGIME_HISTORY_FEATURES = new Set(['turbulent_count_30d_lag1', 'days_in_regime_lag1'])
@@ -489,7 +497,7 @@ export default function ScenarioExplorer() {
                         const interp = DRIVER_INTERP[card.feature]
                         const interpText = interp
                           ? (raisesRisk ? interp.raisesRisk : interp.lowersRisk)
-                          : 'This scenario differs from the current market, but no single driver clearly dominates the change.'
+                          : `This input is shifted in the scenario, contributing to the difference — but interpretation text isn't available for this specific signal yet.`
                         return (
                           <div key={card.feature} style={{
                             background: '#0d1526',
@@ -568,7 +576,7 @@ export default function ScenarioExplorer() {
                               const interpEntry = DRIVER_INTERP[offset.feature]
                               const interpText = interpEntry
                                 ? (offsetRaises ? interpEntry.raisesRisk : interpEntry.lowersRisk)
-                                : 'This scenario differs from the current market, but no single driver clearly dominates the change.'
+                                : `This input is shifted in the scenario, contributing to the difference — but interpretation text isn't available for this specific signal yet.`
                               return (
                                 <>
                                   <div style={{
