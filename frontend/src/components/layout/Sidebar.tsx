@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import { Activity, Clock, Archive, BarChart2, Sliders } from 'lucide-react'
 import HelpDrawer from '../ui/HelpDrawer'
 import { useHealthStatus } from '../../hooks/useHealthStatus'
+import { useCurrentState } from '../../hooks/useCurrentState'
 
 const NAV = [
   {
@@ -23,8 +24,12 @@ const NAV = [
 
 export default function Sidebar() {
   const health = useHealthStatus()
-  const isLive = health?.mode === 'live'
-  const isDemo = health?.mode === 'demo'
+  const { data: currentState } = useCurrentState()
+  // Fall back to currentState.mode during cold-start: health times out (8s) but
+  // currentState (no timeout) resolves through the full cold-start window.
+  const mode = health?.mode ?? currentState?.mode
+  const isLive = mode === 'live'
+  const isDemo = mode === 'demo'
 
   return (
     <aside
