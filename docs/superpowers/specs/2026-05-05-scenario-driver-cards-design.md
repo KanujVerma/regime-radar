@@ -22,7 +22,7 @@ The right column of Scenario Explorer has significant blank space below the prob
 
 **Condition:** No driver in `data.driver_deltas` has `|delta_value| >= 0.03`.
 
-This is broader than checking `data.delta` alone. It catches cases where transition-risk delta is modest but the regime probability mix or individual inputs have shifted meaningfully. It is also falsy when `data` is null (still loading or no API response yet), so loading state falls into empty.
+This is broader than checking `data.delta` alone. It activates when the scenario has at least one materially changed driver, even if the overall transition-risk delta is modest. It is also falsy when `data` is null (still loading or no API response yet), so loading state falls into empty.
 
 **Rendering:**
 - Dashed border container (not just blank space)
