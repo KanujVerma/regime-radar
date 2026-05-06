@@ -13,7 +13,7 @@ RegimeRadar ingests daily SPY, VIX, and FRED Economic Market Volatility data, en
 1. **Regime classifier** — labels current conditions as Calm / Elevated / Turbulent
 2. **Transition-risk model** — estimates the probability that conditions worsen within the next 5 trading days
 
-Results are served by a FastAPI backend and visualized in a React/TypeScript dashboard with five pages: Current State, History, Event Replay, Model Drivers, and Scenario Explorer.
+Results are served by a FastAPI backend and visualized in a React/TypeScript dashboard with five pages: Current State, History, Event Replay, Signal Breakdown, and Scenario Explorer.
 
 ---
 
@@ -43,8 +43,8 @@ Finnhub is optional and only affects the live price-card overlay on the Current 
 | **Current State** | Live regime, transition risk gauge, probability distribution across all three states, key risk drivers, 30-day mini chart |
 | **History** | Day-by-day SPY regime timeline with color-coded market-state bands and a daily transition risk chart; optional VIX overlay |
 | **Event Replay** | Walk the model through named historical events (2020 COVID crash, 2022 rate shock, etc.) |
-| **Model Drivers** | Narrative-first layout: plain-English case brief explaining today's reading, push/pull panel (today's top drivers vs. global importance), forward-looking risk conditions, and a collapsible reliability/threshold tradeoff table |
-| **Scenario Explorer** | Six named presets (Calm Recovery → Crisis Peak) plus manual sliders across 6 features. Each scenario shows a probability tripod (Calm / Elevated / Turbulent baseline vs. scenario), a verdict badge, and driver attribution |
+| **Signal Breakdown** | Narrative-first layout: plain-English case brief explaining today's reading, push/pull panel (today's top drivers vs. global importance), forward-looking risk conditions, and a collapsible reliability/threshold tradeoff table |
+| **Scenario Explorer** | Six named presets (Calm Recovery → Crisis Peak) plus manual sliders across 6 features. Each scenario shows a verdict badge, a probability tripod (Calm / Elevated / Turbulent baseline vs. scenario with animated deltas), and a driver-cards panel showing which inputs are raising or lowering risk — with contextual interpretation for each driver |
 
 ---
 
@@ -60,10 +60,10 @@ Finnhub is optional and only affects the live price-card overlay on the Current 
 *Event Replay — COVID-19 2020: warning lead time, peak transition risk, and alert-day count.*
 
 ![Scenario Explorer](docs/screenshots/scenario-explorer.png)
-*Scenario Explorer — Crisis Peak preset: "Turbulent" verdict badge, probability tripod showing 62% turbulent-dominant, and regime-history tags on the driver panel.*
+*Scenario Explorer — Crisis Peak preset: "Turbulent" verdict, probability tripod at 98% turbulent, and driver cards explaining what's raising risk (VIX level, recent high-stress days) with plain-English interpretation per signal.*
 
-![Model Drivers](docs/screenshots/model-drivers.png)
-*Model Drivers — narrative case brief, push/pull panel, global importance bars, and forward-looking risk conditions.*
+![Signal Breakdown](docs/screenshots/model-drivers.png)
+*Signal Breakdown — narrative case brief, push/pull panel (what's pushing risk higher vs. holding it in check), global importance bars, and forward-looking risk conditions.*
 
 ---
 
@@ -203,7 +203,7 @@ Threshold sensitivity (from OOF evaluation):
 | 0.20 | 9% | 5% | 23.6 days |
 | 0.30 | 0.7% | 0.3% | 21.2 days |
 
-The dashboard default displays the raw probability. The Model Drivers page shows the full threshold sweep.
+The dashboard default displays the raw probability. The Signal Breakdown page shows the full threshold sweep.
 
 ---
 
@@ -225,9 +225,10 @@ Each scenario runs against six slider inputs: `vix_level`, `vix_chg_5d`, `rv_20d
 The output shows:
 - **Verdict badge** (Calm → Mild stress → Elevated → High stress → Elevated + turbulent → Turbulent) with a plain-English sentence
 - **Probability tripod** — three tiles showing baseline vs. scenario probability for each regime class, with animated deltas
-- **Driver panel** — which features moved the needle, with `regime history` tags on the two lag features
+- **Driver cards** — contextual explanation of what's moving the scenario away from the current market. Cards are keyed by signal, not by overall direction: each card shows the feature's direction arrow, a `RAISES RISK` / `LOWERS RISK` badge, the baseline → scenario value shift, and a plain-English interpretation sentence. An optional `OFFSETS` card (dimmer background) captures the strongest opposing signal, separated by a "partial offset" divider. An empty state ("No strong driver signal yet") displays when the scenario is still close to current market conditions.
+- **Changed-input strip** — lightweight pills at the bottom listing every slider that was moved from its baseline value, with direction and magnitude
 
-The Crisis Peak preset is designed to show turbulent-dominant output. It sets `turbulent_count_30d_lag1=30` and `days_in_regime_lag1=14`, which the model requires to push turbulent probability above 50%. This reflects a key design property of the model: a single-day shock moves the XGBoost output toward elevated, not turbulent — turbulence requires accumulated persistence signals over multiple days.
+The Crisis Peak preset is designed to show turbulent-dominant output. It sets `turbulent_count_30d_lag1=30` and `days_in_regime_lag1=14`, which the model requires to push turbulent probability above 50%. This reflects a key design property of the model: a single-day shock moves the XGBoost output toward elevated, not turbulent — turbulence requires accumulated persistence signals over multiple days. The driver cards surface this directly: "stress has been persistent recently" reads differently from "fear gauge rising," and the interface makes that distinction visible.
 
 ---
 
