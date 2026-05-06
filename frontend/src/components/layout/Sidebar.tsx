@@ -15,7 +15,7 @@ const NAV = [
   {
     group: 'Explore',
     items: [
-      { to: '/model-drivers', label: 'Model Drivers', icon: BarChart2 },
+      { to: '/model-drivers', label: 'Signal Breakdown', icon: BarChart2 },
       { to: '/scenario', label: 'Scenario Explorer', icon: Sliders },
     ],
   },

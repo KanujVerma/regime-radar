@@ -101,7 +101,7 @@ export default function ModelDrivers() {
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-      <Topbar title="Model Drivers" subtitle="What is driving today's risk reading?" action={demoAction} />
+      <Topbar title="Signal Breakdown" subtitle="What is driving today's risk reading?" action={demoAction} />
 
       <div className="p-5 space-y-4">
 
