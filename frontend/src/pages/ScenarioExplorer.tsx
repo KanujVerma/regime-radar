@@ -8,6 +8,11 @@ import { SLIDER_CONFIG, PRESETS, type ScenarioInputs } from '../lib/sliderConfig
 import { DEFAULT_THRESHOLD } from '../lib/constants'
 import { useModelDrivers } from '../hooks/useModelDrivers'
 import { buildScenarioVerdict, detectScenarioCharacter } from '../lib/narratives'
+import {
+  isActiveDriverState,
+  selectDriverCards,
+  getChangedInputPills,
+} from '../lib/scenarioDriverCards'
 
 const DEFAULT_INPUTS: ScenarioInputs = {
   vix_level: 18, vix_chg_5d: 0, rv_20d_pct: 0.40,
@@ -25,6 +30,33 @@ const STANDARD_PRESETS = [
 const CRISIS_PRESET = {
   id: 'crisis_peak', icon: '🔴', label: 'Crisis Peak',
   desc: 'Already 2 weeks into sustained turbulence',
+}
+
+const DRIVER_INTERP: Record<string, { raisesRisk: string; lowersRisk: string }> = {
+  drawdown_pct_504d: {
+    raisesRisk: 'Deepening drawdown is the primary stress signal the model is responding to.',
+    lowersRisk: 'Drawdown remains contained — limiting how much stress can build.',
+  },
+  vix_level: {
+    raisesRisk: 'Fear gauge rising — adds to the stress reading.',
+    lowersRisk: 'VIX is low — suppressing the stress reading.',
+  },
+  vix_chg_5d: {
+    raisesRisk: 'Fear is accelerating over the past week — adds momentum to the stress signal.',
+    lowersRisk: 'Fear has been receding — partially offsetting other stress inputs.',
+  },
+  rv_20d_pct: {
+    raisesRisk: 'Realized volatility is elevated relative to recent history — amplifying the regime signal.',
+    lowersRisk: 'Volatility is below recent norms — a calming factor.',
+  },
+  ret_20d: {
+    raisesRisk: 'Recent returns are weak — reinforcing the stress reading.',
+    lowersRisk: 'Medium-term momentum is holding — limiting how much the stress reading can rise.',
+  },
+  dist_sma50: {
+    raisesRisk: 'Price is stretched below its 50-day average — adding to the stress signal.',
+    lowersRisk: 'Price remains above its 50-day average — a stabilizing factor.',
+  },
 }
 
 const REGIME_HISTORY_FEATURES = new Set(['turbulent_count_30d_lag1', 'days_in_regime_lag1'])
@@ -115,11 +147,11 @@ export default function ScenarioExplorer() {
     ? (dominant === 'Calm' ? data.prob_calm : dominant === 'Turbulent' ? data.prob_turbulent : data.prob_elevated)
     : null
 
-  const positiveDrivers = data?.driver_deltas.filter(d => d.delta_value > 0) ?? []
-  const offsetDriver = (
-    data?.driver_deltas?.length &&
-    data.driver_deltas[0].delta_value > 0
-  ) ? (data.driver_deltas.find(d => d.delta_value < 0) ?? null) : null
+  const isActive = isActiveDriverState(data?.driver_deltas ?? [])
+  const { primary, secondary, offset } = selectDriverCards(data?.driver_deltas ?? [])
+  const changedPills = data
+    ? getChangedInputPills(inputs, data.baseline_inputs, SLIDER_CONFIG)
+    : []
 
   const resetBtn = (
     <button
