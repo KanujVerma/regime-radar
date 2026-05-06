@@ -69,6 +69,8 @@ const SENSITIVITY_COLORS = { high: '#f87171', medium: '#fbbf24', low: '#475569' 
 
 const PERCENTILE_KEYS = new Set(['rv_20d_pct', 'drawdown_pct_504d'])
 
+function notNull<T>(v: T | null | undefined): v is T { return v != null }
+
 function getSliderSensitivity(
   key: string,
   globalImportance: { feature: string; importance: number }[] | undefined,
@@ -483,14 +485,14 @@ export default function ScenarioExplorer() {
                   /* Active state */
                   <div>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
-                      {([primary, secondary] as const).filter(Boolean).map((card) => {
-                        const raisesRisk = card!.delta_value > 0
-                        const interp = DRIVER_INTERP[card!.feature]
+                      {([primary, secondary] as const).filter(notNull).map((card) => {
+                        const raisesRisk = card.delta_value > 0
+                        const interp = DRIVER_INTERP[card.feature]
                         const interpText = interp
                           ? (raisesRisk ? interp.raisesRisk : interp.lowersRisk)
                           : 'This scenario differs from the current market, but no single driver clearly dominates the change.'
                         return (
-                          <div key={card!.feature} style={{
+                          <div key={card.feature} style={{
                             background: '#0d1526',
                             border: '1px solid #1e2a3a',
                             borderRadius: 7, padding: '9px 11px',
@@ -504,18 +506,19 @@ export default function ScenarioExplorer() {
                             </div>
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: 10, fontWeight: 700, color: '#e2e8f0' }}>
-                                {card!.plain_label}
+                                {card.plain_label}
                               </div>
                               <div style={{
                                 fontSize: 9, marginTop: 2, color: '#475569',
                                 display: 'flex', alignItems: 'center', gap: 4,
                               }}>
                                 <span style={{ color: '#64748b' }}>
-                                  {formatDriverVal(card!.feature, data!.baseline_inputs[card!.feature] ?? 0)}
+                                  {formatDriverVal(card.feature, data!.baseline_inputs[card.feature] ?? 0)}
                                 </span>
                                 <span>→</span>
                                 <span style={{ color: raisesRisk ? '#f87171' : '#4ade80' }}>
-                                  {formatDriverVal(card!.feature, inputs[card!.feature as keyof typeof inputs] ?? 0)}
+                                  {/* falls back to 0 if feature is not a slider key — display-only, backend should match */}
+                                  {formatDriverVal(card.feature, inputs[card.feature as keyof typeof inputs] ?? 0)}
                                 </span>
                               </div>
                               <div style={{
@@ -588,6 +591,7 @@ export default function ScenarioExplorer() {
                                       </span>
                                       <span>→</span>
                                       <span style={{ color: offsetColor }}>
+                                        {/* falls back to 0 if feature is not a slider key — display-only, backend should match */}
                                         {formatDriverVal(offset.feature, inputs[offset.feature as keyof typeof inputs] ?? 0)}
                                       </span>
                                     </div>
