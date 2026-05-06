@@ -10,8 +10,8 @@ import type {
 
 const BASE_URL = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000'
 
-async function get<T>(path: string): Promise<T> {
-  const resp = await fetch(`${BASE_URL}${path}`)
+async function get<T>(path: string, signal?: AbortSignal): Promise<T> {
+  const resp = await fetch(`${BASE_URL}${path}`, { signal })
   if (!resp.ok) throw new Error(`${resp.status} ${resp.statusText} — ${path}`)
   return resp.json() as Promise<T>
 }
@@ -27,7 +27,7 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 }
 
 export const api = {
-  health: () => get<HealthResponse>('/health'),
+  health: (signal?: AbortSignal) => get<HealthResponse>('/health', signal),
   currentState: () => get<CurrentStateResponse>('/current-state'),
   historicalState: (start = '2020-01-01') =>
     get<HistoricalStateResponse>(`/historical-state?start=${start}`),
