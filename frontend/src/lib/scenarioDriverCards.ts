@@ -83,7 +83,7 @@ export function getChangedInputPills(
 ): ChangedPill[] {
   return sliderConfig.flatMap(cfg => {
     const current  = inputs[cfg.key]         ?? 0
-    const baseline = baselineInputs[cfg.key] ?? current
+    const baseline = baselineInputs[cfg.key] ?? current  // missing key → treat as unchanged
     const delta    = current - baseline
     if (Math.abs(delta) <= 0.001) return []
     return [{ key: cfg.key, label: cfg.label, delta }]

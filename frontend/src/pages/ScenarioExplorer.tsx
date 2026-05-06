@@ -9,7 +9,6 @@ import { DEFAULT_THRESHOLD } from '../lib/constants'
 import { useModelDrivers } from '../hooks/useModelDrivers'
 import { buildScenarioVerdict, detectScenarioCharacter } from '../lib/narratives'
 import {
-  isActiveDriverState,
   selectDriverCards,
   getChangedInputPills,
 } from '../lib/scenarioDriverCards'
@@ -149,8 +148,8 @@ export default function ScenarioExplorer() {
     ? (dominant === 'Calm' ? data.prob_calm : dominant === 'Turbulent' ? data.prob_turbulent : data.prob_elevated)
     : null
 
-  const isActive = isActiveDriverState(data?.driver_deltas ?? [])
   const { primary, secondary, offset } = selectDriverCards(data?.driver_deltas ?? [])
+  const isActive = primary !== null
   const changedPills = data
     ? getChangedInputPills(inputs, data.baseline_inputs, SLIDER_CONFIG)
     : []
