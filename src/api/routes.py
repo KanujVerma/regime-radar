@@ -20,7 +20,7 @@ def _get_state(request: Request):
     return request.app.state.app_state
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.api_route("/health", methods=["GET", "HEAD"], response_model=HealthResponse)
 async def health(request: Request):
     app_state = _get_state(request)
     latest = app_state.read_latest_state()
