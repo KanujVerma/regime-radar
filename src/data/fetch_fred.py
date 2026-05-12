@@ -49,6 +49,17 @@ def fetch_emv(
     start: str = "1985-01-01",
     end: str | None = None,
     cache_path: Path | None = None,
+    fallback_path: Path | None = None,
 ) -> pd.DataFrame:
-    """Download the Equity Market Volatility (EMV) index from FRED."""
-    return fetch_fred_series("EMVOVERALLEMV", start=start, end=end, cache_path=cache_path)
+    """Download the Equity Market Volatility (EMV) index from FRED.
+
+    Falls back to fallback_path (stale snapshot) if FRED returns an error.
+    """
+    try:
+        return fetch_fred_series("EMVOVERALLEMV", start=start, end=end, cache_path=cache_path)
+    except Exception as exc:
+        _logger.warning("FRED EMVOVERALLEMV fetch failed: %s", exc)
+        if fallback_path is not None and Path(fallback_path).exists():
+            _logger.info("Falling back to stale snapshot: %s", fallback_path)
+            return pd.read_parquet(fallback_path)
+        raise

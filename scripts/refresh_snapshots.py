@@ -33,7 +33,7 @@ vix = fetch_vix_history(start="1990-01-01", cache_path=PROCESSED_DIR / "vix.parq
 print(f"  VIX: {len(vix)} rows, last: {vix.index[-1].date()}")
 
 print("Fetching EMV (FRED)...")
-emv = fetch_emv(start="1985-01-01", cache_path=PROCESSED_DIR / "emv.parquet")
+emv = fetch_emv(start="1985-01-01", cache_path=PROCESSED_DIR / "emv.parquet", fallback_path=SNAPSHOTS_DIR / "emv.parquet")
 print(f"  EMV: {len(emv)} rows")
 
 print("Merging panel...")
