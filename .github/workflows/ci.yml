@@ -38,10 +38,10 @@ jobs:
 
       - name: Install dependencies
         working-directory: frontend
-        # npm ci uses the macOS-generated lockfile strictly and misses Linux-specific
-        # optional native bindings for @tailwindcss/oxide. npm install resolves them
-        # fresh for the current runner platform.
-        run: npm install
+        # The lockfile is generated on macOS and omits Linux-specific optional native
+        # bindings for @tailwindcss/oxide. Deleting it before npm install forces a
+        # fresh resolve that picks up the correct Linux binary.
+        run: rm -f package-lock.json && npm install
 
       - name: Build (typecheck + bundle)
         working-directory: frontend
