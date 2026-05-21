@@ -33,15 +33,14 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: npm
-          cache-dependency-path: frontend/package-lock.json
+          # No npm cache — the lockfile is macOS-generated and the cached node_modules
+          # include macOS-only @tailwindcss/oxide native bindings that break on Linux.
 
       - name: Install dependencies
         working-directory: frontend
-        # The lockfile is generated on macOS and omits Linux-specific optional native
-        # bindings for @tailwindcss/oxide. Deleting it before npm install forces a
-        # fresh resolve that picks up the correct Linux binary.
-        run: rm -f package-lock.json && npm install
+        # Wipe both lockfile and node_modules so npm resolves Linux-specific optional
+        # native bindings for @tailwindcss/oxide from scratch on this runner platform.
+        run: rm -rf node_modules package-lock.json && npm install
 
       - name: Build (typecheck + bundle)
         working-directory: frontend
