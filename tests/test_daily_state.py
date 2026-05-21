@@ -1,10 +1,8 @@
 """Unit tests for daily state artifact builder and diff helper."""
-import json
 from pathlib import Path
 from unittest.mock import patch
 import pandas as pd
 import numpy as np
-import pytest
 
 
 def _make_panel_parquet(directory: Path) -> None:

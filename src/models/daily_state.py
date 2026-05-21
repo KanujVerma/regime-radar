@@ -44,12 +44,14 @@ def build_daily_state(snapshots_dir: Path) -> dict:
     regime = build_regime_labels(panel)
     trend = build_trend_labels(panel)
     features = build_features(panel, regime_series=regime).dropna()
+    if features.empty:
+        raise ValueError("Panel too short — no non-NaN feature rows after dropna")
 
     result = predict_current_state(features)
 
     latest_row = panel.iloc[-1]
     as_of_date = str(panel.index[-1].date())
-    trend_latest = str(trend.iloc[-1]) if trend is not None and len(trend) > 0 else "neutral"
+    trend_latest = str(trend.iloc[-1]) if len(trend) > 0 else "neutral"
 
     enriched_drivers = [
         {
@@ -60,8 +62,14 @@ def build_daily_state(snapshots_dir: Path) -> dict:
         for d in result.get("top_drivers", [])
     ]
 
-    t_meta = load_metadata("xgb_transition") if artifact_exists("xgb_transition") else {}
-    r_meta = load_metadata("xgb_regime") if artifact_exists("xgb_regime") else {}
+    try:
+        t_meta = load_metadata("xgb_transition") if artifact_exists("xgb_transition") else {}
+    except Exception:
+        t_meta = {}
+    try:
+        r_meta = load_metadata("xgb_regime") if artifact_exists("xgb_regime") else {}
+    except Exception:
+        r_meta = {}
 
     return {
         "as_of_date": as_of_date,
