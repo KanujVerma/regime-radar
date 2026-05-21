@@ -32,7 +32,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
           # No npm cache — the lockfile is macOS-generated and the cached node_modules
           # include macOS-only @tailwindcss/oxide native bindings that break on Linux.
 
