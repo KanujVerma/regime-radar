@@ -126,3 +126,62 @@ class ReliabilityResponse(BaseModel):
     bins: list[ReliabilityBin]
     base_rate: float
     max_evaluated_p: float
+
+
+class DailyDriverEntry(BaseModel):
+    feature: str
+    plain_label: str
+    importance: float
+
+
+class DailyModelVersion(BaseModel):
+    transition_model: str
+    transition_trained_as_of: str
+    regime_model: str
+    regime_trained_as_of: str
+
+
+class DailyStateSnapshot(BaseModel):
+    as_of_date: str
+    generated_at: str
+    data_through_date: str
+    regime: str
+    transition_risk: float
+    prob_calm: float | None
+    prob_elevated: float | None
+    prob_turbulent: float | None
+    vix_level: float | None
+    trend: str
+    top_drivers: list[DailyDriverEntry]
+    model_version: DailyModelVersion
+
+
+class DailyTopDriverRef(BaseModel):
+    feature: str
+    plain_label: str
+
+
+class DailyDiff(BaseModel):
+    regime_changed: bool
+    prior_regime: str | None
+    risk_delta: float
+    vix_delta: float | None
+    trend_changed: bool
+    prior_trend: str | None
+    top_driver_changed: bool
+    prior_top_driver: DailyTopDriverRef | None
+    current_top_driver: DailyTopDriverRef | None
+
+
+class DailyDiffMetadata(BaseModel):
+    current_date: str
+    previous_date: str
+    gap_days: int
+    is_stale: bool
+
+
+class DailyDiffResponse(BaseModel):
+    current: DailyStateSnapshot
+    previous: DailyStateSnapshot
+    diff: DailyDiff
+    metadata: DailyDiffMetadata
