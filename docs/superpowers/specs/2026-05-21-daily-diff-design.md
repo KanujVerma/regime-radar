@@ -34,7 +34,6 @@ Give returning users a true "what changed since the last trading day" signal on 
     {"feature": "vix_30d_chg", "plain_label": "VIX 30-day change", "importance": 0.042},
     {"feature": "emv_3m_chg", "plain_label": "EMV 3-month change", "importance": 0.031}
   ],
-  "top_drivers_note": "risk-raising only (positive SHAP contributors)",
   "model_version": {
     "transition_model": "xgb_transition",
     "transition_trained_as_of": "2026-04-24",
@@ -46,24 +45,32 @@ Give returning users a true "what changed since the last trading day" signal on 
 
 **Field notes:**
 - `data_through_date`: the last row date in the panel parquet — immediately visible if the data feed was stale when the artifact was written.
-- `top_drivers`: risk-raising (positive SHAP) contributors only, matching the semantics of `/current-state top_drivers`. `plain_label` is the human-readable name so downstream consumers never need to remap raw feature keys.
+- `top_drivers`: risk-raising (positive SHAP) contributors only — the same semantics as `/current-state top_drivers`. Each entry includes `plain_label` so downstream consumers (RSS, card, changelog) never need to remap raw feature keys. The risk-raising-only constraint is documented here in the spec, not repeated as a runtime field in every artifact.
 - `model_version`: both models named separately so that if they ever diverge in training date, the artifact stays self-describing.
 
 ### New script: `scripts/save_daily_state.py`
 
-Runs after the data fetch step in the nightly cron. Loads the already-fetched processed parquets from disk and calls `predict_current_state()` — no new inference logic, reuses the existing inference path and model artifacts. Writes the JSON to `data/daily_state/YYYY-MM-DD.json`.
+Runs after the data fetch step in the nightly cron. Loads the already-fetched processed parquets from disk and calls `predict_current_state()` — no new inference logic, reuses the existing inference path and model artifacts. Writes the JSON to `data/daily_state/YYYY-MM-DD.json` where YYYY-MM-DD is today's UTC date.
 
-Accepts an optional `--date YYYY-MM-DD` argument for seeding historical artifacts and testing without waiting for the cron.
+No date-override argument. The date is always derived from the data, not passed in. This prevents synthetic relabeling (writing today's inference to a file named yesterday).
 
-### Bootstrap
+### New script: `scripts/bootstrap_daily_states.py`
 
-Two initial artifacts are seeded manually before the first deploy so `/daily-diff` is functional immediately:
+A one-time utility that generates genuinely historical daily state artifacts by checking out the panel parquet from each recent snapshot commit in git and running inference on that historical data. The data determines the date — the output filename matches the parquet's last row date, not a CLI argument.
 
 ```bash
-python scripts/save_daily_state.py --date 2026-05-20
-python scripts/save_daily_state.py --date 2026-05-21
+# Usage: generate artifacts for the N most recent snapshot commits
+python scripts/bootstrap_daily_states.py --count 5
 git add data/daily_state/ && git commit -m "chore: seed initial daily state artifacts"
 ```
+
+**How it works:**
+1. Finds commits matching `chore: update snapshots to YYYY-MM-DD` in git log.
+2. For each commit, checks out `data/snapshots/panel.parquet` into a temp directory using `git show <hash>:data/snapshots/panel.parquet`.
+3. Calls `predict_current_state()` with that temp parquet as input, producing a genuine historical inference for that date's data.
+4. Writes `data/daily_state/YYYY-MM-DD.json` where YYYY-MM-DD comes from the panel's last row date — never from a CLI argument.
+
+Two initial artifacts bootstrapped this way give `/daily-diff` a working, honest diff from day one.
 
 ### Cron change: `update-snapshots.yml`
 
@@ -186,7 +193,8 @@ If no rows pass their threshold: "No notable market-state change since the last 
 ## 4. Files Touched
 
 **Backend:**
-- `scripts/save_daily_state.py` — new
+- `scripts/save_daily_state.py` — new (cron artifact writer)
+- `scripts/bootstrap_daily_states.py` — new (one-time historical seed utility)
 - `.github/workflows/update-snapshots.yml` — add artifact step + commit path
 - `src/api/schemas.py` — new daily diff types
 - `src/api/routes.py` — `GET /daily-diff` endpoint
@@ -202,12 +210,11 @@ If no rows pass their threshold: "No notable market-state change since the last 
 
 ## 5. Verification
 
-1. **Artifact generation:**
+1. **Bootstrap:**
    ```bash
-   python scripts/save_daily_state.py --date 2026-05-20
-   python scripts/save_daily_state.py --date 2026-05-21
+   python scripts/bootstrap_daily_states.py --count 2
    ```
-   Both files exist, all required fields present, `data_through_date` matches panel last row.
+   Produces two genuinely historical artifacts (e.g. `2026-05-20.json`, `2026-05-21.json`). Verify that `data_through_date` in each file matches the panel parquet's last row date for that commit — not today's date. This confirms no synthetic relabeling occurred.
 
 2. **Endpoint — normal case:** `GET /daily-diff` returns correct `current`, `previous`, `diff`, and `metadata` for the two seeded artifacts. Confirm `gap_days = 1`, `is_stale = false`.
 
