@@ -49,9 +49,9 @@ def build_daily_state(snapshots_dir: Path) -> dict:
 
     result = predict_current_state(features)
 
-    latest_row = panel.iloc[-1]
-    as_of_date = str(panel.index[-1].date())
-    trend_latest = str(trend.iloc[-1]) if len(trend) > 0 else "neutral"
+    as_of_date = str(features.index[-1].date())
+    latest_row = panel.loc[features.index[-1]]
+    trend_latest = str(trend.loc[features.index[-1]]) if features.index[-1] in trend.index else "neutral"
 
     enriched_drivers = [
         {

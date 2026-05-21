@@ -7,6 +7,7 @@ date is always derived from the panel's last row, never from a CLI argument.
 """
 from __future__ import annotations
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -21,7 +22,9 @@ def main() -> None:
     out_dir = get_project_root() / "data" / "daily_state"
     out_dir.mkdir(parents=True, exist_ok=True)
     out_path = out_dir / f"{state['as_of_date']}.json"
-    out_path.write_text(json.dumps(state, indent=2))
+    tmp_path = out_path.with_suffix(".tmp")
+    tmp_path.write_text(json.dumps(state, indent=2))
+    os.replace(tmp_path, out_path)
     print(f"Written: {out_path}  (data through {state['data_through_date']})")
 
 
