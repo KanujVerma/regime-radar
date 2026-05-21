@@ -1,5 +1,6 @@
 """FastAPI application factory for RegimeRadar."""
 from __future__ import annotations
+import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from src.api.routes import router
@@ -22,9 +23,11 @@ def create_app(app_state: AppState | None = None, start_scheduler: bool = True) 
         version="1.0.0",
     )
 
+    cors_origin = os.environ.get("CORS_ORIGIN")
+    allow_origins = [cors_origin] if cors_origin else ["*"]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=allow_origins,
         allow_methods=["GET", "POST"],
         allow_headers=["*"],
     )
