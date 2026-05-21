@@ -13,30 +13,41 @@ export function buildCurrentStateNarrative(
   trend: string,
   vixLevel: number | null,
   vixChg1d: number | null,
+  outOfRange?: boolean,
 ): string {
   const regimeLower = regime.toLowerCase()
   const isStressed = regimeLower === 'elevated' || regimeLower === 'turbulent'
 
+  // Lead with the regime state — this is the primary signal.
   const regimeSentence =
     regimeLower === 'calm' ? 'SPY is in a calm regime.' :
     regimeLower === 'elevated' ? 'The market is in an elevated stress state.' :
     regimeLower === 'turbulent' ? 'Market conditions are currently turbulent.' :
     `SPY is in a ${regimeLower} regime.`
 
-  const riskSentence =
-    risk < 0.05
-      ? isStressed
-        ? 'The model sees very low risk of further deterioration this week.'
-        : 'The model sees very low risk of conditions worsening this week.'
-      : risk < 0.20
-      ? isStressed
-        ? 'Near-term risk of further worsening is low.'
-        : 'The model sees low risk of conditions changing soon.'
-      : risk < 0.40
-      ? 'The model sees moderate risk of conditions worsening over the next week.'
-      : isStressed
-        ? 'The model sees elevated risk of further deterioration — conditions may continue to worsen.'
-        : 'The model sees elevated risk of conditions worsening soon.'
+  // Contextualize the transition-risk odds against the regime.
+  // If the reading is outside the model's evaluated range, name it explicitly
+  // rather than asserting a bare high probability alongside calm signals.
+  let riskSentence: string
+  if (outOfRange) {
+    riskSentence = isStressed
+      ? 'The model is showing an unusually high odds reading that falls outside its historically evaluated range — treat it as a directional flag, not a precise probability.'
+      : 'The model is showing an unusually high odds reading for a non-turbulent regime; it falls outside the evaluated range and should be interpreted with caution.'
+  } else if (risk < 0.05) {
+    riskSentence = isStressed
+      ? 'The model sees very low odds of further deterioration over the next 5 trading days.'
+      : 'The model sees very low odds of conditions worsening over the next 5 trading days.'
+  } else if (risk < 0.20) {
+    riskSentence = isStressed
+      ? 'Near-term odds of further worsening are low.'
+      : 'The model sees low odds of conditions changing over the next 5 trading days.'
+  } else if (risk < 0.40) {
+    riskSentence = 'The model sees moderate odds of conditions worsening over the next 5 trading days.'
+  } else {
+    riskSentence = isStressed
+      ? 'The model sees elevated odds of further deterioration over the next 5 trading days.'
+      : 'The model sees elevated odds of conditions worsening over the next 5 trading days.'
+  }
 
   const trendSentence =
     trend === 'uptrend' ? 'The trend is positive.' :

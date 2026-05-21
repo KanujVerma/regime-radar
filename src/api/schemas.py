@@ -112,3 +112,17 @@ class ModelDriversResponse(BaseModel):
     global_importance: list[DriverItem]
     local_explanation: dict[str, float]
     threshold_sweep: list[dict] = []
+
+
+class ReliabilityBin(BaseModel):
+    p_low: float
+    p_high: float
+    p_mid: float
+    empirical_rate: float
+    n: int
+
+
+class ReliabilityResponse(BaseModel):
+    bins: list[ReliabilityBin]
+    base_rate: float
+    max_evaluated_p: float

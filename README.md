@@ -32,7 +32,7 @@ Most public market-state dashboards are either overfitted lookback tools or blac
 
 The backend always attempts a live yfinance + FRED refresh on startup. On Render's free tier this can time out on the first cold boot — in that case the backend serves committed snapshot data and flips to live a few minutes later when the scheduler completes its first background refresh.
 
-Finnhub is optional and only affects the live price-card overlay on the Current State page. All regime classification and transition-risk logic runs without it.
+Finnhub is optional. The backend fetches a real-time SPY quote if a key is configured; this value is stored in the database but is not currently surfaced in the frontend UI. All regime classification and transition-risk logic runs without it.
 
 ---
 
@@ -125,7 +125,7 @@ VITE_API_URL  │  data/processed/ (ephemeral)   │
 | **yfinance** | SPY daily OHLCV since 1993 | Price, returns, drawdown, realized volatility |
 | **FRED** | Economic Policy Uncertainty / Market Volatility Index | Macro fear proxy independent of VIX |
 | **CBOE via yfinance** | VIX daily since 1990 | Implied volatility level and momentum |
-| **Finnhub** (optional) | Real-time SPY quote | Live price-card overlay only |
+| **Finnhub** (optional) | Real-time SPY quote | Stored by backend; not currently surfaced in the UI |
 
 ---
 
@@ -257,7 +257,7 @@ Walk the model forward through named historical stress events using committed sn
 ```bash
 cp .env.example .env
 # Fill in FRED_API_KEY (required for live refresh)
-# FINNHUB_API_KEY is optional (price-card overlay only)
+# FINNHUB_API_KEY is optional (backend stores price quote; not currently shown in UI)
 
 cd frontend
 cp .env.example .env
@@ -320,7 +320,7 @@ The `frontend/vercel.json` rewrite rule handles client-side routing.
 |---|---|---|
 | `FRED_API_KEY` | **Yes** | From [api.stlouisfed.org](https://fred.stlouisfed.org/docs/api/api_key.html) |
 | `APP_ENV` | No | `production` |
-| `FINNHUB_API_KEY` | No | Optional price-card overlay |
+| `FINNHUB_API_KEY` | No | Optional; backend stores real-time SPY quote but it is not surfaced in the UI |
 
 **Cold-start notes:** Render free tier spins down after ~15 minutes of inactivity. The first request after a spin-down triggers a cold boot (~15–30 seconds). The backend will attempt a live yfinance + FRED refresh on startup; if that succeeds, the dashboard shows live data (LIVE badge). If it fails, it uses committed snapshots (DEMO badge).
 
@@ -348,7 +348,7 @@ regime-radar/
 ├── data/
 │   ├── models/         Committed XGBoost artifacts (~3 MB)
 │   └── snapshots/      Committed parquets for fallback (~1 MB)
-├── tests/              pytest smoke tests (66 tests)
+├── tests/              pytest suite (66 tests: 22 API smoke + 44 unit/integration)
 ├── Dockerfile.api
 ├── docker-compose.yml
 ├── render.yaml

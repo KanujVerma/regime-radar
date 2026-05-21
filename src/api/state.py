@@ -216,7 +216,7 @@ class AppState:
             "trend": trend_latest,
             "vix_level": float(latest_row.get("vixcls", 0)) if "vixcls" in latest_row.index else None,
             "vix_chg_1d": float(latest_features.get("vix_chg_1d", 0)) if "vix_chg_1d" in latest_features.index else None,
-            "top_drivers": [],  # populated by model_drivers endpoint
+            "top_drivers": result.get("top_drivers", []),
             "mode": mode,
             "price_card_price": price_card_price,
             "prob_calm": result.get("prob_calm"),

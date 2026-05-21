@@ -4,6 +4,7 @@ import type {
   HistoricalStateResponse,
   EventReplayResponse,
   ModelDriversResponse,
+  ReliabilityResponse,
   ScenarioRequest,
   ScenarioResponse,
 } from '../types/api'
@@ -34,6 +35,7 @@ export const api = {
   eventReplay: (name: string) =>
     get<EventReplayResponse>(`/event-replay/${name}`),
   modelDrivers: () => get<ModelDriversResponse>('/model-drivers'),
+  reliability: () => get<ReliabilityResponse>('/reliability'),
   scenario: (body: ScenarioRequest) =>
     post<ScenarioResponse>('/scenario', body),
 }

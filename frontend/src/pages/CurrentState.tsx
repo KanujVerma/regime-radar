@@ -3,6 +3,7 @@ import type { StateDelta } from '../types/api'
 import { useCurrentState } from '../hooks/useCurrentState'
 import { useModelDrivers } from '../hooks/useModelDrivers'
 import { useHistoricalState } from '../hooks/useHistoricalState'
+import { useReliability } from '../hooks/useReliability'
 import MiniRegimeChart from '../components/charts/MiniRegimeChart'
 import Topbar from '../components/layout/Topbar'
 import Panel from '../components/ui/Panel'
@@ -10,6 +11,7 @@ import MetricCard from '../components/ui/MetricCard'
 import RegimeBadge from '../components/ui/RegimeBadge'
 import DriverBar from '../components/ui/DriverBar'
 import { buildCurrentStateNarrative, formatRisk } from '../lib/narratives'
+import { reliabilityFor, reliabilityLine } from '../lib/reliability'
 import RegimeLegend from '../components/ui/RegimeLegend'
 import { regimeColor } from '../lib/tokens'
 import { labelFor } from '../lib/featureLabels'
@@ -23,6 +25,7 @@ export default function CurrentState() {
   const { data, loading, error, refresh } = useCurrentState()
   const { data: drivers } = useModelDrivers()
   const { data: recentData, loading: recentLoading } = useHistoricalState('2020-01-01')
+  const { data: reliabilityTable } = useReliability()
 
   if (loading) return <div className="p-6 text-slate-500 text-sm">Loading…</div>
   if (error) return <div className="p-6 text-red-400 text-sm">{error}</div>
@@ -30,11 +33,20 @@ export default function CurrentState() {
 
   const regime = data.regime.toLowerCase()
   const rColor = regimeColor[regime] ?? regimeColor['unknown']
+
+  const reliability = reliabilityTable
+    ? reliabilityFor(data.transition_risk, reliabilityTable)
+    : null
+
   const narrative = buildCurrentStateNarrative(
     data.regime, data.transition_risk, data.trend, data.vix_level, data.vix_chg_1d,
+    reliability?.out_of_range,
   )
 
-  const topDrivers = data.top_drivers.length > 0
+  // top_drivers from /current-state are risk-raising (positive SHAP) contributors.
+  // Fall back to global importance only if SHAP failed (with a note to the UI).
+  const usingLiveDrivers = data.top_drivers.length > 0
+  const topDrivers = usingLiveDrivers
     ? data.top_drivers
     : drivers?.global_importance.slice(0, 5) ?? []
   const maxImp = Math.max(...topDrivers.map(d => d.importance), 0.001)
@@ -49,14 +61,12 @@ export default function CurrentState() {
     </button>
   )
 
+  const riskColor = data.transition_risk > 0.40 ? '#f87171' : data.transition_risk > 0.20 ? '#fbbf24' : '#4ade80'
+
+  // Regime is the hero — shown first and most prominent.
+  // Transition risk is secondary and always accompanied by its track record.
   const heroCards = [
-    { label: 'Market Regime', value: data.regime, color: rColor, subtitle: 'Current stress level' },
-    {
-      label: 'Transition Risk',
-      value: formatRisk(data.transition_risk),
-      color: data.transition_risk > 0.40 ? '#f87171' : data.transition_risk > 0.20 ? '#fbbf24' : '#4ade80',
-      subtitle: 'Chance conditions worsen this week',
-    },
+    { label: 'Market Regime', value: data.regime, color: rColor, subtitle: 'Current market stress level' },
     { label: 'VIX Level', value: data.vix_level != null ? data.vix_level.toFixed(1) : '—', color: '#f1f5f9', subtitle: 'Market fear gauge' },
     { label: 'Trend', value: data.trend.replace('trend', ''), color: '#94a3b8', subtitle: 'Recent price direction' },
   ]
@@ -79,13 +89,50 @@ export default function CurrentState() {
       )}
 
       <div className="p-5 space-y-5">
-        <div className="grid grid-cols-4 gap-3">
+        {/* Regime is the primary hero; transition risk gets its own evidence-anchored row below */}
+        <div className="grid grid-cols-3 gap-3">
           {heroCards.map((card, i) => (
             <motion.div key={card.label} custom={i} variants={cardVariants} initial="hidden" animate="visible">
               <MetricCard label={card.label} value={card.value} valueColor={card.color} subtitle={card.subtitle} />
             </motion.div>
           ))}
         </div>
+
+        {/* Transition risk — always shown with its empirical track record, never naked */}
+        <motion.div custom={3} variants={cardVariants} initial="hidden" animate="visible">
+          <div
+            className="rounded-lg px-4 py-3"
+            style={{ background: '#080d18', border: '1px solid #151d2e' }}
+          >
+            <div className="flex items-start gap-4 flex-wrap">
+              <div className="min-w-[120px]">
+                <div className="text-[9px] font-bold tracking-widest uppercase mb-1" style={{ color: '#4a6080' }}>
+                  Odds of worsening (next 5 trading days)
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl font-bold" style={{ color: riskColor }}>
+                    {formatRisk(data.transition_risk)}
+                  </span>
+                  {reliability?.out_of_range && (
+                    <span
+                      className="text-[9px] font-bold px-2 py-0.5 rounded"
+                      style={{ background: '#2d1500', border: '1px solid #78350f', color: '#fbbf24' }}
+                    >
+                      ⚠ OUT OF RANGE
+                    </span>
+                  )}
+                </div>
+              </div>
+              {reliability && (
+                <div className="flex-1 min-w-[200px]">
+                  <p className="text-[10px] leading-relaxed" style={{ color: '#64748b' }}>
+                    {reliabilityLine(reliability)}
+                  </p>
+                </div>
+              )}
+            </div>
+          </div>
+        </motion.div>
 
         <div className="h-px" style={{ background: '#151d2e' }} />
 
@@ -135,11 +182,13 @@ export default function CurrentState() {
 
           <div className="flex flex-col gap-4">
             <Panel title="Transition risk gauge">
-              <GaugeArc risk={data.transition_risk} regime={regime} />
+              <GaugeArc risk={data.transition_risk} regime={regime} outOfRange={reliability?.out_of_range ?? false} />
             </Panel>
-            <Panel title="What is pushing risk right now" className="flex-1">
+            <Panel title="What is raising risk right now" className="flex-1">
               <p className="text-[10px] mb-3" style={{ color: '#94a3b8' }}>
-                Features currently exerting the strongest influence on the model's risk estimate.
+                {usingLiveDrivers
+                  ? 'Features with the largest positive (risk-raising) SHAP contribution today. This is not the full driver picture — risk-lowering signals are excluded.'
+                  : 'Global model feature importance (live SHAP unavailable). Not specific to today\'s reading.'}
               </p>
               {topDrivers.slice(0, 5).map(d => (
                 <DriverBar key={d.feature} feature={d.feature} importance={d.importance} maxImportance={maxImp} positive />
@@ -207,23 +256,24 @@ function DeltaRows({ delta, currentRegime }: { delta: StateDelta; currentRegime:
   )
 }
 
-function GaugeArc({ risk, regime }: { risk: number; regime: string }) {
+function GaugeArc({ risk, regime, outOfRange }: { risk: number; regime: string; outOfRange: boolean }) {
   const pct = Math.min(risk, 1)
   const angle = pct * 180 - 180
   const color = risk < 0.20 ? '#4ade80' : risk < 0.40 ? '#fbbf24' : '#f87171'
   const isStressed = regime === 'elevated' || regime === 'turbulent'
-  const caption =
-    risk < 0.05
+  const caption = outOfRange
+    ? 'Reading is outside the model\'s historically evaluated range — treat as a directional signal, not a calibrated probability.'
+    : risk < 0.05
       ? isStressed
-        ? 'Conditions are stressed, but further deterioration this week is unlikely.'
-        : 'Very low risk — conditions appear stable.'
+        ? 'Conditions are stressed, but further deterioration over the next 5 trading days is unlikely.'
+        : 'Very low odds — conditions appear stable.'
       : risk < 0.20
       ? isStressed
-        ? 'Current stress is present; near-term worsening risk is low.'
-        : 'Low risk — conditions appear stable.'
+        ? 'Current stress is present; near-term worsening odds are low.'
+        : 'Low odds — conditions appear stable.'
       : risk < 0.40
-      ? 'Moderate risk — conditions could worsen within the next week.'
-      : 'Elevated risk — model sees meaningful stress probability.'
+      ? 'Moderate odds — conditions could worsen over the next 5 trading days.'
+      : 'Elevated odds — model sees meaningful stress probability over the next 5 trading days.'
 
   // cy=90 puts arc center at bottom edge so semi-circle fits in 110px height
   const cx = 80, cy = 90, r = 55

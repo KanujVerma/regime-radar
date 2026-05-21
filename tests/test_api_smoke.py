@@ -356,6 +356,59 @@ def test_scenario_returns_503_without_artifacts(app_with_state, monkeypatch):
     resp = client.post("/scenario", json=payload)
     assert resp.status_code == 503
 
+def test_reliability_endpoint_returns_table(app_with_state, monkeypatch):
+    """GET /reliability serves the committed JSON table."""
+    import src.api.routes as routes_mod
+
+    # Inject the table directly into the module-level cache so no file I/O is needed
+    table = {
+        "bins": [
+            {"p_low": 0.0, "p_high": 0.10, "p_mid": 0.05, "empirical_rate": 0.05, "n": 500},
+            {"p_low": 0.10, "p_high": 0.30, "p_mid": 0.20, "empirical_rate": 0.15, "n": 200},
+        ],
+        "base_rate": 0.074,
+        "max_evaluated_p": 0.30,
+    }
+    routes_mod._reliability_cache = table
+
+    app, _ = app_with_state
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
+    resp = client.get("/reliability")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "bins" in data and "base_rate" in data and "max_evaluated_p" in data
+    assert isinstance(data["bins"], list) and len(data["bins"]) == 2
+    assert data["max_evaluated_p"] == 0.30
+
+    # Restore so other tests don't pick up stale cache
+    routes_mod._reliability_cache = None
+
+
+def test_current_state_top_drivers_stored_from_write(app_with_state):
+    """top_drivers written by state.write_state() are returned by /current-state."""
+    app, state = app_with_state
+    drivers = [{"feature": "vix_level", "importance": 0.42}]
+    state.write_state({
+        "as_of_ts": "2024-01-01T00:00:00+00:00",
+        "regime": "elevated",
+        "transition_risk": 0.35,
+        "trend": "neutral",
+        "vix_level": 22.0,
+        "vix_chg_1d": 0.8,
+        "top_drivers": drivers,
+        "mode": "demo",
+        "price_card_price": None,
+    })
+    from fastapi.testclient import TestClient
+    client = TestClient(app)
+    resp = client.get("/current-state")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert len(data["top_drivers"]) == 1
+    assert data["top_drivers"][0]["feature"] == "vix_level"
+
+
 def test_scenario_response_shape(app_with_state, monkeypatch):
     """With mocked models and panel, POST /scenario returns expected shape."""
     import numpy as np

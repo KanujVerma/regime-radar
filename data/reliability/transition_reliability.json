@@ -1,0 +1,62 @@
+{
+  "bins": [
+    {
+      "p_low": 0.0,
+      "p_high": 0.02,
+      "p_mid": 0.01,
+      "empirical_rate": 0.0458,
+      "n": 306
+    },
+    {
+      "p_low": 0.02,
+      "p_high": 0.05,
+      "p_mid": 0.035,
+      "empirical_rate": 0.0489,
+      "n": 1310
+    },
+    {
+      "p_low": 0.05,
+      "p_high": 0.1,
+      "p_mid": 0.075,
+      "empirical_rate": 0.069,
+      "n": 2695
+    },
+    {
+      "p_low": 0.1,
+      "p_high": 0.15,
+      "p_mid": 0.125,
+      "empirical_rate": 0.1281,
+      "n": 1421
+    },
+    {
+      "p_low": 0.15,
+      "p_high": 0.2,
+      "p_mid": 0.175,
+      "empirical_rate": 0.1545,
+      "n": 492
+    },
+    {
+      "p_low": 0.2,
+      "p_high": 0.3,
+      "p_mid": 0.25,
+      "empirical_rate": 0.1601,
+      "n": 306
+    },
+    {
+      "p_low": 0.3,
+      "p_high": 0.5,
+      "p_mid": 0.4,
+      "empirical_rate": 0.1818,
+      "n": 22
+    },
+    {
+      "p_low": 0.5,
+      "p_high": 1.0,
+      "p_mid": 0.75,
+      "empirical_rate": 0.0,
+      "n": 0
+    }
+  ],
+  "base_rate": 0.0914,
+  "max_evaluated_p": 0.3
+}

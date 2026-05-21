@@ -9,6 +9,7 @@ from src.api.schemas import (
     EventReplayResponse, ModelDriversResponse, DriverItem,
     HistoricalPoint, EventReplayPoint, TransitionRiskResponse, TransitionRiskPoint,
     StateDelta, ScenarioRequest, ScenarioResponse, DriverDelta,
+    ReliabilityResponse,
 )
 from src.utils.logging import get_logger
 
@@ -240,6 +241,26 @@ async def model_drivers(request: Request):
         local_explanation=local_exp,
         threshold_sweep=meta.get("threshold_sweep", []),
     )
+
+
+_reliability_cache: dict | None = None
+
+
+@router.get("/reliability", response_model=ReliabilityResponse)
+async def reliability():
+    global _reliability_cache
+    if _reliability_cache is None:
+        import json
+        from src.utils.paths import get_project_root
+        table_path = get_project_root() / "data" / "reliability" / "transition_reliability.json"
+        if not table_path.exists():
+            raise HTTPException(
+                status_code=503,
+                detail="Reliability table not found. Run scripts/build_reliability_table.py.",
+            )
+        with open(table_path) as f:
+            _reliability_cache = json.load(f)
+    return _reliability_cache
 
 
 FEATURE_PLAIN_LABELS = {

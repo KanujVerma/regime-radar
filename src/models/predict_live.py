@@ -1,8 +1,9 @@
 """Live inference: load trained artifacts and score the latest feature row."""
 from __future__ import annotations
 import pandas as pd
-from src.models.registry import load_artifact, artifact_exists
+from src.models.registry import load_artifact, artifact_exists, load_metadata
 from src.evaluation.calibration import apply_calibrator
+from src.evaluation.shap_utils import get_shap_explanation
 from src.labeling.build_regime_labels import smooth_live
 from src.utils.logging import get_logger
 
@@ -23,7 +24,8 @@ def predict_current_state(
         smoothing_days: n for smooth_live
 
     Returns:
-        dict with keys: regime, transition_risk, regime_history (last 5 labels)
+        dict with keys: regime, transition_risk, regime_history (last 5 labels),
+        top_drivers (top risk-raising SHAP contributors for the latest row)
     """
     if not artifact_exists("xgb_regime") or not artifact_exists("xgb_transition"):
         raise RuntimeError(
@@ -57,6 +59,28 @@ def predict_current_state(
     latest_regime = REGIME_NAMES[int(latest_probs.argmax())]
     latest_risk = float(transition_cal[-1])
 
+    # Compute per-day SHAP for the latest row using the same get_shap_explanation
+    # path as /model-drivers, so both endpoints reflect the same signal source.
+    # Only positive (risk-raising) contributors are returned; the UI labels them
+    # accordingly and does not imply they are the full driver picture.
+    top_drivers: list[dict] = []
+    try:
+        meta = load_metadata("xgb_transition")
+        feature_names = meta.get("feature_names") or list(features.columns)
+        shap_map = get_shap_explanation(transition_model, features, feature_names)
+        # Sort by signed SHAP descending; keep only positive (risk-raising) contributors
+        risk_raising = sorted(
+            ((f, v) for f, v in shap_map.items() if v > 0),
+            key=lambda x: x[1],
+            reverse=True,
+        )
+        top_drivers = [
+            {"feature": f, "importance": round(abs(v), 6)}
+            for f, v in risk_raising[:5]
+        ]
+    except Exception as e:
+        _logger.warning("SHAP top_drivers computation failed: %s", e)
+
     return {
         "regime": latest_regime,
         "transition_risk": round(latest_risk, 4),
@@ -64,4 +88,5 @@ def predict_current_state(
         "prob_calm": round(float(latest_probs[0]), 4),
         "prob_elevated": round(float(latest_probs[1]), 4),
         "prob_turbulent": round(float(latest_probs[2]), 4),
+        "top_drivers": top_drivers,
     }

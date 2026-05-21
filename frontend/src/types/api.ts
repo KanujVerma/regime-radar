@@ -91,6 +91,20 @@ export interface ScenarioRequest {
   turbulent_count_30d_lag1?: number
 }
 
+export interface ReliabilityBin {
+  p_low: number
+  p_high: number
+  p_mid: number
+  empirical_rate: number
+  n: number
+}
+
+export interface ReliabilityResponse {
+  bins: ReliabilityBin[]
+  base_rate: number
+  max_evaluated_p: number
+}
+
 export interface ScenarioResponse {
   baseline_risk: number
   scenario_risk: number
