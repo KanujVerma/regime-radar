@@ -4,7 +4,7 @@
 
 **Goal:** Add a committed `data/daily_state/YYYY-MM-DD.json` artifact per trading day, a `GET /daily-diff` API endpoint, and a "Since yesterday" UI block on the Current State page.
 
-**Architecture:** The nightly cron writes a daily state JSON after fetching data; a one-time bootstrap utility seeds two initial artifacts from git history. The `/daily-diff` endpoint scans committed files, computes a structured diff of the two most recent, and caches the result until next restart. The frontend renders a "Since last trading day / snapshot" block between the transition-risk row and the horizontal divider on Current State, with rows suppressed below meaningful thresholds.
+**Architecture:** The nightly cron writes a daily state JSON after fetching data; a one-time bootstrap utility seeds two initial artifacts from git history. The `/daily-diff` endpoint scans committed files and computes a structured diff of the two most recent on each request — the files are tiny so no module-level cache is needed. The frontend renders a "Since last trading day / snapshot" block between the transition-risk row and the horizontal divider on Current State, with rows suppressed below meaningful thresholds.
 
 **Tech Stack:** Python 3.11 (FastAPI, Pydantic, pandas), React 18 (TypeScript, Tailwind v4), GitHub Actions
 
@@ -263,8 +263,10 @@ Verify:
 
 - [ ] **Step 3: Commit**
 
+Commit the script only — **do not** stage the generated artifact. The initial committed artifacts are produced by the bootstrap task (Task 3), not from a local smoke run.
+
 ```bash
-git add scripts/save_daily_state.py data/daily_state/
+git add scripts/save_daily_state.py
 git commit -m "feat: add save_daily_state.py cron artifact writer"
 ```
 
@@ -277,6 +279,8 @@ git commit -m "feat: add save_daily_state.py cron artifact writer"
 
 The date of each artifact comes from the panel parquet's last row — never from a CLI argument. If the date in the artifact doesn't match the commit message date, the script prints a warning but still writes the artifact (the data is authoritative).
 
+**`panel.parquet` is sufficient.** `build_daily_state()` reads only `panel.parquet` from the snapshots directory — the panel is the fully merged snapshot (VIX, EMV, SPY data merged during the nightly cron), so no other parquet files are needed from git history. The bootstrap only needs to extract one file per commit.
+
 - [ ] **Step 1: Create `scripts/bootstrap_daily_states.py`**
 
 ```python
@@ -287,6 +291,9 @@ One-time utility. Extracts panel.parquet from each recent snapshot commit,
 runs inference, writes data/daily_state/YYYY-MM-DD.json. The artifact date
 comes from the panel's last row — never from a CLI argument — preventing
 synthetic relabeling (writing today's inference under yesterday's filename).
+
+panel.parquet is the fully merged snapshot (contains VIX, EMV, SPY data),
+so no other parquet files need to be extracted from git history.
 """
 from __future__ import annotations
 import argparse
@@ -303,9 +310,14 @@ from src.utils.paths import get_project_root
 
 
 def find_snapshot_commits(count: int) -> list[tuple[str, str]]:
-    """Return [(commit_hash, date_str)] for recent snapshot commits (newest first)."""
+    """Return [(commit_hash, date_str)] for recent snapshot commits (newest first).
+
+    Scans all commits that touched panel.parquet (no count heuristic) and stops
+    once we have the requested number of snapshot-update commits. This is robust
+    to any number of non-snapshot commits in between.
+    """
     result = subprocess.run(
-        ["git", "log", "--format=%H %s", f"-{count * 4}", "--", "data/snapshots/panel.parquet"],
+        ["git", "log", "--format=%H %s", "--", "data/snapshots/panel.parquet"],
         capture_output=True, text=True, check=True,
     )
     commits: list[tuple[str, str]] = []
@@ -552,13 +564,18 @@ Add to `tests/test_daily_state.py`:
 
 ```python
 def _write_snap(directory: Path, date_str: str, regime: str, risk: float,
-                vix: float, top_feature: str = "vix_chg_5d") -> None:
+                vix: float, top_feature: str | None = "vix_chg_5d") -> None:
+    """Write a fixture daily state artifact. Pass top_feature=None for empty top_drivers."""
+    drivers = (
+        [{"feature": top_feature, "plain_label": "VIX 5-day change", "importance": 0.03}]
+        if top_feature else []
+    )
     snap = {
         "as_of_date": date_str, "generated_at": f"{date_str}T22:00:00+00:00",
         "data_through_date": date_str, "regime": regime,
         "transition_risk": risk, "prob_calm": 0.80, "prob_elevated": 0.18,
         "prob_turbulent": 0.02, "vix_level": vix, "trend": "uptrend",
-        "top_drivers": [{"feature": top_feature, "plain_label": "VIX 5-day change", "importance": 0.03}],
+        "top_drivers": drivers,
         "model_version": {"transition_model": "xgb_transition", "transition_trained_as_of": "2026-04-24",
                            "regime_model": "xgb_regime", "regime_trained_as_of": "2026-04-24"},
     }
@@ -617,6 +634,42 @@ def test_compute_daily_diff_is_stale(tmp_path):
     result = _compute_daily_diff(d)
     assert result["metadata"]["gap_days"] == 10
     assert result["metadata"]["is_stale"] is True
+
+
+def test_compute_daily_diff_prev_empty_cur_nonempty(tmp_path):
+    """previous has no top drivers, current does → top_driver_changed = True."""
+    from src.api.routes import _compute_daily_diff
+    d = tmp_path / "daily_state"
+    _write_snap(d, "2026-05-20", "calm", 0.10, 15.0, top_feature=None)
+    _write_snap(d, "2026-05-21", "calm", 0.10, 15.0, top_feature="vix_chg_5d")
+    result = _compute_daily_diff(d)
+    assert result["diff"]["top_driver_changed"] is True
+    assert result["diff"]["prior_top_driver"] is None
+    assert result["diff"]["current_top_driver"]["feature"] == "vix_chg_5d"
+
+
+def test_compute_daily_diff_prev_nonempty_cur_empty(tmp_path):
+    """previous has top drivers, current does not → top_driver_changed = True."""
+    from src.api.routes import _compute_daily_diff
+    d = tmp_path / "daily_state"
+    _write_snap(d, "2026-05-20", "calm", 0.10, 15.0, top_feature="vix_chg_5d")
+    _write_snap(d, "2026-05-21", "calm", 0.10, 15.0, top_feature=None)
+    result = _compute_daily_diff(d)
+    assert result["diff"]["top_driver_changed"] is True
+    assert result["diff"]["prior_top_driver"]["feature"] == "vix_chg_5d"
+    assert result["diff"]["current_top_driver"] is None
+
+
+def test_compute_daily_diff_both_empty_top_drivers(tmp_path):
+    """both snapshots have empty top_drivers → top_driver_changed = False."""
+    from src.api.routes import _compute_daily_diff
+    d = tmp_path / "daily_state"
+    _write_snap(d, "2026-05-20", "calm", 0.10, 15.0, top_feature=None)
+    _write_snap(d, "2026-05-21", "calm", 0.10, 15.0, top_feature=None)
+    result = _compute_daily_diff(d)
+    assert result["diff"]["top_driver_changed"] is False
+    assert result["diff"]["prior_top_driver"] is None
+    assert result["diff"]["current_top_driver"] is None
 ```
 
 - [ ] **Step 2: Run unit tests to see them fail**
@@ -710,28 +763,23 @@ def _compute_daily_diff(daily_state_dir: Path) -> dict | None:
 pytest tests/test_daily_state.py -k "compute_daily_diff" -v
 ```
 
-Expected: all 5 PASS.
+Expected: all 8 PASS (5 original + 3 empty-driver edge cases).
 
 - [ ] **Step 5: Add the endpoint to `src/api/routes.py`**
 
 Immediately after `_compute_daily_diff`, add:
 
 ```python
-_daily_diff_cache: dict | None = None
-
-
 @router.get("/daily-diff", response_model=DailyDiffResponse)
 async def daily_diff():
-    global _daily_diff_cache
-    if _daily_diff_cache is not None:
-        return _daily_diff_cache
     from src.utils.paths import get_project_root
     result = _compute_daily_diff(get_project_root() / "data" / "daily_state")
     if result is None:
         raise HTTPException(status_code=404, detail="not enough daily snapshots to compute diff")
-    _daily_diff_cache = result
     return result
 ```
+
+No module-level cache. The endpoint reads two tiny JSON files on each request — cheap enough that a forever-until-restart cache adds complexity without meaningful benefit.
 
 - [ ] **Step 6: Write smoke test for the endpoint**
 
@@ -739,7 +787,7 @@ Add to `tests/test_api_smoke.py`:
 
 ```python
 class TestDailyDiffEndpoint:
-    def test_daily_diff_200_with_injected_cache(self, app_with_state):
+    def test_daily_diff_200(self, app_with_state, monkeypatch):
         import src.api.routes as routes_mod
         prebuilt = {
             "current": {
@@ -771,7 +819,7 @@ class TestDailyDiffEndpoint:
             "metadata": {"current_date": "2026-05-21", "previous_date": "2026-05-20",
                           "gap_days": 1, "is_stale": False},
         }
-        routes_mod._daily_diff_cache = prebuilt
+        monkeypatch.setattr(routes_mod, "_compute_daily_diff", lambda _: prebuilt)
         app, _ = app_with_state
         client = TestClient(app)
         resp = client.get("/daily-diff")
@@ -779,7 +827,7 @@ class TestDailyDiffEndpoint:
         data = resp.json()
         assert data["metadata"]["gap_days"] == 1
         assert data["diff"]["regime_changed"] is True
-        routes_mod._daily_diff_cache = None
+        # monkeypatch auto-reverts after test — no manual cleanup needed
 ```
 
 The 404 path is covered by `test_compute_daily_diff_returns_none_*` unit tests, which test `_compute_daily_diff` directly.
@@ -1034,24 +1082,25 @@ function DailyDiffBlock({ diff: response }: { diff: DailyDiffResponse }) {
     ? `Since last trading day (${prevDate.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })} ${prevFormatted})`
     : `Compared with snapshot as of ${prevFormatted}`
 
-  const rows: { icon: string; text: string; positive: boolean }[] = []
+  // calming=true → green (market stress easing); calming=false → muted (stress rising or neutral)
+  const rows: { icon: string; text: string; calming: boolean }[] = []
 
   if (diff.regime_changed && diff.prior_regime) {
-    rows.push({ icon: '🔄', text: `Regime shifted from ${diff.prior_regime} → ${response.current.regime}`, positive: false })
+    rows.push({ icon: '🔄', text: `Regime shifted from ${diff.prior_regime} → ${response.current.regime}`, calming: false })
   }
 
   if (Math.abs(diff.risk_delta) >= 0.01) {
     const up = diff.risk_delta > 0
-    rows.push({ icon: up ? '📈' : '📉', text: `Transition risk ${up ? '+' : ''}${(diff.risk_delta * 100).toFixed(1)}pp`, positive: !up })
+    rows.push({ icon: up ? '📈' : '📉', text: `Transition risk ${up ? '+' : ''}${(diff.risk_delta * 100).toFixed(1)}pp`, calming: !up })
   }
 
   if (diff.vix_delta !== null && Math.abs(diff.vix_delta) >= 0.5) {
     const up = diff.vix_delta > 0
-    rows.push({ icon: up ? '↑' : '↓', text: `VIX ${up ? '+' : ''}${diff.vix_delta.toFixed(1)}`, positive: !up })
+    rows.push({ icon: up ? '↑' : '↓', text: `VIX ${up ? '+' : ''}${diff.vix_delta.toFixed(1)}`, calming: !up })
   }
 
   if (diff.top_driver_changed && diff.prior_top_driver && diff.current_top_driver) {
-    rows.push({ icon: '⇄', text: `Top risk driver: ${diff.prior_top_driver.plain_label} → ${diff.current_top_driver.plain_label}`, positive: false })
+    rows.push({ icon: '⇄', text: `Top risk driver: ${diff.prior_top_driver.plain_label} → ${diff.current_top_driver.plain_label}`, calming: false })
   }
 
   return (
@@ -1075,7 +1124,7 @@ function DailyDiffBlock({ diff: response }: { diff: DailyDiffResponse }) {
           {rows.map((row, i) => (
             <div key={i} className="flex items-center gap-2 text-[11px]">
               <span>{row.icon}</span>
-              <span style={{ color: row.positive ? '#4ade80' : '#94a3b8', flex: 1 }}>{row.text}</span>
+              <span style={{ color: row.calming ? '#4ade80' : '#94a3b8', flex: 1 }}>{row.text}</span>
             </div>
           ))}
         </div>
@@ -1157,6 +1206,6 @@ Both `Backend tests` and `Frontend build` CI jobs should be green.
 - **Spec coverage:** artifact (§1) ✓, cron (§1) ✓, bootstrap (§3) ✓, API (§2) ✓, schemas ✓, frontend types/hook/block (§3) ✓, verification (§5) ✓
 - **No placeholders:** all code blocks complete, all commands include expected output
 - **Type consistency:** `DailyDiffResponse`, `DailyStateSnapshot`, `DailyTopDriverRef`, `DailyDiff`, `DailyDiffMetadata` consistent across Python schemas, TypeScript interfaces, and usage in `DailyDiffBlock` and `_compute_daily_diff`
-- **`top_driver_changed` logic:** when both artifacts have the same top feature, `top_driver_changed = False` and both `prior_top_driver`/`current_top_driver` are `null` — tested in `test_compute_daily_diff_no_change`
-- **Bootstrap anti-relabeling:** date comes from `panel.index[-1].date()`, not from CLI; sanity check prints warning if commit date differs
-- **Cache reset in tests:** `routes_mod._daily_diff_cache = None` called before and after every smoke test that touches it
+- **`top_driver_changed` logic:** when both artifacts have the same top feature, `top_driver_changed = False` and both `prior_top_driver`/`current_top_driver` are `null` — tested in `test_compute_daily_diff_no_change`; edge cases (one or both sides empty) tested in three dedicated tests
+- **Bootstrap anti-relabeling:** date comes from `panel.index[-1].date()`, not from CLI; sanity check prints warning if commit date differs; `panel.parquet` alone is sufficient (it's the fully merged snapshot)
+- **No cache:** endpoint reads two tiny JSON files per request; monkeypatch used in smoke test (auto-reverts, no cleanup needed)
