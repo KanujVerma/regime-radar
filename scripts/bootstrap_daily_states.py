@@ -65,7 +65,7 @@ def extract_panel_and_build(commit_hash: str, commit_date: str, output_dir: Path
               f"from commit date {commit_date} — using data date (this is correct)")
 
     out_path = output_dir / f"{state['as_of_date']}.json"
-    out_path.write_text(json.dumps(state, indent=2))
+    out_path.write_text(json.dumps(state, indent=2) + "\n")
     print(f"  Written: {out_path}  (data through {state['data_through_date']})")
 
 
