@@ -1,6 +1,6 @@
 # RegimeRadar
 
-**Live market-state monitor powered by XGBoost — classify today's equity market as Calm, Elevated, or Turbulent and quantify the weekly transition risk.**
+**Live market-state monitor powered by XGBoost — classify today's equity market as Calm, Elevated, or Turbulent and quantify the 5-trading-day transition risk.**
 
 **[→ Live Demo](https://regime-radar.vercel.app/)** — React/TypeScript frontend on Vercel + FastAPI/XGBoost backend on Render. The backend runs on Render's free tier and may cold-start (15–30s) after ~15 minutes of inactivity; on cold start it falls back to committed snapshots and shows a **DEMO** badge until the live refresh completes.
 
@@ -347,8 +347,9 @@ regime-radar/
 │   └── vercel.json
 ├── data/
 │   ├── models/         Committed XGBoost artifacts (~3 MB)
-│   └── snapshots/      Committed parquets for fallback (~1 MB)
-├── tests/              pytest suite (66 tests: 22 API smoke + 44 unit/integration)
+│   ├── snapshots/      Committed parquets for fallback (~1 MB)
+│   └── daily_state/    Committed daily state JSON artifacts (one per trading day)
+├── tests/              pytest suite (80 tests: 22 API smoke + 10 daily-diff unit + 48 unit/integration)
 ├── Dockerfile.api
 ├── docker-compose.yml
 ├── render.yaml
@@ -362,5 +363,4 @@ regime-radar/
 
 - Multi-asset extension (bonds, gold, international equity)
 - Intraday signals with 15-minute OHLCV
-- GitHub Actions CI for automated test runs on push
 - Alerting integration (email / Slack when transition risk crosses threshold)

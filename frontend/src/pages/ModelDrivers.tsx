@@ -125,10 +125,10 @@ export default function ModelDrivers() {
               {formatRisk(risk)}
             </div>
             <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', lineHeight: 1.4 }}>
-              Weekly<br />transition risk
+              5-day<br />transition risk
             </div>
             <div style={{ fontSize: 8.5, color: '#4a5568', lineHeight: 1.4, marginTop: 2 }}>
-              Chance conditions<br />worsen this week
+              Chance conditions worsen<br />next 5 trading days
             </div>
             <div style={{
               display: 'inline-block', marginTop: 10, padding: '3px 8px', borderRadius: 99,
