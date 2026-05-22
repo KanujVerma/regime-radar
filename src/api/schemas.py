@@ -185,3 +185,31 @@ class DailyDiffResponse(BaseModel):
     previous: DailyStateSnapshot
     diff: DailyDiff
     metadata: DailyDiffMetadata
+
+
+class ChangelogEntry(BaseModel):
+    current_date: str
+    previous_date: str | None
+    gap_days: int
+    is_stale_gap: bool              # gap_days > 5
+    regime: str
+    transition_risk: float
+    risk_delta: float
+    vix_level: float | None
+    vix_delta: float | None
+    trend: str
+    prior_regime: str | None
+    prior_trend: str | None
+    top_driver: DailyDriverEntry | None
+    prior_top_driver: DailyDriverEntry | None
+    triggers: list[str]
+    primary_trigger: str | None     # None when triggers is empty
+    narrative: str
+
+
+class ChangelogResponse(BaseModel):
+    entries: list[ChangelogEntry]   # most-recent-first
+    total_notable: int
+    total_days: int
+    earliest_date: str | None
+    latest_date: str | None
