@@ -1,4 +1,5 @@
 """Smoke tests for the FastAPI endpoints."""
+import json
 import pytest
 from fastapi.testclient import TestClient
 from src.api.main import create_app
@@ -519,4 +520,60 @@ class TestDailyDiffEndpoint:
         app, _ = app_with_state
         client = TestClient(app)
         resp = client.get("/daily-diff")
+        assert resp.status_code == 404
+
+
+class TestChangelogEndpoint:
+    def test_changelog_200(self, app_with_state, monkeypatch, tmp_path):
+        import src.api.routes as routes_mod
+        # Two stub files so the file-count check passes
+        d = tmp_path / "data" / "daily_state"
+        d.mkdir(parents=True)
+        (d / "2026-05-20.json").write_text(json.dumps({"as_of_date": "2026-05-20"}))
+        (d / "2026-05-21.json").write_text(json.dumps({"as_of_date": "2026-05-21"}))
+        monkeypatch.setattr("src.utils.paths.get_project_root", lambda: tmp_path)
+        prebuilt = [
+            {
+                "current_date": "2026-05-21",
+                "previous_date": "2026-05-20",
+                "gap_days": 1,
+                "is_stale_gap": False,
+                "regime": "elevated",
+                "transition_risk": 0.20,
+                "risk_delta": 0.10,
+                "vix_level": 18.0,
+                "vix_delta": 3.0,
+                "trend": "uptrend",
+                "prior_regime": "calm",
+                "prior_trend": None,
+                "top_driver": {
+                    "feature": "vix_chg_5d",
+                    "plain_label": "VIX 5-day change",
+                    "importance": 0.20,
+                },
+                "prior_top_driver": {
+                    "feature": "vix_pct_504d",
+                    "plain_label": "VIX relative to 2-year history",
+                    "importance": 0.18,
+                },
+                "triggers": ["regime_shift", "risk_move"],
+                "primary_trigger": "regime_shift",
+                "narrative": "Calm → Elevated. Risk +10pp to 20%.",
+            }
+        ]
+        monkeypatch.setattr(routes_mod, "_compute_changelog_entries", lambda *a, **kw: prebuilt)
+        app, _ = app_with_state
+        client = TestClient(app)
+        resp = client.get("/changelog")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert "entries" in data
+        assert data["entries"][0]["primary_trigger"] == "regime_shift"
+
+    def test_changelog_404_when_fewer_than_two_snapshots(self, app_with_state, monkeypatch, tmp_path):
+        monkeypatch.setattr("src.utils.paths.get_project_root", lambda: tmp_path)
+        # tmp_path has no daily_state dir → 0 files → 404
+        app, _ = app_with_state
+        client = TestClient(app)
+        resp = client.get("/changelog")
         assert resp.status_code == 404
