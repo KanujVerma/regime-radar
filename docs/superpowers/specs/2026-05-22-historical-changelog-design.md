@@ -58,7 +58,7 @@ Endpoint behavior:
 | `regime_shift` | `current.regime != previous.regime` |
 | `risk_move` | `abs(risk_delta) >= 0.05` |
 | `vix_move` | `abs(vix_delta) >= 1.5` |
-| `driver_rotation` | `top_driver_changed AND current_top_driver.importance >= DRIVER_ROTATION_MIN_IMPORTANCE` |
+| `driver_rotation` | `top_driver_changed AND current_top_driver is not None AND prior_top_driver is not None AND current_top_driver.importance >= DRIVER_ROTATION_MIN_IMPORTANCE` |
 
 `DRIVER_ROTATION_MIN_IMPORTANCE = 0.15` — named constant at module level, easy to tune.
 
@@ -66,14 +66,21 @@ Priority (for `primary_trigger`): `regime_shift > risk_move > vix_move > driver_
 
 **Narrative templates** (deterministic, keyed to `primary_trigger`):
 
-| Primary trigger | Template |
-|---|---|
-| `regime_shift` | `"{prior_regime.title()} → {regime.title()}. Risk {risk_delta:+.0%} to {transition_risk:.0%}."` |
-| `risk_move` | `"Transition risk {risk_delta:+.0%} to {transition_risk:.0%}. Regime: {regime.title()}."` |
-| `vix_move` | `"VIX {'rose' if vix_delta > 0 else 'fell'} {abs(vix_delta):.1f} to {vix_level:.1f}. Risk {transition_risk:.0%}."` |
-| `driver_rotation` | `"Top driver shifted to {current_top_driver.plain_label} (was: {prior_top_driver.plain_label})."` |
+Placeholder definitions:
+- `{risk_delta_pp}` = `f"{risk_delta*100:+.0f}pp"` e.g. `+14pp` or `-6pp`
+- `{transition_risk_pct}` = `f"{transition_risk*100:.0f}%"` e.g. `80%`
+- `{abs_vix_delta}` = `f"{abs(vix_delta):.1f}"` e.g. `2.1`
+- `{vix_direction}` = `"rose"` if `vix_delta > 0` else `"fell"`
 
-Note: percentages in narratives are displayed as pp-style integers (e.g. "+14pp to 80%"), so format `risk_delta` as `f"{risk_delta*100:+.0f}pp"` and `transition_risk` as `f"{transition_risk*100:.0f}%"`.
+| Primary trigger | Final string format | Example output |
+|---|---|---|
+| `regime_shift` | `"{prior_regime} → {regime}. Risk {risk_delta_pp} to {transition_risk_pct}."` | `"Calm → Elevated. Risk +14pp to 80%."` |
+| `risk_move` | `"Transition risk {risk_delta_pp} to {transition_risk_pct}. Regime: {regime}."` | `"Transition risk +8pp to 64%. Regime: Elevated."` |
+| `vix_move` | `"VIX {vix_direction} {abs_vix_delta} to {vix_level:.1f}. Risk {transition_risk_pct}."` | `"VIX rose 2.1 to 19.6. Risk 48%."` |
+| `driver_rotation` | `"Top driver shifted to {current_top_driver.plain_label} (was: {prior_top_driver.plain_label})."` | `"Top driver shifted to Realized volatility percentile (was: VIX 5-day change)."` |
+| _(no triggers)_ | `"No notable market-state change from the prior snapshot."` | _(same)_ |
+
+Regime names in narratives are title-cased: `calm` → `Calm`, `elevated` → `Elevated`, `turbulent` → `Turbulent`.
 
 **Fallback narrative** (when `triggers` is empty, i.e. `notable_only=False` entries):
 `"No notable market-state change from the prior snapshot."`
@@ -191,12 +198,22 @@ export function useChangelog() {
 
 **Component** (`frontend/src/components/ui/ChangelogFeed.tsx` — new file):
 
-Regime color map:
+Regime color map (left-border + driver-shift badge):
 ```typescript
 const REGIME_COLOR: Record<string, string> = {
   calm: '#22c55e',
   elevated: '#f59e0b',
   turbulent: '#ef4444',
+}
+```
+
+Trigger badge color map (text color; background = color at 10% opacity, border = color at 25% opacity):
+```typescript
+const TRIGGER_BADGE_COLOR: Record<string, string> = {
+  regime_shift:    '#f59e0b',  // amber  — regime severity signal
+  risk_move:       '#ef4444',  // red    — risk direction
+  vix_move:        '#06b6d4',  // cyan   — fear-gauge reading (matches app accent)
+  driver_rotation: '#64748b',  // slate  — informational, lower severity
 }
 ```
 
@@ -252,7 +269,7 @@ Unit tests for `_compute_changelog_entries`:
 | `test_notable_regime_shift` | two files with regime change → 1 entry, `primary_trigger = "regime_shift"` |
 | `test_non_notable_small_deltas` | delta below all thresholds → 0 entries (`notable_only=True`); 1 entry (`notable_only=False`) with `primary_trigger=None` and fallback narrative |
 | `test_risk_move_threshold_boundary` | `risk_delta = 0.049` → miss; `risk_delta = 0.050` → hit |
-| `test_driver_rotation_importance_gate` | importance `0.14` → miss; `0.15` → hit |
+| `test_driver_rotation_importance_gate` | importance `0.14` → miss; `0.15` → hit; `current_top_driver=None` → miss; `prior_top_driver=None` → miss |
 | `test_since_filter` | two notable entries; `since` = date of first → only second returned |
 | `test_limit` | 5 notable entries, `limit=3` → 3 entries, most-recent-first |
 | `test_narrative_regime_shift` | narrative contains regime transition and risk delta |
