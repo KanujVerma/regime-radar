@@ -316,8 +316,10 @@ def _compute_changelog_entries(
         prev_vix = previous_data.get("vix_level")
         vix_delta = round(cur_vix - prev_vix, 2) if (cur_vix is not None and prev_vix is not None) else None
 
-        cur_top = current_data["top_drivers"][0] if current_data["top_drivers"] else None
-        prev_top = previous_data["top_drivers"][0] if previous_data["top_drivers"] else None
+        cur_top_drivers = current_data.get("top_drivers") or []
+        prev_top_drivers = previous_data.get("top_drivers") or []
+        cur_top = cur_top_drivers[0] if cur_top_drivers else None
+        prev_top = prev_top_drivers[0] if prev_top_drivers else None
 
         # Compute triggers
         triggers: list[str] = []
@@ -414,8 +416,10 @@ def _compute_daily_diff(daily_state_dir: Path) -> dict | None:
     prev_vix = previous_data.get("vix_level")
     vix_delta = round(cur_vix - prev_vix, 2) if (cur_vix is not None and prev_vix is not None) else None
 
-    cur_top = current_data["top_drivers"][0] if current_data["top_drivers"] else None
-    prev_top = previous_data["top_drivers"][0] if previous_data["top_drivers"] else None
+    cur_top_drivers = current_data.get("top_drivers") or []
+    prev_top_drivers = previous_data.get("top_drivers") or []
+    cur_top = cur_top_drivers[0] if cur_top_drivers else None
+    prev_top = prev_top_drivers[0] if prev_top_drivers else None
     top_driver_changed = ((cur_top is None) != (prev_top is None)) or (
         cur_top is not None and prev_top is not None and cur_top["feature"] != prev_top["feature"]
     )
