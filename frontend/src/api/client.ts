@@ -8,6 +8,7 @@ import type {
   ScenarioRequest,
   ScenarioResponse,
   DailyDiffResponse,
+  ChangelogResponse,
 } from '../types/api'
 
 const BASE_URL = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000'
@@ -40,4 +41,14 @@ export const api = {
   scenario: (body: ScenarioRequest) =>
     post<ScenarioResponse>('/scenario', body),
   dailyDiff: () => get<DailyDiffResponse>('/daily-diff'),
+  changelog: (params?: { limit?: number; since?: string; notable_only?: boolean }) => {
+    const qs = params
+      ? new URLSearchParams(
+          Object.entries(params)
+            .filter(([, v]) => v !== undefined)
+            .map(([k, v]) => [k, String(v)])
+        ).toString()
+      : ''
+    return get<ChangelogResponse>('/changelog' + (qs ? '?' + qs : ''))
+  },
 }
