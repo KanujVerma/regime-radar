@@ -48,6 +48,115 @@ def test_build_daily_state_shape(mock_meta, mock_exists, mock_regime, mock_trend
     assert result["model_version"]["transition_trained_as_of"] == "2026-04-24"
 
 
+def _write_snap(directory: Path, date_str: str, regime: str, risk: float,
+                vix: float, top_feature: str | None = "vix_chg_5d") -> None:
+    """Write a fixture daily state artifact. Pass top_feature=None for empty top_drivers."""
+    drivers = (
+        [{"feature": top_feature, "plain_label": "VIX 5-day change", "importance": 0.03}]
+        if top_feature else []
+    )
+    snap = {
+        "as_of_date": date_str, "generated_at": f"{date_str}T22:00:00+00:00",
+        "data_through_date": date_str, "regime": regime,
+        "transition_risk": risk, "prob_calm": 0.80, "prob_elevated": 0.18,
+        "prob_turbulent": 0.02, "vix_level": vix, "trend": "uptrend",
+        "top_drivers": drivers,
+        "model_version": {"transition_model": "xgb_transition", "transition_trained_as_of": "2026-04-24",
+                           "regime_model": "xgb_regime", "regime_trained_as_of": "2026-04-24"},
+    }
+    directory.mkdir(parents=True, exist_ok=True)
+    (directory / f"{date_str}.json").write_text(json.dumps(snap))
+
+
+def test_compute_daily_diff_returns_none_no_dir(tmp_path):
+    from src.api.routes import _compute_daily_diff
+    assert _compute_daily_diff(tmp_path / "nonexistent") is None
+
+
+def test_compute_daily_diff_returns_none_one_artifact(tmp_path):
+    from src.api.routes import _compute_daily_diff
+    d = tmp_path / "daily_state"
+    _write_snap(d, "2026-05-21", "calm", 0.10, 15.0)
+    assert _compute_daily_diff(d) is None
+
+
+def test_compute_daily_diff_regime_change(tmp_path):
+    from src.api.routes import _compute_daily_diff
+    d = tmp_path / "daily_state"
+    _write_snap(d, "2026-05-20", "calm", 0.10, 15.0, top_feature="vix_pct_504d")
+    _write_snap(d, "2026-05-21", "elevated", 0.20, 18.0, top_feature="vix_chg_5d")
+    result = _compute_daily_diff(d)
+    assert result is not None
+    assert result["diff"]["regime_changed"] is True
+    assert result["diff"]["prior_regime"] == "calm"
+    assert abs(result["diff"]["risk_delta"] - 0.10) < 0.001
+    assert abs(result["diff"]["vix_delta"] - 3.0) < 0.01
+    assert result["diff"]["top_driver_changed"] is True
+    assert result["diff"]["prior_top_driver"]["feature"] == "vix_pct_504d"
+    assert result["diff"]["current_top_driver"]["feature"] == "vix_chg_5d"
+    assert result["metadata"]["gap_days"] == 1
+    assert result["metadata"]["is_stale"] is False
+
+
+def test_compute_daily_diff_no_change(tmp_path):
+    from src.api.routes import _compute_daily_diff
+    d = tmp_path / "daily_state"
+    _write_snap(d, "2026-05-20", "calm", 0.10, 15.0)
+    _write_snap(d, "2026-05-21", "calm", 0.10, 15.0)
+    result = _compute_daily_diff(d)
+    assert result["diff"]["regime_changed"] is False
+    assert result["diff"]["prior_regime"] is None
+    assert result["diff"]["top_driver_changed"] is False
+    assert result["diff"]["prior_top_driver"] is None
+    assert result["diff"]["current_top_driver"] is None
+
+
+def test_compute_daily_diff_is_stale(tmp_path):
+    from src.api.routes import _compute_daily_diff
+    d = tmp_path / "daily_state"
+    _write_snap(d, "2026-05-10", "calm", 0.10, 15.0)
+    _write_snap(d, "2026-05-20", "calm", 0.11, 15.5)
+    result = _compute_daily_diff(d)
+    assert result["metadata"]["gap_days"] == 10
+    assert result["metadata"]["is_stale"] is True
+
+
+def test_compute_daily_diff_prev_empty_cur_nonempty(tmp_path):
+    """previous has no top drivers, current does → top_driver_changed = True."""
+    from src.api.routes import _compute_daily_diff
+    d = tmp_path / "daily_state"
+    _write_snap(d, "2026-05-20", "calm", 0.10, 15.0, top_feature=None)
+    _write_snap(d, "2026-05-21", "calm", 0.10, 15.0, top_feature="vix_chg_5d")
+    result = _compute_daily_diff(d)
+    assert result["diff"]["top_driver_changed"] is True
+    assert result["diff"]["prior_top_driver"] is None
+    assert result["diff"]["current_top_driver"]["feature"] == "vix_chg_5d"
+
+
+def test_compute_daily_diff_prev_nonempty_cur_empty(tmp_path):
+    """previous has top drivers, current does not → top_driver_changed = True."""
+    from src.api.routes import _compute_daily_diff
+    d = tmp_path / "daily_state"
+    _write_snap(d, "2026-05-20", "calm", 0.10, 15.0, top_feature="vix_chg_5d")
+    _write_snap(d, "2026-05-21", "calm", 0.10, 15.0, top_feature=None)
+    result = _compute_daily_diff(d)
+    assert result["diff"]["top_driver_changed"] is True
+    assert result["diff"]["prior_top_driver"]["feature"] == "vix_chg_5d"
+    assert result["diff"]["current_top_driver"] is None
+
+
+def test_compute_daily_diff_both_empty_top_drivers(tmp_path):
+    """both snapshots have empty top_drivers → top_driver_changed = False."""
+    from src.api.routes import _compute_daily_diff
+    d = tmp_path / "daily_state"
+    _write_snap(d, "2026-05-20", "calm", 0.10, 15.0, top_feature=None)
+    _write_snap(d, "2026-05-21", "calm", 0.10, 15.0, top_feature=None)
+    result = _compute_daily_diff(d)
+    assert result["diff"]["top_driver_changed"] is False
+    assert result["diff"]["prior_top_driver"] is None
+    assert result["diff"]["current_top_driver"] is None
+
+
 def test_daily_diff_response_schema_is_valid():
     """Pydantic schema accepts a well-formed diff response."""
     from src.api.schemas import DailyDiffResponse
