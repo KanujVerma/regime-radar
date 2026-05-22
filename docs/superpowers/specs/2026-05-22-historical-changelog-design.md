@@ -75,6 +75,12 @@ Priority (for `primary_trigger`): `regime_shift > risk_move > vix_move > driver_
 
 Note: percentages in narratives are displayed as pp-style integers (e.g. "+14pp to 80%"), so format `risk_delta` as `f"{risk_delta*100:+.0f}pp"` and `transition_risk` as `f"{transition_risk*100:.0f}%"`.
 
+**Fallback narrative** (when `triggers` is empty, i.e. `notable_only=False` entries):
+`"No notable market-state change from the prior snapshot."`
+
+**Helper / endpoint boundary — explicit rule:**
+`_compute_changelog_entries()` is a pure data function. It returns `[]` when `daily_state_dir` has < 2 files and never raises HTTP exceptions. The endpoint is the only place that converts a < 2 file condition to a **404**. This boundary must not be blurred: tests for the helper assert return values; tests for the endpoint assert HTTP status codes.
+
 ---
 
 ### Pydantic schemas (`src/api/schemas.py`)
@@ -96,7 +102,7 @@ class ChangelogEntry(BaseModel):
     top_driver: DailyDriverEntry | None      # includes importance field
     prior_top_driver: DailyDriverEntry | None
     triggers: list[str]
-    primary_trigger: str
+    primary_trigger: str | None     # None when triggers is empty (notable_only=False entries)
     narrative: str
 
 class ChangelogResponse(BaseModel):
@@ -132,7 +138,7 @@ export interface ChangelogEntry {
   top_driver: DailyDriverEntry | null
   prior_top_driver: DailyDriverEntry | null
   triggers: string[]
-  primary_trigger: string
+  primary_trigger: string | null   // null when triggers is empty
   narrative: string
 }
 
@@ -148,11 +154,19 @@ export interface ChangelogResponse {
 **API client** (`frontend/src/api/client.ts`):
 
 ```typescript
-changelog: (params?: { limit?: number; since?: string; notable_only?: boolean }) =>
-  get<ChangelogResponse>('/changelog' + (params ? '?' + new URLSearchParams(
-    Object.entries(params).filter(([,v]) => v !== undefined).map(([k,v]) => [k, String(v)])
-  ) : ''))
+changelog: (params?: { limit?: number; since?: string; notable_only?: boolean }) => {
+  const qs = params
+    ? new URLSearchParams(
+        Object.entries(params)
+          .filter(([, v]) => v !== undefined)
+          .map(([k, v]) => [k, String(v)])
+      ).toString()
+    : ''
+  return get<ChangelogResponse>('/changelog' + (qs ? '?' + qs : ''))
+}
 ```
+
+Build the query string first; only append `?` if it is non-empty. This avoids producing `/changelog?` when params is provided but all values are undefined.
 
 **Hook** (`frontend/src/hooks/useChangelog.ts` — new file):
 
@@ -167,8 +181,8 @@ export function useChangelog() {
   const [error, setError] = useState<string | null>(null)
   useEffect(() => {
     api.changelog({ limit: 20 })
-      .then(setData)
-      .catch(() => setError('Changelog unavailable right now.'))
+      .then(result => { setData(result); setError(null) })
+      .catch(() => { setData(null); setError('Changelog unavailable right now.') })
       .finally(() => setLoading(false))
   }, [])
   return { data, loading, error }
@@ -236,7 +250,7 @@ Unit tests for `_compute_changelog_entries`:
 | `test_empty_dir` | directory has 0 files → `[]` |
 | `test_single_file` | directory has 1 file → `[]` |
 | `test_notable_regime_shift` | two files with regime change → 1 entry, `primary_trigger = "regime_shift"` |
-| `test_non_notable_small_deltas` | delta below all thresholds → 0 entries (`notable_only=True`), 1 entry (`notable_only=False`) |
+| `test_non_notable_small_deltas` | delta below all thresholds → 0 entries (`notable_only=True`); 1 entry (`notable_only=False`) with `primary_trigger=None` and fallback narrative |
 | `test_risk_move_threshold_boundary` | `risk_delta = 0.049` → miss; `risk_delta = 0.050` → hit |
 | `test_driver_rotation_importance_gate` | importance `0.14` → miss; `0.15` → hit |
 | `test_since_filter` | two notable entries; `since` = date of first → only second returned |
