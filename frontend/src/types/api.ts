@@ -177,3 +177,31 @@ export interface DailyDiffResponse {
   diff: DailyDiff
   metadata: DailyDiffMetadata
 }
+
+export interface ChangelogEntry {
+  current_date: string
+  previous_date: string | null
+  gap_days: number
+  is_stale_gap: boolean
+  regime: string
+  transition_risk: number
+  risk_delta: number
+  vix_level: number | null
+  vix_delta: number | null
+  trend: string
+  prior_regime: string | null
+  prior_trend: string | null
+  top_driver: DailyDriverEntry | null
+  prior_top_driver: DailyDriverEntry | null
+  triggers: string[]
+  primary_trigger: string | null
+  narrative: string
+}
+
+export interface ChangelogResponse {
+  entries: ChangelogEntry[]
+  total_notable: number
+  total_days: number
+  earliest_date: string | null
+  latest_date: string | null
+}
