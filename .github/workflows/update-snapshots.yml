@@ -27,10 +27,15 @@ jobs:
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: python scripts/refresh_snapshots.py
 
-      - name: Commit updated snapshots
+      - name: Save daily state artifact
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: python scripts/save_daily_state.py
+
+      - name: Commit updated snapshots and daily state
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/snapshots/
+          git add data/snapshots/ data/daily_state/
           git diff --staged --quiet || git commit -m "chore: update snapshots to $(date -u +%Y-%m-%d)"
           git push

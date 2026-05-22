@@ -1,7 +1,9 @@
 """FastAPI route definitions for RegimeRadar."""
 from __future__ import annotations
+import json
 import math
 from datetime import datetime, date, timezone
+from pathlib import Path
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Request
 from src.api.schemas import (
@@ -9,7 +11,7 @@ from src.api.schemas import (
     EventReplayResponse, ModelDriversResponse, DriverItem,
     HistoricalPoint, EventReplayPoint, TransitionRiskResponse, TransitionRiskPoint,
     StateDelta, ScenarioRequest, ScenarioResponse, DriverDelta,
-    ReliabilityResponse,
+    ReliabilityResponse, DailyDiffResponse,
 )
 from src.utils.logging import get_logger
 
@@ -278,6 +280,68 @@ FEATURE_PLAIN_LABELS = {
     "turbulent_count_30d_lag1": "Turbulent days in past 30 days (lagged)",
     "trend_code":               "Trend direction",
 }
+
+
+def _compute_daily_diff(daily_state_dir: Path) -> dict | None:
+    """Return diff response dict, or None if fewer than 2 artifacts exist."""
+    if not daily_state_dir.exists():
+        return None
+    files = sorted(daily_state_dir.glob("*.json"))
+    if len(files) < 2:
+        return None
+
+    current_data = json.loads(files[-1].read_text())
+    previous_data = json.loads(files[-2].read_text())
+
+    current_date = date.fromisoformat(current_data["as_of_date"])
+    previous_date = date.fromisoformat(previous_data["as_of_date"])
+    gap_days = (current_date - previous_date).days
+
+    cur_vix = current_data.get("vix_level")
+    prev_vix = previous_data.get("vix_level")
+    vix_delta = round(cur_vix - prev_vix, 2) if (cur_vix is not None and prev_vix is not None) else None
+
+    cur_top = current_data["top_drivers"][0] if current_data["top_drivers"] else None
+    prev_top = previous_data["top_drivers"][0] if previous_data["top_drivers"] else None
+    top_driver_changed = ((cur_top is None) != (prev_top is None)) or (
+        cur_top is not None and prev_top is not None and cur_top["feature"] != prev_top["feature"]
+    )
+
+    regime_changed = current_data["regime"] != previous_data["regime"]
+    trend_changed = current_data["trend"] != previous_data["trend"]
+
+    return {
+        "current": current_data,
+        "previous": previous_data,
+        "diff": {
+            "regime_changed": regime_changed,
+            "prior_regime": previous_data["regime"] if regime_changed else None,
+            "risk_delta": round(current_data["transition_risk"] - previous_data["transition_risk"], 4),
+            "vix_delta": vix_delta,
+            "trend_changed": trend_changed,
+            "prior_trend": previous_data["trend"] if trend_changed else None,
+            "top_driver_changed": top_driver_changed,
+            "prior_top_driver": {"feature": prev_top["feature"], "plain_label": prev_top["plain_label"]}
+                                 if (prev_top and top_driver_changed) else None,
+            "current_top_driver": {"feature": cur_top["feature"], "plain_label": cur_top["plain_label"]}
+                                   if (cur_top and top_driver_changed) else None,
+        },
+        "metadata": {
+            "current_date": str(current_date),
+            "previous_date": str(previous_date),
+            "gap_days": gap_days,
+            "is_stale": gap_days > 5,
+        },
+    }
+
+
+@router.get("/daily-diff", response_model=DailyDiffResponse)
+async def daily_diff():
+    from src.utils.paths import get_project_root
+    result = _compute_daily_diff(get_project_root() / "data" / "daily_state")
+    if result is None:
+        raise HTTPException(status_code=404, detail="not enough daily snapshots to compute diff")
+    return result
 
 
 @router.post("/scenario", response_model=ScenarioResponse)

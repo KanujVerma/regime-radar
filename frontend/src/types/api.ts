@@ -118,3 +118,62 @@ export interface ScenarioResponse {
   driver_deltas: DriverDelta[]
   baseline_inputs: Record<string, number>
 }
+
+export interface DailyDriverEntry {
+  feature: string
+  plain_label: string
+  importance: number
+}
+
+export interface DailyModelVersion {
+  transition_model: string
+  transition_trained_as_of: string
+  regime_model: string
+  regime_trained_as_of: string
+}
+
+export interface DailyStateSnapshot {
+  as_of_date: string
+  generated_at: string
+  data_through_date: string
+  regime: string
+  transition_risk: number
+  prob_calm: number | null
+  prob_elevated: number | null
+  prob_turbulent: number | null
+  vix_level: number | null
+  trend: string
+  top_drivers: DailyDriverEntry[]
+  model_version: DailyModelVersion
+}
+
+export interface DailyTopDriverRef {
+  feature: string
+  plain_label: string
+}
+
+export interface DailyDiff {
+  regime_changed: boolean
+  prior_regime: string | null
+  risk_delta: number
+  vix_delta: number | null
+  trend_changed: boolean
+  prior_trend: string | null
+  top_driver_changed: boolean
+  prior_top_driver: DailyTopDriverRef | null
+  current_top_driver: DailyTopDriverRef | null
+}
+
+export interface DailyDiffMetadata {
+  current_date: string
+  previous_date: string
+  gap_days: number
+  is_stale: boolean
+}
+
+export interface DailyDiffResponse {
+  current: DailyStateSnapshot
+  previous: DailyStateSnapshot
+  diff: DailyDiff
+  metadata: DailyDiffMetadata
+}

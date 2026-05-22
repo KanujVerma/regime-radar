@@ -469,3 +469,54 @@ def test_scenario_response_shape(app_with_state, monkeypatch):
                   "baseline_prob_elevated", "baseline_prob_turbulent", "driver_deltas"]:
         assert field in data
     assert isinstance(data["driver_deltas"], list)
+
+
+class TestDailyDiffEndpoint:
+    def test_daily_diff_200(self, app_with_state, monkeypatch):
+        import src.api.routes as routes_mod
+        prebuilt = {
+            "current": {
+                "as_of_date": "2026-05-21", "generated_at": "2026-05-21T22:00:00+00:00",
+                "data_through_date": "2026-05-21", "regime": "elevated",
+                "transition_risk": 0.20, "prob_calm": 0.30, "prob_elevated": 0.65,
+                "prob_turbulent": 0.05, "vix_level": 18.0, "trend": "uptrend",
+                "top_drivers": [{"feature": "vix_chg_5d", "plain_label": "VIX 5-day change", "importance": 0.03}],
+                "model_version": {"transition_model": "xgb_transition", "transition_trained_as_of": "2026-04-24",
+                                   "regime_model": "xgb_regime", "regime_trained_as_of": "2026-04-24"},
+            },
+            "previous": {
+                "as_of_date": "2026-05-20", "generated_at": "2026-05-20T22:00:00+00:00",
+                "data_through_date": "2026-05-20", "regime": "calm",
+                "transition_risk": 0.10, "prob_calm": 0.80, "prob_elevated": 0.18,
+                "prob_turbulent": 0.02, "vix_level": 15.0, "trend": "uptrend",
+                "top_drivers": [{"feature": "vix_pct_504d", "plain_label": "VIX relative to 2-year history", "importance": 0.04}],
+                "model_version": {"transition_model": "xgb_transition", "transition_trained_as_of": "2026-04-24",
+                                   "regime_model": "xgb_regime", "regime_trained_as_of": "2026-04-24"},
+            },
+            "diff": {
+                "regime_changed": True, "prior_regime": "calm",
+                "risk_delta": 0.10, "vix_delta": 3.0,
+                "trend_changed": False, "prior_trend": None,
+                "top_driver_changed": True,
+                "prior_top_driver": {"feature": "vix_pct_504d", "plain_label": "VIX relative to 2-year history"},
+                "current_top_driver": {"feature": "vix_chg_5d", "plain_label": "VIX 5-day change"},
+            },
+            "metadata": {"current_date": "2026-05-21", "previous_date": "2026-05-20",
+                          "gap_days": 1, "is_stale": False},
+        }
+        monkeypatch.setattr(routes_mod, "_compute_daily_diff", lambda _: prebuilt)
+        app, _ = app_with_state
+        client = TestClient(app)
+        resp = client.get("/daily-diff")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["metadata"]["gap_days"] == 1
+        assert data["diff"]["regime_changed"] is True
+
+    def test_daily_diff_404_when_not_enough_snapshots(self, app_with_state, monkeypatch):
+        import src.api.routes as routes_mod
+        monkeypatch.setattr(routes_mod, "_compute_daily_diff", lambda _: None)
+        app, _ = app_with_state
+        client = TestClient(app)
+        resp = client.get("/daily-diff")
+        assert resp.status_code == 404

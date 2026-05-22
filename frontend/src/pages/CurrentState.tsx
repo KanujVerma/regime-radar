@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion'
-import type { StateDelta } from '../types/api'
+import type { StateDelta, DailyDiffResponse } from '../types/api'
 import { useCurrentState } from '../hooks/useCurrentState'
 import { useModelDrivers } from '../hooks/useModelDrivers'
 import { useHistoricalState } from '../hooks/useHistoricalState'
 import { useReliability } from '../hooks/useReliability'
+import { useDailyDiff } from '../hooks/useDailyDiff'
 import MiniRegimeChart from '../components/charts/MiniRegimeChart'
 import Topbar from '../components/layout/Topbar'
 import Panel from '../components/ui/Panel'
@@ -26,6 +27,7 @@ export default function CurrentState() {
   const { data: drivers } = useModelDrivers()
   const { data: recentData, loading: recentLoading } = useHistoricalState('2020-01-01')
   const { data: reliabilityTable } = useReliability()
+  const { data: dailyDiff } = useDailyDiff()
 
   if (loading) return <div className="p-6 text-slate-500 text-sm">Loading…</div>
   if (error) return <div className="p-6 text-red-400 text-sm">{error}</div>
@@ -133,6 +135,12 @@ export default function CurrentState() {
             </div>
           </div>
         </motion.div>
+
+        {dailyDiff && (
+          <motion.div custom={4} variants={cardVariants} initial="hidden" animate="visible">
+            <DailyDiffBlock diff={dailyDiff} />
+          </motion.div>
+        )}
 
         <div className="h-px" style={{ background: '#151d2e' }} />
 
@@ -304,6 +312,65 @@ function GaugeArc({ risk, regime, outOfRange }: { risk: number; regime: string; 
         </text>
       </svg>
       <p className="text-[10px] text-center mt-1 leading-relaxed" style={{ color: '#94a3b8', maxWidth: 220 }}>{caption}</p>
+    </div>
+  )
+}
+
+function DailyDiffBlock({ diff: response }: { diff: DailyDiffResponse }) {
+  const { diff, metadata } = response
+
+  const prevDate = new Date(metadata.previous_date + 'T12:00:00Z')
+  const prevFormatted = prevDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', timeZone: 'UTC' })
+  const label = metadata.gap_days === 1
+    ? `Since last trading day (${prevDate.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' })} ${prevFormatted})`
+    : `Compared with snapshot as of ${prevFormatted}`
+
+  const rows: { icon: string; text: string; calming: boolean }[] = []
+
+  if (diff.regime_changed && diff.prior_regime) {
+    rows.push({ icon: '🔄', text: `Regime shifted from ${diff.prior_regime} → ${response.current.regime}`, calming: false })
+  }
+
+  if (Math.abs(diff.risk_delta) >= 0.01) {
+    const up = diff.risk_delta > 0
+    rows.push({ icon: up ? '📈' : '📉', text: `Transition risk ${up ? '+' : ''}${(diff.risk_delta * 100).toFixed(1)}pp`, calming: !up })
+  }
+
+  if (diff.vix_delta !== null && Math.abs(diff.vix_delta) >= 0.5) {
+    const up = diff.vix_delta > 0
+    rows.push({ icon: up ? '↑' : '↓', text: `VIX ${up ? '+' : ''}${diff.vix_delta.toFixed(1)}`, calming: !up })
+  }
+
+  if (diff.top_driver_changed && diff.prior_top_driver && diff.current_top_driver) {
+    rows.push({ icon: '⇄', text: `Top risk driver: ${diff.prior_top_driver.plain_label} → ${diff.current_top_driver.plain_label}`, calming: false })
+  }
+
+  return (
+    <div className="rounded-lg px-4 py-3" style={{ background: '#080d18', border: '1px solid #151d2e' }}>
+      <div className="text-[9px] font-bold tracking-widest uppercase mb-2" style={{ color: '#4a6080' }}>
+        {label}
+      </div>
+
+      {metadata.is_stale && (
+        <p className="text-[9px] mb-2" style={{ color: '#92400e' }}>
+          Snapshot is unusually old — comparison may not reflect recent conditions
+        </p>
+      )}
+
+      {rows.length === 0 ? (
+        <p className="text-[11px]" style={{ color: '#64748b' }}>
+          No notable market-state change since the last snapshot.
+        </p>
+      ) : (
+        <div className="space-y-1.5">
+          {rows.map((row, i) => (
+            <div key={i} className="flex items-center gap-2 text-[11px]">
+              <span>{row.icon}</span>
+              <span style={{ color: row.calming ? '#4ade80' : '#94a3b8', flex: 1 }}>{row.text}</span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }
