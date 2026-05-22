@@ -7,6 +7,7 @@ import type {
   ReliabilityResponse,
   ScenarioRequest,
   ScenarioResponse,
+  DailyDiffResponse,
 } from '../types/api'
 
 const BASE_URL = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000'
@@ -38,4 +39,5 @@ export const api = {
   reliability: () => get<ReliabilityResponse>('/reliability'),
   scenario: (body: ScenarioRequest) =>
     post<ScenarioResponse>('/scenario', body),
+  dailyDiff: () => get<DailyDiffResponse>('/daily-diff'),
 }
