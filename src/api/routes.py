@@ -11,7 +11,7 @@ from src.api.schemas import (
     EventReplayResponse, ModelDriversResponse, DriverItem,
     HistoricalPoint, EventReplayPoint, TransitionRiskResponse, TransitionRiskPoint,
     StateDelta, ScenarioRequest, ScenarioResponse, DriverDelta,
-    ReliabilityResponse, DailyDiffResponse,
+    ReliabilityResponse, DailyDiffResponse, ChangelogResponse,
 )
 from src.utils.logging import get_logger
 
@@ -459,6 +459,30 @@ async def daily_diff():
     if result is None:
         raise HTTPException(status_code=404, detail="not enough daily snapshots to compute diff")
     return result
+
+
+@router.get("/changelog", response_model=ChangelogResponse)
+async def changelog(limit: int = 50, since: str | None = None, notable_only: bool = True):
+    from src.utils.paths import get_project_root
+    daily_state_dir = get_project_root() / "data" / "daily_state"
+    files = sorted(daily_state_dir.glob("*.json")) if daily_state_dir.exists() else []
+    if len(files) < 2:
+        raise HTTPException(status_code=404, detail="not enough daily snapshots to compute changelog")
+    # Single file-read pass — compute all entries, filter in memory
+    all_entries = _compute_changelog_entries(daily_state_dir, limit=9999, since=None, notable_only=False)
+    total_notable = sum(1 for e in all_entries if e["triggers"])
+    filtered = [
+        e for e in all_entries
+        if (not notable_only or e["triggers"])
+        and (since is None or e["current_date"] > since)
+    ][:limit]
+    return {
+        "entries": filtered,
+        "total_notable": total_notable,
+        "total_days": len(files) - 1,
+        "earliest_date": json.loads(files[0].read_text()).get("as_of_date"),
+        "latest_date": json.loads(files[-1].read_text()).get("as_of_date"),
+    }
 
 
 @router.post("/scenario", response_model=ScenarioResponse)
