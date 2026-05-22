@@ -6,10 +6,13 @@ import RegimeLegend from '../components/ui/RegimeLegend'
 import RegimeChart from '../components/charts/RegimeChart'
 import RiskLineChart from '../components/charts/RiskLineChart'
 import { useHistoricalState } from '../hooks/useHistoricalState'
+import { useChangelog } from '../hooks/useChangelog'
+import ChangelogFeed from '../components/ui/ChangelogFeed'
 
 export default function History() {
   const [showVix, setShowVix] = useState(false)
   const { data, loading, error } = useHistoricalState()
+  const { data: changelog, loading: changelogLoading, error: changelogError } = useChangelog()
 
   if (loading) return <div className="p-6 text-slate-500 text-sm">Loading…</div>
   if (error) return <div className="p-6 text-red-400 text-sm">{error}</div>
@@ -48,6 +51,11 @@ export default function History() {
             The line shows the model's daily estimate of the chance conditions worsen within the next week.
           </p>
           <RiskLineChart data={data.data} />
+        </Panel>
+        <Panel title="Notable days">
+          {changelogLoading && <div className="text-slate-500 text-sm">Loading…</div>}
+          {changelogError && <div className="text-slate-500 text-xs">{changelogError}</div>}
+          {changelog && <ChangelogFeed data={changelog} />}
         </Panel>
       </div>
     </motion.div>
