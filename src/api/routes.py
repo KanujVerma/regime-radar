@@ -282,6 +282,119 @@ FEATURE_PLAIN_LABELS = {
 }
 
 
+DRIVER_ROTATION_MIN_IMPORTANCE = 0.15
+
+
+def _compute_changelog_entries(
+    daily_state_dir: Path,
+    limit: int = 50,
+    since: str | None = None,
+    notable_only: bool = True,
+) -> list[dict]:
+    """Diff consecutive daily state artifacts and return notable entries most-recent-first.
+
+    Returns [] when daily_state_dir has < 2 files. Never raises HTTP exceptions.
+    """
+    if not daily_state_dir.exists():
+        return []
+    files = sorted(daily_state_dir.glob("*.json"))
+    if len(files) < 2:
+        return []
+
+    entries = []
+    for i in range(1, len(files)):
+        current_data = json.loads(files[i].read_text())
+        previous_data = json.loads(files[i - 1].read_text())
+
+        current_date = current_data["as_of_date"]
+        previous_date = previous_data["as_of_date"]
+        gap_days = (date.fromisoformat(current_date) - date.fromisoformat(previous_date)).days
+
+        risk_delta = round(current_data["transition_risk"] - previous_data["transition_risk"], 4)
+
+        cur_vix = current_data.get("vix_level")
+        prev_vix = previous_data.get("vix_level")
+        vix_delta = round(cur_vix - prev_vix, 2) if (cur_vix is not None and prev_vix is not None) else None
+
+        cur_top = current_data["top_drivers"][0] if current_data["top_drivers"] else None
+        prev_top = previous_data["top_drivers"][0] if previous_data["top_drivers"] else None
+
+        # Compute triggers
+        triggers: list[str] = []
+        if current_data["regime"] != previous_data["regime"]:
+            triggers.append("regime_shift")
+        if abs(risk_delta) >= 0.05:
+            triggers.append("risk_move")
+        if vix_delta is not None and abs(vix_delta) >= 1.5:
+            triggers.append("vix_move")
+        if (
+            cur_top is not None
+            and prev_top is not None
+            and cur_top["feature"] != prev_top["feature"]
+            and cur_top.get("importance", 0.0) >= DRIVER_ROTATION_MIN_IMPORTANCE
+        ):
+            triggers.append("driver_rotation")
+
+        # Primary trigger: highest priority
+        primary_trigger: str | None = None
+        for t in ("regime_shift", "risk_move", "vix_move", "driver_rotation"):
+            if t in triggers:
+                primary_trigger = t
+                break
+
+        # Narrative
+        regime = current_data["regime"].title()
+        prior_regime = previous_data["regime"].title()
+        risk_pct = f"{current_data['transition_risk'] * 100:.0f}%"
+        risk_delta_pp = f"{risk_delta * 100:+.0f}pp"
+
+        if primary_trigger == "regime_shift":
+            narrative = f"{prior_regime} → {regime}. Risk {risk_delta_pp} to {risk_pct}."
+        elif primary_trigger == "risk_move":
+            narrative = f"Transition risk {risk_delta_pp} to {risk_pct}. Regime: {regime}."
+        elif primary_trigger == "vix_move":
+            direction = "rose" if (vix_delta or 0) > 0 else "fell"
+            narrative = f"VIX {direction} {abs(vix_delta or 0):.1f} to {cur_vix:.1f}. Risk {risk_pct}."
+        elif primary_trigger == "driver_rotation":
+            narrative = (
+                f"Top driver shifted to {cur_top['plain_label']} "
+                f"(was: {prev_top['plain_label']})."
+            )
+        else:
+            narrative = "No notable market-state change from the prior snapshot."
+
+        entry: dict = {
+            "current_date": current_date,
+            "previous_date": previous_date,
+            "gap_days": gap_days,
+            "is_stale_gap": gap_days > 5,
+            "regime": current_data["regime"],
+            "transition_risk": current_data["transition_risk"],
+            "risk_delta": risk_delta,
+            "vix_level": cur_vix,
+            "vix_delta": vix_delta,
+            "trend": current_data["trend"],
+            "prior_regime": previous_data["regime"] if "regime_shift" in triggers else None,
+            "prior_trend": previous_data["trend"] if current_data["trend"] != previous_data["trend"] else None,
+            "top_driver": cur_top,
+            "prior_top_driver": prev_top,
+            "triggers": triggers,
+            "primary_trigger": primary_trigger,
+            "narrative": narrative,
+        }
+
+        if notable_only and not triggers:
+            continue
+        if since is not None and current_date <= since:
+            continue
+
+        entries.append(entry)
+
+    # Most-recent-first, then apply limit
+    entries.reverse()
+    return entries[:limit]
+
+
 def _compute_daily_diff(daily_state_dir: Path) -> dict | None:
     """Return diff response dict, or None if fewer than 2 artifacts exist."""
     if not daily_state_dir.exists():
