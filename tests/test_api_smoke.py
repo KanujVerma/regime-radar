@@ -358,10 +358,9 @@ def test_scenario_returns_503_without_artifacts(app_with_state, monkeypatch):
     assert resp.status_code == 503
 
 def test_reliability_endpoint_returns_table(app_with_state, monkeypatch):
-    """GET /reliability serves the committed JSON table."""
+    """GET /reliability serves the committed JSON table including source field."""
     import src.api.routes as routes_mod
 
-    # Inject the table directly into the module-level cache so no file I/O is needed
     table = {
         "bins": [
             {"p_low": 0.0, "p_high": 0.10, "p_mid": 0.05, "empirical_rate": 0.05, "n": 500},
@@ -369,6 +368,7 @@ def test_reliability_endpoint_returns_table(app_with_state, monkeypatch):
         ],
         "base_rate": 0.074,
         "max_evaluated_p": 0.30,
+        "source": "production_insample",
     }
     routes_mod._reliability_cache = table
 
@@ -379,10 +379,11 @@ def test_reliability_endpoint_returns_table(app_with_state, monkeypatch):
     assert resp.status_code == 200
     data = resp.json()
     assert "bins" in data and "base_rate" in data and "max_evaluated_p" in data
+    assert "source" in data
+    assert data["source"] == "production_insample"
     assert isinstance(data["bins"], list) and len(data["bins"]) == 2
     assert data["max_evaluated_p"] == 0.30
 
-    # Restore so other tests don't pick up stale cache
     routes_mod._reliability_cache = None
 
 

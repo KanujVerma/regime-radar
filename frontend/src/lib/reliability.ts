@@ -42,13 +42,7 @@ export function reliabilityFor(p: number, table: ReliabilityResponse): Reliabili
 export function reliabilityLine(ctx: ReliabilityContext): string {
   if (ctx.out_of_range) {
     const maxPct = Math.round(ctx.max_evaluated_p * 100)
-    if (ctx.reference_bin && ctx.reference_bin.n >= MIN_N) {
-      const refPct = Math.round(ctx.reference_bin.p_mid * 100)
-      const rate = Math.round(ctx.reference_bin.empirical_rate * 100)
-      const n = ctx.reference_bin.n
-      return `Above the model's evaluated range (max ~${maxPct}%). Closest historical readings (~${refPct}%): worsened ${rate}% of the time (n=${n} — small sample, treat with caution).`
-    }
-    return `Above the model's evaluated range (max ~${maxPct}%). No comparable historical readings — treat as a directional flag, not a calibrated probability.`
+    return `Above the model's validated range (max ~${maxPct}%). No comparable historical analog in validation data. Treat as a directional stress signal, not a calibrated probability.`
   }
 
   if (!ctx.bin) return ''

@@ -1,5 +1,6 @@
 """Pydantic response schemas for RegimeRadar API."""
 from __future__ import annotations
+from typing import Literal
 from pydantic import BaseModel
 
 
@@ -126,6 +127,7 @@ class ReliabilityResponse(BaseModel):
     bins: list[ReliabilityBin]
     base_rate: float
     max_evaluated_p: float
+    source: Literal["oof", "production_insample"] = "oof"
 
 
 class DailyDriverEntry(BaseModel):
