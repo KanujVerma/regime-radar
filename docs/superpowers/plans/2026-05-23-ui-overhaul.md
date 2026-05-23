@@ -540,7 +540,7 @@
                   style={{ color: isActive ? '#f1f5f9' : '#4a6080' }}
                 />
                 <span style={{
-                  fontSize: 9,
+                  fontSize: 10,
                   fontWeight: 700,
                   textTransform: 'uppercase' as const,
                   letterSpacing: '.06em',
@@ -624,9 +624,50 @@ This is the most significant layout change. The three equal-weight MetricCards a
 
   Read `frontend/src/pages/CurrentState.tsx` completely before making any changes.
 
-- [ ] **Step 2: Replace the return statement with the new editorial layout**
+- [ ] **Step 2: Make the following targeted changes to `CurrentState.tsx`**
 
-  The entire `return` block of `CurrentState` becomes:
+  **2a. Update `cardVariants` timing (currently line 20–23 — change `duration: 0.2` to new easing):**
+
+  ```tsx
+  const cardVariants = {
+    hidden: { opacity: 0, y: 12 },
+    visible: (i: number) => ({
+      opacity: 1, y: 0,
+      transition: { delay: i * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] },
+    }),
+  }
+  ```
+
+  **2b. Replace `refreshAction` (currently lines 56–63) with a loading-aware version:**
+
+  ```tsx
+  const refreshAction = (
+    <button
+      onClick={refresh}
+      disabled={loading}
+      className="text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1.5"
+      style={{
+        background: '#0c1020',
+        border: '1px solid #151d2e',
+        color: '#06b6d4',
+        opacity: loading ? 0.5 : 1,
+        cursor: loading ? 'not-allowed' : 'pointer',
+        transition: 'opacity 150ms',
+      }}
+    >
+      <span className={loading ? 'spin' : ''}>↻</span>
+      Refresh
+    </button>
+  )
+  ```
+
+  **2c. Update the tokens import (line 17) to also import `colors`:**
+
+  ```tsx
+  import { regimeColor, colors } from '../lib/tokens'
+  ```
+
+  **2d. Replace the entire `return (...)` block (lines 76–209) with the following. The return has 6 content blocks; A–C are new, D–F keep the original content with updated container class (`px-6 py-5 space-y-6` instead of `p-5 space-y-5`):**
 
   ```tsx
   return (
@@ -653,13 +694,8 @@ This is the most significant layout change. The three equal-weight MetricCards a
 
       <div className="px-6 py-5 space-y-6">
 
-        {/* ── HERO BLOCK — Tier 1 Glass ── */}
-        <motion.div
-          custom={0}
-          variants={cardVariants}
-          initial="hidden"
-          animate="visible"
-        >
+        {/* ── Block A: Regime Hero [NEW] ── */}
+        <motion.div custom={0} variants={cardVariants} initial="hidden" animate="visible">
           <div
             style={{
               background: 'rgba(12,16,32,0.85)',
@@ -673,15 +709,12 @@ This is the most significant layout change. The three equal-weight MetricCards a
               overflow: 'hidden',
             }}
           >
-            {/* Radial regime glow */}
             <div style={{
               position: 'absolute', top: -80, left: -80,
               width: 300, height: 300,
               background: `radial-gradient(circle, ${rColor}1a 0%, transparent 70%)`,
               pointerEvents: 'none',
             }} />
-
-            {/* Live indicator */}
             <div className="flex items-center gap-2 mb-3" style={{ position: 'relative', zIndex: 1 }}>
               <div className="live-dot" style={{ background: rColor }} />
               <span style={{
@@ -693,18 +726,12 @@ This is the most significant layout change. The three equal-weight MetricCards a
                   : '—'}
               </span>
             </div>
-
-            {/* Regime hero name */}
-            <div
-              style={{
-                fontSize: 52, fontWeight: 900, color: rColor, lineHeight: 1,
-                marginBottom: 14, letterSpacing: '-0.02em', position: 'relative', zIndex: 1,
-              }}
-            >
+            <div style={{
+              fontSize: 52, fontWeight: 900, color: rColor, lineHeight: 1,
+              marginBottom: 14, letterSpacing: '-0.02em', position: 'relative', zIndex: 1,
+            }}>
               {data.regime}
             </div>
-
-            {/* Narrative */}
             <p style={{
               fontSize: 14, color: '#94a3b8', lineHeight: 1.65,
               maxWidth: 540, margin: 0, position: 'relative', zIndex: 1,
@@ -714,48 +741,24 @@ This is the most significant layout change. The three equal-weight MetricCards a
           </div>
         </motion.div>
 
-        {/* ── SECONDARY METRIC CHIPS ── */}
+        {/* ── Block B: Secondary Metric Chips [NEW] ── */}
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
           {[
-            {
-              label: 'VIX Level',
-              value: data.vix_level != null ? data.vix_level.toFixed(1) : '—',
-              color: '#f1f5f9',
-              subtitle: 'Market fear gauge',
-            },
+            { label: 'VIX Level', value: data.vix_level != null ? data.vix_level.toFixed(1) : '—', color: '#f1f5f9', subtitle: 'Market fear gauge' },
             {
               label: 'VIX Change',
-              value: data.vix_chg_1d != null
-                ? `${data.vix_chg_1d >= 0 ? '+' : ''}${data.vix_chg_1d.toFixed(2)}`
-                : '—',
+              value: data.vix_chg_1d != null ? `${data.vix_chg_1d >= 0 ? '+' : ''}${data.vix_chg_1d.toFixed(2)}` : '—',
               color: data.vix_chg_1d != null && data.vix_chg_1d > 0 ? colors.red : colors.green,
               subtitle: '1-day change',
             },
-            {
-              label: 'Trend',
-              value: data.trend.replace('trend', ''),
-              color: '#94a3b8',
-              subtitle: 'Recent price direction',
-            },
+            { label: 'Trend', value: data.trend.replace('trend', ''), color: '#94a3b8', subtitle: 'Recent price direction' },
           ].map((chip, i) => (
-            <motion.div
-              key={chip.label}
-              custom={i + 1}
-              variants={cardVariants}
-              initial="hidden"
-              animate="visible"
-            >
+            <motion.div key={chip.label} custom={i + 1} variants={cardVariants} initial="hidden" animate="visible">
               <div
                 className="card-hover rounded-lg px-4 py-3"
-                style={{
-                  background: colors.surfaceElevated,
-                  border: `1px solid ${colors.borderElevated}`,
-                }}
+                style={{ background: colors.surfaceElevated, border: `1px solid ${colors.borderElevated}` }}
               >
-                <div style={{
-                  fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-                  letterSpacing: '.1em', color: colors.textDim, marginBottom: 4,
-                }}>
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: colors.textDim, marginBottom: 4 }}>
                   {chip.label}
                 </div>
                 <div style={{ fontSize: 22, fontWeight: 800, color: chip.color, lineHeight: 1 }}>
@@ -769,21 +772,15 @@ This is the most significant layout change. The three equal-weight MetricCards a
           ))}
         </div>
 
-        {/* ── TRANSITION RISK WITH GAUGE ── */}
+        {/* ── Block C: Transition Risk Gauge Bar [NEW] ── */}
         <motion.div custom={4} variants={cardVariants} initial="hidden" animate="visible">
-          <div
-            className="rounded-xl px-5 py-4"
-            style={{ background: '#080d18', border: `1px solid ${colors.border}` }}
-          >
-            <div style={{
-              fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-              letterSpacing: '.1em', color: colors.textDim, marginBottom: 10,
-            }}>
+          <div className="rounded-xl px-5 py-4" style={{ background: '#080d18', border: `1px solid ${colors.border}` }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: colors.textDim, marginBottom: 10 }}>
               Odds of worsening · next 5 trading days
             </div>
             {reliability?.out_of_range && (
               <span
-                className="inline-block text-[9px] font-bold px-2 py-0.5 rounded mb-2"
+                className="inline-block text-[10px] font-bold px-2 py-0.5 rounded mb-2"
                 style={{ background: '#2d1500', border: '1px solid #78350f', color: '#fbbf24' }}
               >
                 ⚠ OUT OF RANGE
@@ -807,7 +804,7 @@ This is the most significant layout change. The three equal-weight MetricCards a
                 }} />
               </div>
               <span style={{
-                fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+                fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
                 color: riskColor,
                 background: `${riskColor}15`,
                 border: `1px solid ${riskColor}30`,
@@ -824,28 +821,32 @@ This is the most significant layout change. The three equal-weight MetricCards a
           </div>
         </motion.div>
 
-        {/* Daily diff, divider, chart, and driver sections remain unchanged below */}
-        {/* Copy the existing dailyDiff block, divider, chart section, and top drivers section
-            from the original file verbatim — no changes needed to those sections */}
+        {/* ── Block D: Daily Diff [KEEP — original lines 139–143; update motion custom from 4 → 5] ── */}
+        {dailyDiff && (
+          <motion.div custom={5} variants={cardVariants} initial="hidden" animate="visible">
+            <DailyDiffBlock diff={dailyDiff} />
+          </motion.div>
+        )}
+
+        {/* ── Block E: Divider [KEEP — original line 145, unchanged] ── */}
+        <div className="h-px" style={{ background: '#151d2e' }} />
+
+        {/* ── Block F: Two-column grid [KEEP — paste original lines 147–206 exactly] ──
+            Contents: Panel "What this means right now" (narrative, RegimeBadge, DeltaRows),
+            conditional Panel "Last 30 Trading Days" (RegimeLegend, MiniRegimeChart),
+            Panel "Transition risk gauge" (GaugeArc), Panel "What is raising risk right now"
+            (DriverBar list). All props and children are unchanged. Do not remove GaugeArc —
+            it provides detail the top-level gauge bar does not.                               */}
+        <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: '1fr 320px' }}>
+          {/* paste original lines 148–205 here */}
+        </div>
+
       </div>
     </motion.div>
   )
   ```
 
-  **Important:** At the top of the component function, add this import at the file level:
-  ```tsx
-  import { colors } from '../lib/tokens'
-  ```
-
-  And ensure `cardVariants` is defined (it already exists in the file):
-  ```tsx
-  const cardVariants = {
-    hidden: { opacity: 0, y: 12 },
-    visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] } }),
-  }
-  ```
-
-  Preserve the `riskColor` and `rColor` derivations exactly as they appear in the original file.
+  `riskColor` and `rColor` derivations (lines 66–67 in the original) are not changed — leave them exactly as-is.
 
 - [ ] **Step 3: Verify build**
 
@@ -995,7 +996,7 @@ This is the most significant layout change. The three equal-weight MetricCards a
         {/* Reference line annotation badges — positioned above chart */}
         <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 6 }}>
           <span style={{
-            fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+            fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
             color: '#fbbf24', background: 'rgba(251,191,36,0.08)',
             border: '1px solid rgba(251,191,36,0.2)',
             borderRadius: 4, padding: '2px 7px',
@@ -1003,7 +1004,7 @@ This is the most significant layout change. The three equal-weight MetricCards a
             Alert · {(ALERT_THRESHOLD * 100).toFixed(0)}%
           </span>
           <span style={{
-            fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+            fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
             color: '#06b6d4', background: 'rgba(6,182,212,0.08)',
             border: '1px solid rgba(6,182,212,0.2)',
             borderRadius: 4, padding: '2px 7px',
@@ -1023,14 +1024,14 @@ This is the most significant layout change. The three equal-weight MetricCards a
 
             <XAxis
               dataKey="date"
-              tick={{ fill: '#4a6080', fontSize: 9 }}
+              tick={{ fill: '#4a6080', fontSize: 10 }}
               tickLine={false}
               axisLine={false}
               interval="preserveStartEnd"
             />
             <YAxis
               tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
-              tick={{ fill: '#4a6080', fontSize: 9 }}
+              tick={{ fill: '#4a6080', fontSize: 10 }}
               tickLine={false}
               axisLine={false}
               domain={[0, 1]}
@@ -1100,7 +1101,7 @@ This is the most significant layout change. The three equal-weight MetricCards a
 
 ---
 
-### Task 8: RegimeChart — Area Fill, Band Hover, Custom Tooltip
+### Task 8: RegimeChart — Area Fill + Custom Tooltip
 
 **Files:**
 - Modify: `frontend/src/components/charts/RegimeChart.tsx`
@@ -1162,9 +1163,9 @@ This is the most significant layout change. The three equal-weight MetricCards a
      />
      ```
 
-  5. On each `<ReferenceArea>` element, add `fillOpacity={0.18}` (slightly more visible than before). Keep all other props unchanged.
+  5. On each `<ReferenceArea>` element, add `fillOpacity={0.18}` (increased from default ~0.08 for readability). No hover behavior — the custom tooltip already shows regime, SPY price, and risk on any chart hover. Keep all other props unchanged.
 
-  6. On the `XAxis` and `YAxis` elements, change `tick={{ fill: '#64748b', fontSize: 9 }}` to `tick={{ fill: '#4a6080', fontSize: 9 }}`.
+  6. On the `XAxis` and `YAxis` elements, change `tick={{ fill: '#64748b', fontSize: 9 }}` to `tick={{ fill: '#4a6080', fontSize: 10 }}`.
 
 - [ ] **Step 3: Verify build**
 
@@ -1397,9 +1398,11 @@ This is the most interaction-heavy change. The module ripple (`.module-base.modu
   import StateBanner from '../components/ui/StateBanner'
   ```
 
-- [ ] **Step 3: Add refs and banner hook inside the component**
+- [ ] **Step 3: Add refs, banner hook, and ripple helper inside the component**
 
-  Inside `ScenarioExplorer` (or whichever component renders the scenario output), add:
+  `ScenarioResponse` has `prob_calm`, `prob_elevated`, `prob_turbulent` — no `dominant_regime` field. The dominant regime is already derived in the component as `const dominant = ...`. The risk signal is `scenarioStress = 1 - data.prob_calm` (stress = probability of not being calm), not `prob_turbulent`. `DEFAULT_THRESHOLD` (0.20) and `ALERT_THRESHOLD` (0.40) are already imported.
+
+  Add these declarations inside `ScenarioExplorer`, after the existing `const dominant = ...` line:
 
   ```tsx
   const { activeBanner, showBanner } = useStateBanners()
@@ -1409,9 +1412,9 @@ This is the most interaction-heavy change. The module ripple (`.module-base.modu
   const prevDominant = useRef<string | null>(null)
   const prevRiskBucket = useRef<string>('low')
 
-  function riskBucket(pct: number): string {
-    if (pct >= 0.40) return 'alert'
-    if (pct >= 0.20) return 'watch'
+  function riskBucket(stress: number): string {
+    if (stress >= ALERT_THRESHOLD) return 'alert'
+    if (stress >= DEFAULT_THRESHOLD) return 'watch'
     return 'low'
   }
 
@@ -1424,49 +1427,74 @@ This is the most interaction-heavy change. The module ripple (`.module-base.modu
   }, [])
   ```
 
-- [ ] **Step 4: Wire up the ripple and banners to slider onChange**
+  Also add `useEffect` to the imports at the top of the file if not already present.
 
-  Find the place where slider values change (in the `inputs` state or the individual slider `onValueChange` callbacks). After any slider value updates, call:
+- [ ] **Step 4: Wire up interactions**
+
+  **4a. Add ripple flash to every slider `onChange` handler.** The sliders use `onChange={e => setInputs(prev => ({ ...prev, [cfg.key]: parseFloat(e.target.value) }))}`. Expand each to also flash modules:
 
   ```tsx
-  // After updating inputs state (in the slider onChange handler):
-  flashModule(riskModuleRef.current)
-  flashModule(probModuleRef.current)
-
-  // Check for dominant regime flip
-  const newDominant = data?.dominant_regime ?? null
-  if (newDominant && prevDominant.current && newDominant !== prevDominant.current) {
-    showBanner({
-      id: 'regime-flip',
-      priority: 1,
-      text: `Dominant regime: ${prevDominant.current} → ${newDominant}`,
-      color: regimeColor[newDominant.toLowerCase()] ?? '#06b6d4',
-    })
-  }
-  if (newDominant) prevDominant.current = newDominant
-
-  // Check for threshold crossings
-  const risk = data?.prob_turbulent ?? 0
-  const newBucket = riskBucket(risk)
-  if (newBucket !== prevRiskBucket.current) {
-    if (newBucket === 'watch' && prevRiskBucket.current === 'low')
-      showBanner({ id: 'banner-threshold', priority: 3, text: '⚠ Crossed watch threshold (20%)', color: '#fbbf24' })
-    else if (newBucket === 'alert' && prevRiskBucket.current !== 'alert')
-      showBanner({ id: 'banner-threshold', priority: 2, text: '⚠ Crossed alert threshold (40%)', color: '#f87171' })
-    else if (newBucket === 'low' && prevRiskBucket.current !== 'low')
-      showBanner({ id: 'banner-threshold', priority: 4, text: '✓ Back below watch threshold', color: '#4ade80' })
-    else if (newBucket === 'watch' && prevRiskBucket.current === 'alert')
-      showBanner({ id: 'banner-threshold', priority: 4, text: '↓ Pulled back from alert zone', color: '#fbbf24' })
-    prevRiskBucket.current = newBucket
-  }
+  onChange={e => {
+    setInputs(prev => ({ ...prev, [cfg.key]: parseFloat(e.target.value) }))
+    flashModule(riskModuleRef.current)
+    flashModule(probModuleRef.current)
+  }}
   ```
 
-  Also fire a banner on reset:
+  **4b. Add a `useEffect` that watches `data` for edge-triggered banners.** Banners fire on API response, not during slider drag (the API is async — `data` updates after the debounce/fetch cycle, making it the correct edge):
+
   ```tsx
-  // In the reset() handler, after reset call:
-  showBanner({ id: 'reset-applied', priority: 5, text: '↺ Reset to baseline', color: '#06b6d4' })
-  prevDominant.current = null
-  prevRiskBucket.current = 'low'
+  useEffect(() => {
+    if (!data) return
+    // dominant is already computed above from data.prob_calm/elevated/turbulent
+    const newDominant = dominant
+    const stress = 1 - data.prob_calm  // scenarioStress: prob of not being calm
+    const newBucket = riskBucket(stress)
+
+    if (prevDominant.current && newDominant && newDominant !== prevDominant.current) {
+      showBanner({
+        id: 'regime-flip',
+        priority: 1,
+        text: `Dominant regime: ${prevDominant.current} → ${newDominant}`,
+        color: regimeColor[newDominant.toLowerCase()] ?? '#06b6d4',
+      })
+    }
+    if (newDominant) prevDominant.current = newDominant
+
+    if (newBucket !== prevRiskBucket.current) {
+      if (newBucket === 'watch' && prevRiskBucket.current === 'low')
+        showBanner({ id: 'banner-threshold', priority: 3, text: '⚠ Crossed watch threshold (20%)', color: '#fbbf24' })
+      else if (newBucket === 'alert' && prevRiskBucket.current !== 'alert')
+        showBanner({ id: 'banner-threshold', priority: 2, text: '⚠ Crossed alert threshold (40%)', color: '#f87171' })
+      else if (newBucket === 'low' && prevRiskBucket.current !== 'low')
+        showBanner({ id: 'banner-threshold', priority: 4, text: '✓ Back below watch threshold', color: '#4ade80' })
+      else if (newBucket === 'watch' && prevRiskBucket.current === 'alert')
+        showBanner({ id: 'banner-threshold', priority: 4, text: '↓ Pulled back from alert zone', color: '#fbbf24' })
+      prevRiskBucket.current = newBucket
+    }
+  }, [data, dominant])
+  ```
+
+  Also add `import { regimeColor } from '../lib/tokens'` at the top if not already imported.
+
+  **4c. Expand the `reset` callback to fire a banner and reset tracking refs:**
+
+  ```tsx
+  const reset = useCallback(() => {
+    setInputs(currentMarketInputs ?? DEFAULT_INPUTS)
+    showBanner({ id: 'reset-applied', priority: 5, text: '↺ Reset to baseline', color: '#06b6d4' })
+    prevDominant.current = null
+    prevRiskBucket.current = 'low'
+  }, [currentMarketInputs, showBanner])
+  ```
+
+  **4d. Fire a preset banner when any preset button is clicked:**
+
+  ```tsx
+  onClick={() => {
+    setInputs(PRESETS[p.id])
+    showBanner({ id: 'preset-applied', priority: 5, text: `Preset: ${p.label}`, color: '#06b6d4' })
+  }}
   ```
 
 - [ ] **Step 5: Add `className="module-base"` and refs to the output modules**
@@ -1732,16 +1760,20 @@ Each page currently returns bare `<div className="p-6 text-slate-500 text-sm">Lo
 
 - [ ] **Step 3: Redesign `ChangelogFeed.tsx` as a vertical timeline**
 
-  Read the current file, then replace the render logic with a vertical timeline layout. Keep all data fetching and types unchanged — only the visual output changes.
+  Read the current file first. The actual `ChangelogEntry` fields are:
+  - `entry.current_date` — ISO date string (not `entry.date`)
+  - `entry.narrative` — display text (not `entry.event`)
+  - `entry.regime` — regime string (correct)
+  - `entry.triggers` — string[] (intentionally dropped in this simplified timeline view)
+
+  The existing `formatDate(isoDate)` helper function is already defined in the file — keep it, use it for the date display.
+
+  Keep all existing imports, types, helper functions (`formatDate`, `badgeLabel`, `regimeContext`), and the `ChangelogResponse` prop type. Only replace the `return (...)` block.
+
+  Also add `import { regimeColor } from '../../lib/tokens'` at the top (replaces the local `REGIME_COLOR` map for the node color).
 
   ```tsx
-  // frontend/src/components/ui/ChangelogFeed.tsx
-  // (Keep all existing imports, types, and hook if any — only change the JSX)
-
-  // In the render/return, replace the feed list with:
-  import { regimeColor } from '../../lib/tokens'
-
-  // Inside the component, after data is available:
+  // Replace the entire return (...) block with:
   return (
     <div style={{ position: 'relative', paddingLeft: 20 }}>
       {/* Vertical connector line */}
@@ -1754,10 +1786,10 @@ Each page currently returns bare `<div className="p-6 text-slate-500 text-sm">Lo
         background: 'linear-gradient(to bottom, #1e2940, #0f1929)',
       }} />
 
-      {data.entries.map((entry, i) => {
+      {data.entries.map((entry) => {
         const color = regimeColor[entry.regime?.toLowerCase() ?? 'unknown'] ?? '#64748b'
         return (
-          <div key={i} style={{ display: 'flex', gap: 14, marginBottom: 18, position: 'relative' }}>
+          <div key={entry.current_date} style={{ display: 'flex', gap: 14, marginBottom: 18, position: 'relative' }}>
             {/* Node */}
             <div style={{
               width: 14, height: 14, borderRadius: '50%',
@@ -1771,10 +1803,10 @@ Each page currently returns bare `<div className="p-6 text-slate-500 text-sm">Lo
             {/* Content */}
             <div style={{ flex: 1, paddingBottom: 4 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b' }}>{entry.date}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b' }}>{formatDate(entry.current_date)}</span>
                 {entry.regime && (
                   <span style={{
-                    fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em',
+                    fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em',
                     color, background: `${color}15`, border: `1px solid ${color}30`,
                     borderRadius: 4, padding: '1px 6px',
                   }}>
@@ -1783,7 +1815,7 @@ Each page currently returns bare `<div className="p-6 text-slate-500 text-sm">Lo
                 )}
               </div>
               <p style={{ fontSize: 11, color: '#94a3b8', lineHeight: 1.6, margin: 0 }}>
-                {entry.event}
+                {entry.narrative}
               </p>
             </div>
           </div>
@@ -2005,7 +2037,7 @@ After writing this plan, spec coverage check:
 | BottomNav + responsive AppShell | Task 4 |
 | Sidebar hidden on mobile | Task 4 |
 | RiskLineChart → area chart | Task 7 |
-| RegimeChart → area fill + hover tooltip | Task 8 |
+| RegimeChart → area fill + custom tooltip (static band opacity, no hover needed — tooltip covers it) | Task 8 |
 | Shared ChartTooltip | Task 2, used in Tasks 7, 8, 16 |
 | DriverBar animated fill + stagger | Task 9 |
 | AnimatePresence expand/collapse | Task 10 |
