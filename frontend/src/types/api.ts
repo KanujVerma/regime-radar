@@ -205,3 +205,21 @@ export interface ChangelogResponse {
   earliest_date: string | null
   latest_date: string | null
 }
+
+export interface AnalogEntry {
+  display_date: string
+  full_date: string
+  regime: string
+  transition_risk: number
+  spy_fwd_5d: number
+  spy_fwd_20d: number
+  regime_outcome_20d: string
+}
+
+export interface AnalogsResponse {
+  query_date: string
+  query_regime: string
+  query_transition_risk: number
+  analogs: AnalogEntry[]
+  feature_set_version: string
+}

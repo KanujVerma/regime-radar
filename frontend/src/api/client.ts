@@ -9,6 +9,7 @@ import type {
   ScenarioResponse,
   DailyDiffResponse,
   ChangelogResponse,
+  AnalogsResponse,
 } from '../types/api'
 
 const BASE_URL = (import.meta.env.VITE_API_URL as string) || 'http://localhost:8000'
@@ -51,4 +52,5 @@ export const api = {
       : ''
     return get<ChangelogResponse>('/changelog' + (qs ? '?' + qs : ''))
   },
+  analogs: () => get<AnalogsResponse>('/analogs'),
 }
