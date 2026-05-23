@@ -99,9 +99,12 @@ def main() -> None:
     # Step 9: build post-retrain snapshot
     from src.models.registry import load_artifact
     oof_df = load_artifact("oof_predictions")
+    # Use only rows with actual OOF predictions (non-NaN transition_risk).
+    # The full oof_df index includes the burn-in rows that were never held out.
+    oof_valid = oof_df.dropna(subset=["transition_risk"])
     oof_eval_window = {
-        "start": str(oof_df.index.min().date()),
-        "end": str(oof_df.index.max().date()),
+        "start": str(oof_valid.index.min().date()),
+        "end": str(oof_valid.index.max().date()),
     }
     post = build_post_retrain_snapshot(
         trans_summary=trans_summary,

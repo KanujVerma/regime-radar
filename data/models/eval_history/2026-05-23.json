@@ -1,0 +1,44 @@
+{
+  "retrain_date": "2026-05-23",
+  "timestamp": "2026-05-23T05:55:41.444543+00:00",
+  "git_commit": "4c12d35",
+  "training_data_end_date": "2026-05-22",
+  "oof_eval_window": {
+    "start": "2000-04-04",
+    "end": "2026-04-23"
+  },
+  "previous_model": {
+    "transition": {
+      "mean_roc_auc": 0.6584,
+      "mean_pr_auc": 0.204,
+      "brier_calibrated": 0.07886199354943779,
+      "ece_calibrated": 0.006118684006274583,
+      "n_folds": 104
+    },
+    "regime": {
+      "mean_macro_f1": 0.6385
+    },
+    "reliability": {
+      "max_evaluated_p": 0.3,
+      "base_rate": 0.0914
+    }
+  },
+  "new_model": {
+    "transition": {
+      "mean_roc_auc": 0.6631,
+      "mean_pr_auc": 0.2003,
+      "brier_calibrated": 0.07880069035523789,
+      "ece_calibrated": 0.0072247509386592895,
+      "n_folds": 104,
+      "n_training_rows": 7833
+    },
+    "regime": {
+      "mean_macro_f1": 0.6381
+    },
+    "reliability": {
+      "max_evaluated_p": 0.3,
+      "base_rate": 0.0915,
+      "source": "oof"
+    }
+  }
+}

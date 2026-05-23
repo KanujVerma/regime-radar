@@ -4,50 +4,50 @@
       "p_low": 0.0,
       "p_high": 0.02,
       "p_mid": 0.01,
-      "empirical_rate": 0.0458,
-      "n": 306
+      "empirical_rate": 0.0467,
+      "n": 300
     },
     {
       "p_low": 0.02,
       "p_high": 0.05,
       "p_mid": 0.035,
-      "empirical_rate": 0.0489,
-      "n": 1310
+      "empirical_rate": 0.0442,
+      "n": 1334
     },
     {
       "p_low": 0.05,
       "p_high": 0.1,
       "p_mid": 0.075,
-      "empirical_rate": 0.069,
-      "n": 2695
+      "empirical_rate": 0.0726,
+      "n": 2700
     },
     {
       "p_low": 0.1,
       "p_high": 0.15,
       "p_mid": 0.125,
-      "empirical_rate": 0.1281,
-      "n": 1421
+      "empirical_rate": 0.123,
+      "n": 1390
     },
     {
       "p_low": 0.15,
       "p_high": 0.2,
       "p_mid": 0.175,
-      "empirical_rate": 0.1545,
-      "n": 492
+      "empirical_rate": 0.171,
+      "n": 503
     },
     {
       "p_low": 0.2,
       "p_high": 0.3,
       "p_mid": 0.25,
-      "empirical_rate": 0.1601,
-      "n": 306
+      "empirical_rate": 0.1498,
+      "n": 307
     },
     {
       "p_low": 0.3,
       "p_high": 0.5,
       "p_mid": 0.4,
-      "empirical_rate": 0.1818,
-      "n": 22
+      "empirical_rate": 0.1667,
+      "n": 18
     },
     {
       "p_low": 0.5,
@@ -57,6 +57,7 @@
       "n": 0
     }
   ],
-  "base_rate": 0.0914,
-  "max_evaluated_p": 0.3
+  "base_rate": 0.0915,
+  "max_evaluated_p": 0.3,
+  "source": "oof"
 }
