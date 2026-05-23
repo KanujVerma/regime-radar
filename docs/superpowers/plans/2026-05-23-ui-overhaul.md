@@ -836,7 +836,11 @@ This is the most significant layout change. The three equal-weight MetricCards a
             conditional Panel "Last 30 Trading Days" (RegimeLegend, MiniRegimeChart),
             Panel "Transition risk gauge" (GaugeArc), Panel "What is raising risk right now"
             (DriverBar list). All props and children are unchanged. Do not remove GaugeArc —
-            it provides detail the top-level gauge bar does not.                               */}
+            it provides detail the top-level gauge bar does not.
+            COMPILE CHECK: After pasting, verify all identifiers from Block F are still in
+            scope — recentLoading, recentData, data, regime, reliability, usingLiveDrivers,
+            topDrivers, maxImp, narrative. Do not drop any import or variable that these
+            blocks reference. Build must pass before committing.                              */}
         <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: '1fr 320px' }}>
           {/* paste original lines 148–205 here */}
         </div>
@@ -1863,24 +1867,22 @@ Each page currently returns bare `<div className="p-6 text-slate-500 text-sm">Lo
 
   Change the page's mount transition: `transition={{ duration: 0.2 }}` → `transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}`
 
-- [ ] **Step 3: Apply glass surface to AnalogCard**
+- [ ] **Step 3: Apply elevated technical surface to AnalogCard**
 
-  Read `frontend/src/components/AnalogCard.tsx`. Replace the outer card container's background/border:
+  Read `frontend/src/components/AnalogCard.tsx`. Replace the outer card container's background/border. Do NOT use glass/backdrop-blur — glass is reserved for Tier 1 hero surfaces only (one per page). AnalogCard is a dense technical component in the Signal Breakdown section; use the Elevated tier:
 
   ```tsx
   // The outer card div should use:
   style={{
-    background: 'rgba(12,16,32,0.85)',
-    backdropFilter: 'blur(8px)',
-    WebkitBackdropFilter: 'blur(8px)',
+    background: '#0d1525',
     border: `1px solid ${regimeColor[analogRegime]}26`,
     borderRadius: 10,
-    boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.04), 0 4px 20px rgba(0,0,0,0.4)',
+    boxShadow: '0 2px 16px rgba(0,0,0,0.35)',
     padding: '14px 16px',
   }}
   ```
 
-  Where `analogRegime` is the lowercase regime string from the analog entry. Import `regimeColor` from `'../lib/tokens'`.
+  Where `analogRegime` is the lowercase regime string from the analog entry. The regime-colored border at ~15% opacity (`hex + '26'`) gives the card a subtle identity without glass. Import `regimeColor` from `'../lib/tokens'`.
 
 - [ ] **Step 4: Verify build**
 
@@ -1894,7 +1896,7 @@ Each page currently returns bare `<div className="p-6 text-slate-500 text-sm">Lo
 
   ```bash
   git add frontend/src/pages/ModelDrivers.tsx frontend/src/components/AnalogCard.tsx
-  git commit -m "feat(ui): Signal Breakdown typography pass (10px min); AnalogCard glass surface"
+  git commit -m "feat(ui): Signal Breakdown typography pass (10px min); AnalogCard elevated surface with regime border"
   ```
 
 ---
@@ -2048,34 +2050,12 @@ After writing this plan, spec coverage check:
 | History timeline changelog | Task 14 |
 | VIX toggle transition polish | Task 14 |
 | Signal Breakdown typography (10px min) | Task 15 |
-| AnalogCard glass surface | Task 15 |
+| AnalogCard elevated surface with regime-color border (no glass — glass reserved for hero only) | Task 15 |
 | Event Replay light pass | Task 16 |
 | Mobile grid adaptations | Task 17 |
 | Topbar subtitle hidden on mobile | Task 17 |
 | card-hover lift + active:scale | Tasks 1 (CSS), 6 |
-| Refresh button loading state | Not explicitly tasked — add to Task 5 or 6 as a small addition to CurrentState's refreshAction button: add `className="spin"` to the icon while `loading` and `disabled` + `opacity-50` to the button |
+| Refresh button loading state | Task 5 (Step 2b — `refreshAction` with `disabled`, `spin` class, `opacity 0.5`) |
 | Hero chart readability rule | Tasks 7, 8 — preserved axes, reference lines, annotation badges |
 | 10px font minimum everywhere | Tasks 9, 15, 16 |
 
-**One gap found:** Refresh button loading state was in the spec but not assigned to a task. Add it to Task 5: in `CurrentState.tsx`, change `refreshAction` to:
-
-```tsx
-const refreshAction = (
-  <button
-    onClick={refresh}
-    disabled={loading}
-    className="text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1.5"
-    style={{
-      background: '#0c1020',
-      border: '1px solid #151d2e',
-      color: '#06b6d4',
-      opacity: loading ? 0.5 : 1,
-      cursor: loading ? 'not-allowed' : 'pointer',
-      transition: 'opacity 150ms',
-    }}
-  >
-    <span className={loading ? 'spin' : ''}>↻</span>
-    Refresh
-  </button>
-)
-```
