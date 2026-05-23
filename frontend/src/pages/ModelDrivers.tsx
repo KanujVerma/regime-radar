@@ -2,8 +2,10 @@ import { useState } from 'react'
 import { motion } from 'framer-motion'
 import Topbar from '../components/layout/Topbar'
 import DriverBar from '../components/ui/DriverBar'
+import ClosestHistoricalSetups from '../components/ClosestHistoricalSetups'
 import { useModelDrivers } from '../hooks/useModelDrivers'
 import { useCurrentState } from '../hooks/useCurrentState'
+import { useAnalogs } from '../hooks/useAnalogs'
 import { buildDriversNarrative, getDriverHeadline, formatRisk } from '../lib/narratives'
 import { sentenceFor } from '../lib/featureLabels'
 import { regimeColor } from '../lib/tokens'
@@ -59,6 +61,7 @@ function buildForwardBullets(topPushingFeature: string | undefined): string[] {
 export default function ModelDrivers() {
   const { data, loading, error } = useModelDrivers()
   const { data: stateData, loading: stateLoading, error: stateError } = useCurrentState()
+  const { data: analogsData } = useAnalogs()
   const [reliabilityOpen, setReliabilityOpen] = useState(false)
   const [reliabilityHover, setReliabilityHover] = useState(false)
 
@@ -216,6 +219,11 @@ export default function ModelDrivers() {
             </div>
           ))}
         </div>
+
+        {/* ── Closest Historical Setups ── */}
+        {analogsData && analogsData.analogs.length > 0 && (
+          <ClosestHistoricalSetups data={analogsData} />
+        )}
 
         {/* ── Reliability accordion ── */}
         {data.threshold_sweep.length > 0 && (
