@@ -100,6 +100,8 @@ Replace the 3-equal-weight MetricCard grid with an editorial hero layout:
 
 **Chart:** Expands to full-width cinematic area chart (see Section 3)
 
+**Implementation note — hero must stay regime-led:** If the right-side risk/reliability block (transition risk number + reliability context) causes layout pressure on the hero composition, it must collapse below the regime name rather than sitting beside it. The regime label is always the visual anchor. A two-column split that makes the hero feel like "half of a dashboard" defeats the editorial direction. On narrow desktop viewports and all mobile widths, the risk block stacks beneath the hero — never beside it at reduced size.
+
 **DailyDiff block:** Refined with slide-in stagger per item (see Section 4)
 
 ### History — Moderate Upgrade
@@ -225,18 +227,23 @@ Two distinct layers — both are required.
 
 Banners appear **only** for these events. All other slider motion produces no badge.
 
-| Trigger | Banner text | Color |
-|---|---|---|
-| Dominant regime flips | "Dominant regime: {from} → {to}" | New regime color |
-| Risk crosses 20% upward | "⚠ Crossed watch threshold (20%)" | Amber |
-| Risk crosses 40% upward | "⚠ Crossed alert threshold (40%)" | Red |
-| Risk drops below 20% | "✓ Back below watch threshold" | Green |
-| Scenario reset applied | "↺ Reset to baseline" | Cyan |
-| Preset scenario applied | "{Preset name} applied" | Cyan |
+| Priority | Trigger | Banner text | Color |
+|---|---|---|---|
+| 1 | Dominant regime flips | "Dominant regime: {from} → {to}" | New regime color |
+| 2 | Risk crosses 40% upward | "⚠ Crossed alert threshold (40%)" | Red |
+| 3 | Risk crosses 20% upward | "⚠ Crossed watch threshold (20%)" | Amber |
+| 4 | Risk drops below 40% | "↓ Pulled back from alert zone" | Amber |
+| 4 | Risk drops below 20% | "✓ Back below watch threshold" | Green |
+| 5 | Scenario reset applied | "↺ Reset to baseline" | Cyan |
+| 5 | Preset scenario applied | "{Preset name} applied" | Cyan |
 
-**Edge-trigger + cooldown rule:** Each banner has a per-ID cooldown of **250ms minimum** between fires. If the user scrubs back and forth across a threshold boundary, the banner fires once, then is suppressed for 250ms before it can fire again for the same banner ID. This prevents flicker-on-boundary without requiring debounce on the slider itself.
+**Single-banner rule:** Only one banner is shown at a time. When a new banner is triggered, it replaces any currently-visible banner immediately (the old one exits, the new one enters). Priority determines which banner wins when multiple events fire in the same interaction cycle — higher priority (lower number) always wins.
 
-Implementation: track `lastFiredAt[bannerId]` timestamp. Before showing a banner, check `Date.now() - lastFiredAt[bannerId] > 250`. If not, skip.
+Implementation: maintain a single `activeBanner` state object `{ id, text, color } | null`. On each trigger event, compare the incoming priority against the currently-active banner's priority. If the incoming priority is higher (lower number) or no banner is active, replace. If lower, discard.
+
+**Edge-trigger + cooldown rule:** Each banner ID has a per-ID cooldown of **250ms minimum** between fires. If the user scrubs back and forth across a threshold boundary, the banner fires once, then is suppressed for 250ms before it can fire again for the same banner ID. This prevents flicker-on-boundary without requiring debounce on the slider itself.
+
+Implementation: track `lastFiredAt[bannerId]` timestamp. Before showing a banner, check `Date.now() - lastFiredAt[bannerId] > 250`. If not, skip. The single-banner rule and cooldown rule are independent — both apply.
 
 #### Other interaction feedback
 
@@ -313,6 +320,7 @@ No icon-rail intermediate state. The sidebar hides entirely below `lg`, replaced
 - **Type sizes:** Max 3 distinct sizes visible in any single content section.
 - **No decorative elements:** No particle effects, background canvas, floating shapes, or carousels.
 - **Skeleton duration:** Loading skeletons should resolve quickly (API is fast). If a skeleton persists >3s, show an error state — don't leave the user staring at a shimmer indefinitely.
+- **Hero chart readability rule:** Hero charts may use more cinematic styling (area fill, glow, animated draw), but interpretability must remain intact. "Cool" must never reduce legibility. Concretely: reference threshold lines must remain visible, axes must stay readable, regime band fills must not obscure the line, and tooltip content must be unambiguous. A chart that looks impressive but is harder to read than the current version is a regression.
 
 ---
 
