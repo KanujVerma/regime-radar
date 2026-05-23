@@ -11,9 +11,7 @@ from src.models.registry import load_metadata
 from src.utils.paths import MODELS_DIR
 
 EVAL_HISTORY_DIR: Path = MODELS_DIR / "eval_history"
-_RELIABILITY_PATH: Path = (
-    Path(__file__).resolve().parents[2] / "data" / "reliability" / "transition_reliability.json"
-)
+_RELIABILITY_PATH: Path = MODELS_DIR.parent / "reliability" / "transition_reliability.json"
 
 
 def _load_reliability() -> dict:
@@ -104,7 +102,8 @@ def write_eval_history_entry(
     """
     EVAL_HISTORY_DIR.mkdir(parents=True, exist_ok=True)
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    now = datetime.now(timezone.utc)
+    today = now.strftime("%Y-%m-%d")
     path = EVAL_HISTORY_DIR / f"{today}.json"
 
     if path.exists():
@@ -115,7 +114,7 @@ def write_eval_history_entry(
 
     entry = {
         "retrain_date": today,
-        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "timestamp": now.isoformat(),
         "git_commit": git_commit,
         "training_data_end_date": training_data_end_date,
         "oof_eval_window": oof_eval_window,

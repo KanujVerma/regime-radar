@@ -124,7 +124,48 @@ def test_write_eval_history_creates_missing_directory(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# Test 5: load_recent_entries raises ValueError on malformed JSON
+# Test 5: write_eval_history_entry raises FileExistsError on same-day duplicate
+# ---------------------------------------------------------------------------
+def test_write_duplicate_raises_file_exists_error(tmp_path):
+    """Second write on the same day must raise FileExistsError."""
+    from src.evaluation.eval_history import write_eval_history_entry
+
+    pre = {"transition": {}, "regime": {}, "reliability": {}, "git_commit": None}
+    post = {"transition": {"n_training_rows": 50}, "regime": {}, "reliability": {}}
+    kwargs = dict(
+        pre=pre, post=post,
+        training_data_end_date="2026-05-21",
+        oof_eval_window={"start": "1995-04-07", "end": "2026-05-21"},
+        git_commit=None,
+    )
+
+    with patch("src.evaluation.eval_history.EVAL_HISTORY_DIR", tmp_path):
+        write_eval_history_entry(**kwargs)
+        with pytest.raises(FileExistsError):
+            write_eval_history_entry(**kwargs)
+
+
+# ---------------------------------------------------------------------------
+# Test 6: read_pre_retrain_snapshot returns empty dicts on missing artifacts
+# ---------------------------------------------------------------------------
+def test_read_pre_retrain_snapshot_handles_missing_artifacts():
+    """Returns empty sub-dicts when artifacts don't exist (FileNotFoundError)."""
+    with patch("src.evaluation.eval_history.load_metadata") as mock_meta, \
+         patch("src.evaluation.eval_history._load_reliability") as mock_rel:
+        mock_meta.side_effect = FileNotFoundError("no artifact")
+        mock_rel.return_value = {}
+
+        from src.evaluation.eval_history import read_pre_retrain_snapshot
+        snapshot = read_pre_retrain_snapshot(git_commit=None)
+
+    assert snapshot["transition"] == {}
+    assert snapshot["regime"] == {}
+    assert snapshot["reliability"] == {}
+    assert snapshot["git_commit"] is None
+
+
+# ---------------------------------------------------------------------------
+# Test 7: load_recent_entries raises ValueError on malformed JSON
 # ---------------------------------------------------------------------------
 def test_load_recent_entries_raises_on_malformed_json(tmp_path):
     """load_recent_entries must raise ValueError (not silently skip) on bad JSON."""
