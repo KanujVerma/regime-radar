@@ -15,7 +15,7 @@
 | Action | Path | Responsibility |
 |--------|------|---------------|
 | Create | `src/models/analogs.py` | `AnalogIndex` dataclass, `build_analog_index()`, `find_analogs()` |
-| Create | `tests/test_analogs.py` | 9 unit tests for analogs module |
+| Create | `tests/test_analogs.py` | 11 unit tests for analogs module |
 | Modify | `src/api/state.py` | Build index in `_do_refresh()`, store `_analog_index`, `_latest_features`, `_latest_date` |
 | Modify | `src/api/schemas.py` | Add `AnalogEntry`, `AnalogsResponse` Pydantic models |
 | Modify | `src/api/routes.py` | Add `GET /analogs` endpoint + schema imports |
@@ -35,7 +35,7 @@
 - Create: `src/models/analogs.py`
 - Create: `tests/test_analogs.py`
 
-- [ ] **Step 1: Write all 9 unit tests (they will all fail with ImportError)**
+- [ ] **Step 1: Write all 11 unit tests (they will all fail with ImportError)**
 
 Create `tests/test_analogs.py`:
 
@@ -262,15 +262,73 @@ def test_analog_index_alignment():
     assert len(index.spy_fwd_5d) == n
     assert len(index.spy_fwd_20d) == n
     assert len(index.regime_outcomes) == n
+
+
+# ── Test 10: find_analogs returns fewer than n when pool is too small ─────────
+
+def test_find_analogs_returns_fewer_when_pool_is_small():
+    """When exclusions leave fewer than n candidates, return what's available cleanly."""
+    from src.models.analogs import find_analogs, AnalogIndex, FEAT_COLS, FEATURE_SET_VERSION
+    # With n=150 pool rows and query past the end (query_row_pos=150),
+    # recency exclusion (RECENCY_ROWS=126) removes rows 24-149.
+    # Rows 0-23 are eligible (24 rows). With DEDUP_ROWS=63, only 1 fits.
+    n = 150
+    rng = np.random.default_rng(5)
+    dates = pd.bdate_range("2005-01-03", periods=n)
+    X = rng.standard_normal((n, len(FEAT_COLS)))
+    scaler = StandardScaler()
+    matrix = scaler.fit_transform(X)
+    index = AnalogIndex(
+        dates=dates, matrix=matrix, scaler=scaler,
+        regimes=["calm"] * n, transition_risks=[0.1] * n,
+        spy_fwd_5d=np.zeros(n), spy_fwd_20d=np.zeros(n),
+        regime_outcomes=["Remained Calm"] * n,
+        feature_set_version=FEATURE_SET_VERSION,
+    )
+    query_features = pd.Series(np.zeros(len(FEAT_COLS)), index=FEAT_COLS)
+    results = find_analogs(date(2030, 1, 1), query_features, index, n=3)
+    # Must not raise and must return fewer than 3
+    assert isinstance(results, list)
+    assert len(results) < 3
+
+
+# ── Test 11: Recency exclusion with query date inside the pool ────────────────
+
+def test_recency_exclusion_query_inside_pool():
+    """Query at pool position 200: rows within 126 positions of 200 are excluded."""
+    from src.models.analogs import find_analogs, AnalogIndex, FEAT_COLS, FEATURE_SET_VERSION, RECENCY_ROWS
+    n = 400
+    dates = pd.bdate_range("2005-01-03", periods=n)
+    # query at position 200 (inside pool) → query_row_pos = 200
+    # Row 75: |75 - 200| = 125 ≤ 126 → excluded
+    # Row 73: |73 - 200| = 127 > 126 → eligible
+    X = np.ones((n, len(FEAT_COLS))) * 999.0
+    X[75] = 0.0    # closest feature-space match but within recency window → excluded
+    X[73] = 0.01   # outside recency window → must appear
+    scaler = StandardScaler()
+    matrix = scaler.fit_transform(X)
+    index = AnalogIndex(
+        dates=dates, matrix=matrix, scaler=scaler,
+        regimes=["calm"] * n, transition_risks=[0.1] * n,
+        spy_fwd_5d=np.zeros(n), spy_fwd_20d=np.zeros(n),
+        regime_outcomes=["Remained Calm"] * n,
+        feature_set_version=FEATURE_SET_VERSION,
+    )
+    query_features = pd.Series(np.zeros(len(FEAT_COLS)), index=FEAT_COLS)
+    query_date = dates[200].date()  # inside the pool
+    results = find_analogs(query_date, query_features, index, n=3)
+    result_positions = [dates.get_loc(pd.Timestamp(r["full_date"])) for r in results]
+    assert 75 not in result_positions, "Row 75 (distance 125 ≤ 126) must be excluded"
+    assert 73 in result_positions, "Row 73 (distance 127 > 126) must be eligible"
 ```
 
-- [ ] **Step 2: Run tests to confirm all 9 fail with ImportError**
+- [ ] **Step 2: Run tests to confirm all 11 fail with ImportError**
 
 ```bash
 python3 -m pytest tests/test_analogs.py -v 2>&1 | tail -15
 ```
 
-Expected: 9 errors, all `ModuleNotFoundError` or `ImportError`.
+Expected: 11 errors, all `ModuleNotFoundError` or `ImportError`.
 
 - [ ] **Step 3: Create `src/models/analogs.py`**
 
@@ -353,6 +411,14 @@ def build_analog_index(
     pool_features = pool_features[valid]
     pool_regimes = pool_regimes[valid]
     pool_risks = pool_risks[valid]
+
+    # OOF-alignment contract: pool must be non-empty after join
+    if len(pool_features) == 0:
+        raise ValueError(
+            "Analog pool is empty after OOF join. "
+            "Ensure oof_predictions artifact has non-NaN transition_risk rows "
+            "that overlap with features_df.index."
+        )
 
     # Step 2: Near-end filter — drop last FORWARD_WINDOW rows
     if len(pool_features) > FORWARD_WINDOW:
@@ -466,13 +532,13 @@ def find_analogs(
     ]
 ```
 
-- [ ] **Step 4: Run all 9 tests to confirm they pass**
+- [ ] **Step 4: Run all 11 tests to confirm they pass**
 
 ```bash
 python3 -m pytest tests/test_analogs.py -v 2>&1 | tail -15
 ```
 
-Expected: 9 passed.
+Expected: 11 passed.
 
 - [ ] **Step 5: Commit**
 
@@ -521,6 +587,8 @@ Read `src/api/state.py` lines 190–200 to confirm exact variable names, then ad
         except Exception as e:
             _logger.warning("Analog index build failed: %s", e)
             self._analog_index = None
+            self._latest_features = None
+            self._latest_date = None
 ```
 
 - [ ] **Step 3: Verify existing smoke tests still pass**
@@ -673,7 +741,11 @@ Append after the last `@router` decorator block in `src/api/routes.py`:
 @router.get("/analogs", response_model=AnalogsResponse)
 async def get_analogs(request: Request):
     app_state = _get_state(request)
-    if app_state._analog_index is None:
+    if (
+        app_state._analog_index is None
+        or app_state._latest_features is None
+        or app_state._latest_date is None
+    ):
         raise HTTPException(status_code=503, detail="Analog index not available")
     latest = app_state.read_latest_state()
     if latest is None:
