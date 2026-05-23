@@ -12,10 +12,12 @@
 
 ## Analog Pool
 
-The pool is the full historical features DataFrame — the same 7,833 rows (`1995-04-07 → 2026-05-22`) produced by `build_features(panel, regime_series=regime).dropna()`. This is already computed in `AppState._do_refresh()` as the `features` variable. No OOF artifact join needed.
+The pool is restricted to the **6,552 dates with valid OOF transition-risk** — the non-NaN rows of `oof_predictions`. This is an inner join of `features_df` with `oof_df.dropna(subset=["transition_risk"])` on DatetimeIndex. The ~1,280 burn-in rows (roughly 1995–2000) where the walk-forward folds had not yet produced held-out predictions are excluded.
+
+**Why OOF-restricted:** Analog cards display `transition_risk` for each historical date. Restricting to OOF non-NaN rows ensures every surfaced analog shows a genuine held-out score — consistent with the app's evaluation philosophy — and eliminates any need for null handling or a parallel inference path.
 
 **Near-end filter (applied at index-build time):**
-Exclude any date `d` where `d + 20 trading days > dataset_end_date`. Approximately the last 20 rows of the pool are removed. This ensures every analog in the pool has a complete 20-day forward history. Because today's queries already exclude the last 126 trading days via the recency filter, this is belt-and-suspenders for the live endpoint — but required for correctness if historical queries are added later.
+After the OOF join, exclude any row where `row_position + 20 > len(pool)` (i.e., the last 20 rows of the pool lack a complete 20-day forward window). This guarantees SPY forward returns and regime outcome lines are always available without runtime edge cases.
 
 ---
 
@@ -50,9 +52,11 @@ Do not include regime labels, transition_risk predictions, or any post-hoc deriv
 
 ## Exclusion Rules (applied in order)
 
-1. **Recency exclusion:** Set distance to `inf` for any analog date within **126 trading days** of the query date. Rolling features (rv_20d, vix_zscore_252d, emv_lag_20d, etc.) heavily overlap within this window — those dates are not independent setups.
+Both exclusions use **trading-row distance** (position index distance in the sorted pool), not calendar-day or timestamp subtraction. This avoids miscounting around weekends and market holidays.
 
-2. **Inter-analog deduplication:** After sorting by distance, select analogs greedily: accept the closest date, then skip any subsequent candidate within **63 trading days** of an already-accepted analog. This prevents all 3 cards from being drawn from the same 3-week crisis window (e.g., March 2020 days 1, 8, and 14).
+1. **Recency exclusion:** Set distance to `inf` for any pool row where `|pool_row_pos - query_row_pos| <= 126`. Rolling features (rv_20d, vix_zscore_252d, emv_lag_20d, etc.) heavily overlap within this window — those dates are not independent setups. `query_row_pos` is the position of the query date in the pool; if the query date is not in the pool (e.g., today is beyond dataset end), use the position of the nearest earlier date.
+
+2. **Inter-analog deduplication:** After sorting by distance, select analogs greedily: accept the closest row, then skip any subsequent candidate where `|candidate_row_pos - accepted_row_pos| <= 63` for any already-accepted analog. This prevents all 3 cards from being drawn from the same 3-week crisis window (e.g., March 2020 rows 1, 8, and 14).
 
 ---
 
@@ -181,6 +185,8 @@ In `_do_refresh()`:
 
 No query parameters for v1. Always queries today's (latest) live features.
 
+**`query_regime` and `query_transition_risk`** are read from `app_state.read_latest_state()["regime"]` and `["transition_risk"]` — the same values used by `/current-state`. No separate inference path.
+
 **Response if analog index not yet built:** 503 with `"Analog index not available"`.
 
 **Response schema:**
@@ -260,7 +266,8 @@ Add `ClosestHistoricalSetups` below the push/pull panel and above the reliabilit
 5. Dates with insufficient forward history are excluded from the pool (last 20 rows of features history are never surfaced)
 6. Outcome line is `"Escalated to {regime} within N days"` when escalation occurs in window
 7. Outcome line is `"Remained {regime}"` when no escalation in 20-day window
-8. Query date recency exclusion: a date 125 days before query is excluded; a date 127 days before is eligible
+8. Query date recency exclusion: a pool row 125 positions before the query row is excluded; a row 127 positions before is eligible (row-position distance, not calendar days)
+9. **Alignment test:** After `build_analog_index()`, assert all parallel structures have the same length: `len(index.dates) == len(index.matrix) == len(index.regimes) == len(index.transition_risks) == len(index.spy_fwd_5d) == len(index.spy_fwd_20d) == len(index.regime_outcomes)`
 
 ### API smoke test: `tests/test_api_smoke.py`
 
