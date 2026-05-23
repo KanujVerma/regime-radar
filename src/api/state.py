@@ -29,6 +29,9 @@ class AppState:
         self.db_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_db()
         self._scheduler: BackgroundScheduler | None = None
+        self._analog_index: Any | None = None
+        self._latest_features: Any | None = None
+        self._latest_date: Any | None = None
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, check_same_thread=False)
@@ -197,6 +200,26 @@ class AppState:
         latest_row = panel.iloc[-1]
         latest_features = features.iloc[-1]
         trend_latest = trend.iloc[-1] if trend is not None else "neutral"
+
+        try:
+            from src.models.analogs import build_analog_index
+            from src.models.registry import load_artifact
+            oof_df = load_artifact("oof_predictions")
+            transition_risk_series = oof_df["transition_risk"]
+            self._analog_index = build_analog_index(
+                features_df=features,
+                regime_series=regime,
+                spy_close=panel["close"],
+                transition_risk_series=transition_risk_series,
+            )
+            self._latest_features = features.iloc[-1].copy()
+            self._latest_date = features.index[-1].date()
+            _logger.info("Analog index built: %d pool rows", len(self._analog_index.dates))
+        except Exception as e:
+            self._analog_index = None
+            self._latest_features = None
+            self._latest_date = None
+            _logger.error("Analog index build failed: %s", e)
 
         # yfinance+FRED data is always live; Finnhub is optional price-card enrichment only
         mode = "live"
