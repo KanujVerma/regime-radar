@@ -10,7 +10,21 @@ from src.utils.logging import get_logger
 _logger = get_logger("bootstrap")
 
 
-def main():
+def run_pipeline() -> dict:
+    """Run the full fetch → merge → features → train pipeline.
+
+    Returns:
+        {
+          "trans_summary": dict,        # from train_transition_model()
+          "regime_summary": dict,       # from train_regime_model()
+          "n_training_rows": int,       # len(X) after dropna
+          "training_data_end_date": str,  # str(df.index.max().date())
+        }
+    Partial-overwrite risk: train_regime_model() and train_transition_model()
+    write artifacts immediately on completion. If transition training fails
+    after regime training succeeds, artifacts will be in a mismatched state.
+    This is accepted risk for Sub-project A.
+    """
     from pathlib import Path
     from src.data.fetch_yfinance import fetch_spy_history
     from src.data.fetch_fred import fetch_emv
@@ -22,8 +36,6 @@ def main():
     from src.labeling.build_trend_labels import build_trend_labels
     from src.models.train_regime_model import train_regime_model
     from src.models.train_transition_model import train_transition_model
-
-    _logger.info("=== RegimeRadar Bootstrap ===")
 
     # 1. Fetch data (full available history)
     _logger.info("Fetching SPY history from 1993...")
@@ -78,7 +90,25 @@ def main():
     _logger.info("Transition model: roc_auc=%.3f pr_auc=%.3f",
                  trans_summary["mean_roc_auc"], trans_summary["mean_pr_auc"])
 
-    _logger.info("=== Bootstrap complete ===")
+    return {
+        "trans_summary": trans_summary,
+        "regime_summary": regime_summary,
+        "n_training_rows": len(X),
+        "training_data_end_date": str(df.index.max().date()),
+    }
+
+
+def main():
+    _logger.info("=== RegimeRadar Bootstrap ===")
+    result = run_pipeline()
+    _logger.info(
+        "Bootstrap complete: roc_auc=%.3f pr_auc=%.3f macro_f1=%.3f n_rows=%d end=%s",
+        result["trans_summary"]["mean_roc_auc"],
+        result["trans_summary"]["mean_pr_auc"],
+        result["regime_summary"]["mean_macro_f1"],
+        result["n_training_rows"],
+        result["training_data_end_date"],
+    )
 
 
 if __name__ == "__main__":
