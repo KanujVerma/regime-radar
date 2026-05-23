@@ -1,9 +1,11 @@
 export const colors = {
   bg: '#080b12',
   surface: '#0c1020',
+  surfaceElevated: '#0d1525',
   sidebar: '#0a0d16',
   border: '#151d2e',
   borderSubtle: '#131b2a',
+  borderElevated: '#1a2540',
   cyan: '#06b6d4',
   cyanDim: '#0e4d6e',
   green: '#4ade80',
@@ -16,6 +18,13 @@ export const colors = {
   textSecondary: '#94a3b8',
   textMuted: '#64748b',
   textDim: '#4a6080',
+  // Glass surfaces — Tier 1 hero panels only
+  glass: 'rgba(12,16,32,0.85)',
+  glassHighlight: 'inset 0 1px 0 rgba(255,255,255,0.05)',
+  // Per-regime ambient glow (used as radial-gradient color, one per page)
+  calmGlow: 'rgba(74,222,128,0.10)',
+  elevatedGlow: 'rgba(251,191,36,0.10)',
+  turbulentGlow: 'rgba(248,113,113,0.10)',
 } as const
 
 export const regimeColor: Record<string, string> = {
@@ -23,4 +32,16 @@ export const regimeColor: Record<string, string> = {
   elevated: colors.amber,
   turbulent: colors.red,
   unknown: colors.textMuted,
+}
+
+export const regimeGlow: Record<string, string> = {
+  calm: colors.calmGlow,
+  elevated: colors.elevatedGlow,
+  turbulent: colors.turbulentGlow,
+  unknown: 'transparent',
+}
+
+/** Returns an rgba border color at ~15% opacity from a hex color */
+export function regimeBorder(hexColor: string): string {
+  return `${hexColor}26`
 }
