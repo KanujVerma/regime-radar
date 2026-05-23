@@ -41,7 +41,7 @@ Finnhub is optional. The backend fetches a real-time SPY quote if a key is confi
 | Page | What it shows |
 |---|---|
 | **Current State** | Live regime, transition risk gauge, probability distribution across all three states, key risk drivers, 30-day mini chart |
-| **History** | Day-by-day SPY regime timeline with color-coded market-state bands and a daily transition risk chart; optional VIX overlay |
+| **History** | Day-by-day SPY regime timeline with color-coded market-state bands and a daily transition risk chart; optional VIX overlay. Includes a **Notable Days** changelog panel surfacing significant model events and retrain dates. |
 | **Event Replay** | Walk the model through named historical events (2020 COVID crash, 2022 rate shock, etc.) |
 | **Signal Breakdown** | Narrative-first layout: plain-English case brief explaining today's reading, push/pull panel (today's top drivers vs. global importance), forward-looking risk conditions, and a collapsible reliability/threshold tradeoff table |
 | **Scenario Explorer** | Six named presets (Calm Recovery → Crisis Peak) plus manual sliders across 6 features. Each scenario shows a verdict badge, a probability tripod (Calm / Elevated / Turbulent baseline vs. scenario with animated deltas), and a driver-cards panel showing which inputs are raising or lowering risk — with contextual interpretation for each driver |
@@ -171,7 +171,7 @@ The transition-risk target is a binary label: did the market regime worsen withi
 | Model | Task | Algorithm | Primary metric |
 |---|---|---|---|
 | `xgb_regime` | Regime classification (3-class) | XGBoost | Balanced accuracy: **0.926** |
-| `xgb_transition` | 5-day transition risk (binary) | XGBoost + Platt calibration | ROC-AUC: **0.658**, Brier (calibrated): **0.079** |
+| `xgb_transition` | 5-day transition risk (binary) | XGBoost + Platt calibration | ROC-AUC: **0.663**, Brier (calibrated): **0.068** |
 
 ### Baseline comparison
 
@@ -185,7 +185,7 @@ The XGBoost model meaningfully outperforms both baselines on PR-AUC and calibrat
 
 ## Evaluation methodology
 
-Walk-forward cross-validation: 104 weekly folds, each fold trains on all past data and tests on the next week. This respects temporal ordering — no look-ahead. Out-of-fold (OOF) predictions cover 7,812 daily observations.
+Walk-forward cross-validation: 104 weekly folds, each fold trains on all past data and tests on the next week. This respects temporal ordering — no look-ahead. Out-of-fold (OOF) predictions cover 7,833 daily observations.
 
 The regime classifier uses the same walk-forward structure for consistency, but the transition-risk model is the primary ML contribution.
 
@@ -245,6 +245,26 @@ Walk the model forward through named historical stress events using committed sn
 - Regime labels are rule-based — they encode a specific definition of "stress" that may not match all use cases
 - The transition-risk model has modest PR-AUC (0.20) at 10% threshold — it is a signal, not a forecast
 - Runtime state is ephemeral — the backend resets on every cold boot; committed parquet artifacts ensure a deterministic startup regardless
+
+---
+
+## Recurring retrain
+
+`scripts/retrain.py` is the canonical retraining entrypoint. It runs the full pipeline — fetch fresh data, rebuild features, retrain both models, rebuild the OOF reliability table — and writes a dated eval-history entry to `data/models/eval_history/YYYY-MM-DD.json` recording pre/post metrics, OOF evaluation window, training data end date, and git commit.
+
+```bash
+# Full retrain (overwrites model artifacts, writes eval history entry)
+python3 scripts/retrain.py
+
+# Dry run: validates pre-retrain snapshot only, exits 0, writes nothing
+python3 scripts/retrain.py --dry-run
+```
+
+Each eval-history entry captures:
+- **`previous_model`** — metrics before retrain (AUC, Brier, ECE, macro F1, reliability max_evaluated_p)
+- **`new_model`** — same fields after retrain
+- **`oof_eval_window`** — date range of valid out-of-fold predictions (excludes burn-in rows)
+- **`training_data_end_date`** — last date in the training set
 
 ---
 
@@ -346,10 +366,16 @@ regime-radar/
 │   │   └── types/      API response types
 │   └── vercel.json
 ├── data/
-│   ├── models/         Committed XGBoost artifacts (~3 MB)
+│   ├── models/
+│   │   ├── eval_history/   Per-retrain JSON entries (pre/post metrics, OOF window, git commit)
+│   │   └── ...             Committed XGBoost artifacts (~3 MB)
+│   ├── reliability/    OOF-sourced transition reliability table
 │   ├── snapshots/      Committed parquets for fallback (~1 MB)
 │   └── daily_state/    Committed daily state JSON artifacts (one per trading day)
-├── tests/              pytest suite (80 tests: 22 API smoke + 10 daily-diff unit + 48 unit/integration)
+├── scripts/
+│   ├── retrain.py      Recurring retrain orchestrator (fetch → features → train → reliability → eval history)
+│   └── bootstrap_data.py  One-shot full pipeline (also called by retrain.py)
+├── tests/              pytest suite (105 tests: 22 API smoke + 10 daily-diff unit + 73 unit/integration)
 ├── Dockerfile.api
 ├── docker-compose.yml
 ├── render.yaml
