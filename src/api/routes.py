@@ -12,6 +12,7 @@ from src.api.schemas import (
     HistoricalPoint, EventReplayPoint, TransitionRiskResponse, TransitionRiskPoint,
     StateDelta, ScenarioRequest, ScenarioResponse, DriverDelta,
     ReliabilityResponse, DailyDiffResponse, ChangelogResponse,
+    AnalogEntry, AnalogsResponse,
 )
 from src.utils.logging import get_logger
 
@@ -483,6 +484,29 @@ async def changelog(limit: int = 50, since: str | None = None, notable_only: boo
         "earliest_date": json.loads(files[0].read_text()).get("as_of_date"),
         "latest_date": json.loads(files[-1].read_text()).get("as_of_date"),
     }
+
+
+@router.get("/analogs", response_model=AnalogsResponse)
+async def analogs(request: Request):
+    from src.models.analogs import find_analogs
+    app_state = _get_state(request)
+    if app_state._analog_index is None or app_state._latest_features is None or app_state._latest_date is None:
+        raise HTTPException(status_code=503, detail="Analog index not available")
+    latest = app_state.read_latest_state()
+    if latest is None:
+        raise HTTPException(status_code=503, detail="No current state available")
+    results = find_analogs(
+        query_date=app_state._latest_date,
+        query_features=app_state._latest_features,
+        index=app_state._analog_index,
+    )
+    return AnalogsResponse(
+        query_date=str(app_state._latest_date),
+        query_regime=latest.get("regime", "unknown"),
+        query_transition_risk=float(latest.get("transition_risk") or 0.0),
+        analogs=[AnalogEntry(**a) for a in results],
+        feature_set_version=app_state._analog_index.feature_set_version,
+    )
 
 
 @router.post("/scenario", response_model=ScenarioResponse)

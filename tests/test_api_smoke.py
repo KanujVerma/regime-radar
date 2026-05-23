@@ -578,3 +578,90 @@ class TestChangelogEndpoint:
         client = TestClient(app)
         resp = client.get("/changelog")
         assert resp.status_code == 404
+
+
+class TestAnalogsEndpoint:
+    _ANALOG_ENTRIES = [
+        {
+            "display_date": "Mar 2020",
+            "full_date": "2020-03-15",
+            "regime": "turbulent",
+            "transition_risk": 0.82,
+            "spy_fwd_5d": -0.042,
+            "spy_fwd_20d": -0.112,
+            "regime_outcome_20d": "Remained Turbulent",
+        },
+        {
+            "display_date": "Aug 2015",
+            "full_date": "2015-08-24",
+            "regime": "elevated",
+            "transition_risk": 0.55,
+            "spy_fwd_5d": 0.01,
+            "spy_fwd_20d": 0.03,
+            "regime_outcome_20d": "Escalated to Turbulent within 3 days",
+        },
+        {
+            "display_date": "Oct 2018",
+            "full_date": "2018-10-11",
+            "regime": "elevated",
+            "transition_risk": 0.48,
+            "spy_fwd_5d": -0.02,
+            "spy_fwd_20d": -0.05,
+            "regime_outcome_20d": "Remained Elevated",
+        },
+    ]
+
+    def test_analogs_503_when_index_not_built(self, app_with_state):
+        app, state = app_with_state
+        # _analog_index/_latest_features/_latest_date are all None by default
+        client = TestClient(app)
+        resp = client.get("/analogs")
+        assert resp.status_code == 503
+
+    def test_analogs_200_with_three_entries(self, app_with_state, monkeypatch):
+        import pandas as pd
+        from datetime import date as date_cls
+        app, state = app_with_state
+
+        # Write a live-state row so read_latest_state() returns data
+        state.write_state({
+            "as_of_ts": "2026-05-23T10:00:00+00:00",
+            "regime": "elevated",
+            "transition_risk": 0.42,
+            "trend": "uptrend",
+            "vix_level": 18.0,
+            "vix_chg_1d": 0.5,
+            "top_drivers": [],
+            "mode": "live",
+            "price_card_price": None,
+            "prob_calm": 0.4,
+            "prob_elevated": 0.5,
+            "prob_turbulent": 0.1,
+        })
+
+        # Inject a stub analog index with just feature_set_version
+        class _StubIndex:
+            feature_set_version = "v1_all22"
+
+        state._analog_index = _StubIndex()
+        state._latest_features = pd.Series({"ret_1d": 0.0})
+        state._latest_date = date_cls(2026, 5, 23)
+
+        monkeypatch.setattr(
+            "src.models.analogs.find_analogs",
+            lambda *args, **kwargs: self._ANALOG_ENTRIES,
+        )
+
+        client = TestClient(app)
+        resp = client.get("/analogs")
+        assert resp.status_code == 200
+        data = resp.json()
+        assert len(data["analogs"]) == 3
+        assert data["feature_set_version"] == "v1_all22"
+        assert data["query_regime"] == "elevated"
+        required_keys = {
+            "display_date", "full_date", "regime", "transition_risk",
+            "spy_fwd_5d", "spy_fwd_20d", "regime_outcome_20d",
+        }
+        for entry in data["analogs"]:
+            assert required_keys <= entry.keys()

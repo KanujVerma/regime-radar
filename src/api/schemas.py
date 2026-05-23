@@ -215,3 +215,21 @@ class ChangelogResponse(BaseModel):
     total_days: int
     earliest_date: str | None
     latest_date: str | None
+
+
+class AnalogEntry(BaseModel):
+    display_date: str        # "Apr 2020"
+    full_date: str           # "2020-04-03"
+    regime: str
+    transition_risk: float
+    spy_fwd_5d: float
+    spy_fwd_20d: float
+    regime_outcome_20d: str
+
+
+class AnalogsResponse(BaseModel):
+    query_date: str
+    query_regime: str
+    query_transition_risk: float
+    analogs: list[AnalogEntry]
+    feature_set_version: str
