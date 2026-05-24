@@ -5,7 +5,7 @@ const pt = (date: string, regime: string) => ({ date, regime, transition_risk: n
 
 describe('buildRegimeBands', () => {
   it('returns [] for empty data', () => {
-    expect(buildRegimeBands([], r => r.regime, r => r.date)).toEqual([])
+    expect(buildRegimeBands<{ regime: string; date: string }>([], r => r.regime, r => r.date)).toEqual([])
   })
 
   it('returns one band for uniform regime', () => {
