@@ -1,32 +1,36 @@
-import { labelFor } from '../../lib/featureLabels'
 import { colors } from '../../lib/tokens'
 
 interface DriverBarProps {
-  feature: string
-  importance: number
-  maxImportance: number
-  positive?: boolean
-  labelWidth?: number
+  label: string
+  value: number
+  max: number
+  direction?: 'raising' | 'calming' | 'neutral'
   delay?: number
 }
 
-export default function DriverBar({ feature, importance, maxImportance, positive = true, labelWidth = 180, delay = 0 }: DriverBarProps) {
-  const pct = maxImportance > 0 ? (importance / maxImportance) * 100 : 0
-  const color = positive ? '#06b6d4' : '#f87171'
+export default function DriverBar({ label, value, max, direction = 'neutral', delay = 0 }: DriverBarProps) {
+  const pct = Math.min((value / (max || 1)) * 100, 100)
+  const barColor = direction === 'raising'
+    ? 'linear-gradient(90deg, #f87171, #fbbf24)'
+    : direction === 'calming'
+      ? 'linear-gradient(90deg, #4ade80, #06b6d4)'
+      : 'linear-gradient(90deg, #06b6d4, #0e4d6e)'
+  const scoreColor = direction === 'raising' ? colors.red : direction === 'calming' ? colors.green : colors.cyan
+
   return (
     <div style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-        <span style={{ fontSize: 11, color: colors.textSecondary, width: labelWidth, textAlign: 'right' }}>
-          {labelFor(feature)}
+        <span style={{ fontSize: 11, color: colors.textSecondary }}>{label}</span>
+        <span style={{ fontSize: 11, fontWeight: 700, color: scoreColor }}>
+          {direction === 'raising' ? '+' : direction === 'calming' ? '−' : ''}{value.toFixed(3)}
         </span>
-        <span style={{ fontSize: 11, fontWeight: 700, color }}>{(importance * 100).toFixed(1)}%</span>
       </div>
       <div style={{ height: 4, background: '#1a2540', borderRadius: 2, overflow: 'hidden' }}>
         <div
           style={{
             height: '100%',
             width: `${pct}%`,
-            background: color,
+            background: barColor,
             borderRadius: 2,
             animation: `barFill 350ms ease-out ${delay}ms both`,
           }}

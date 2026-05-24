@@ -7,7 +7,7 @@ import { useModelDrivers } from '../hooks/useModelDrivers'
 import { useCurrentState } from '../hooks/useCurrentState'
 import { useAnalogs } from '../hooks/useAnalogs'
 import { buildDriversNarrative, getDriverHeadline, formatRisk } from '../lib/narratives'
-import { sentenceFor } from '../lib/featureLabels'
+import { sentenceFor, labelFor } from '../lib/featureLabels'
 import { regimeColor } from '../lib/tokens'
 import type { ThresholdSweepRow } from '../types/api'
 
@@ -199,7 +199,7 @@ export default function ModelDrivers() {
               Relative importance across all historical periods — top 5 factors shown. Bars are proportional to each other, not a percentage breakdown.
             </p>
             {topImportance.map((d, i) => (
-              <DriverBar key={d.feature} feature={d.feature} importance={d.importance} maxImportance={maxImp} positive labelWidth={120} delay={i * 40} />
+              <DriverBar key={d.feature} label={labelFor(d.feature)} value={d.importance} max={maxImp} direction="raising" delay={i * 40} />
             ))}
             <p style={{ color: '#4a5568', fontSize: 9, marginTop: 10, lineHeight: 1.5 }}>
               Left panel shows <em>what is driving the model today</em>. This panel shows <em>what the model typically relies on most</em>.

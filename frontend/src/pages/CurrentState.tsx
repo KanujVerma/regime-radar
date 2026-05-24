@@ -293,7 +293,7 @@ export default function CurrentState() {
                   : 'Global model feature importance (live SHAP unavailable). Not specific to today\'s reading.'}
               </p>
               {topDrivers.slice(0, 5).map((d, i) => (
-                <DriverBar key={d.feature} feature={d.feature} importance={d.importance} maxImportance={maxImp} positive delay={i * 40} />
+                <DriverBar key={d.feature} label={labelFor(d.feature)} value={d.importance} max={maxImp} direction="raising" delay={i * 40} />
               ))}
             </Panel>
           </div>
