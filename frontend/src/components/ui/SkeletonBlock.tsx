@@ -13,7 +13,7 @@ export default function SkeletonBlock({
 }: SkeletonBlockProps) {
   return (
     <div
-      className={`skeleton-pulse ${className}`}
+      className={`skeleton-pulse${className ? ` ${className}` : ''}`}
       style={{ width, height, borderRadius: rounded }}
     />
   )

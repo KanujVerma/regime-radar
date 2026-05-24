@@ -1,6 +1,6 @@
 interface ChartTooltipProps {
   active?: boolean
-  payload?: Array<{ value: number | null; name?: string }>
+  payload?: Array<{ value?: number | string | null | undefined; name?: string }>
   label?: string
   accentColor?: string
   formatter?: (value: number) => string
@@ -17,7 +17,7 @@ export default function ChartTooltip({
 }: ChartTooltipProps) {
   if (!active || !payload?.length) return null
   const raw = payload[0]?.value
-  if (raw == null) return null
+  if (raw == null || typeof raw !== 'number') return null
   const displayValue = formatter ? formatter(raw) : String(raw)
   const displayLabel = labelFormatter ? labelFormatter(label ?? '') : (label ?? '')
 
