@@ -153,7 +153,7 @@ export default function CurrentState() {
             { label: 'VIX Level', value: data.vix_level != null ? data.vix_level.toFixed(1) : '—', color: '#f1f5f9', subtitle: 'Market fear gauge' },
             {
               label: 'VIX Change',
-              value: data.vix_chg_1d != null ? `${data.vix_chg_1d >= 0 ? '+' : ''}${data.vix_chg_1d.toFixed(2)}` : '—',
+              value: data.vix_chg_1d != null ? `${data.vix_chg_1d > 0 ? '+' : ''}${data.vix_chg_1d.toFixed(2)}` : '—',
               color: data.vix_chg_1d != null && data.vix_chg_1d > 0 ? colors.red : colors.green,
               subtitle: '1-day change',
             },
@@ -199,7 +199,7 @@ export default function CurrentState() {
               <div style={{ flex: 1, minWidth: 80, height: 5, background: '#1a2540', borderRadius: 3, overflow: 'hidden' }}>
                 <div style={{
                   height: '100%',
-                  width: `${Math.min(data.transition_risk * 100, 100)}%`,
+                  width: `max(${Math.min(data.transition_risk * 100, 100)}%, 2px)`,
                   background: data.transition_risk > 0.40
                     ? 'linear-gradient(90deg,#f87171,#fbbf24)'
                     : data.transition_risk > 0.20
