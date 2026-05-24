@@ -28,21 +28,22 @@ export default function History() {
   const toggleBtn = (
     <button
       onClick={() => setShowVix(v => !v)}
-      className="text-[10px] font-bold px-3 py-1.5 rounded"
+      className="text-[10px] font-bold px-3 py-1.5 rounded card-hover"
       style={{
         background: showVix ? '#0e4d6e' : '#0c1020',
-        border: `1px solid ${showVix ? '#06b6d4' : '#151d2e'}`,
+        border: `1px solid ${showVix ? '#06b6d4' : '#1a2540'}`,
         color: showVix ? '#06b6d4' : '#64748b',
+        transition: 'background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out',
       }}
     >
-      {showVix ? '▼ Hide VIX' : '▲ Overlay VIX (fear gauge)'}
+      {showVix ? '▼ Hide VIX' : '▲ Overlay VIX'}
     </button>
   )
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
       <Topbar title="History" subtitle={`${data.start} — ${data.end}`} />
-      <div className="p-5 space-y-5">
+      <div className="px-6 py-5 space-y-6">
         <Panel title="What happened over time?">
           <p className="text-[10px] mb-2" style={{ color: '#94a3b8' }}>
             Shaded bands show the market regime on each day. A darker shade indicates higher stress.
