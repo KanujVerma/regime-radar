@@ -1,10 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 
 export function clampFrame(frame: number, total: number): number {
+  if (total <= 0) return 0
   return Math.max(0, Math.min(frame, total - 1))
 }
 
 export function isAtEnd(frame: number, total: number): boolean {
+  if (total <= 0) return true
   return frame >= total - 1
 }
 
