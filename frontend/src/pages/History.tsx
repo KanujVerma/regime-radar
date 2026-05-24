@@ -60,7 +60,7 @@ export default function History() {
           <RiskLineChart data={data.data} />
         </Panel>
         <Panel title="Notable days">
-          {changelogLoading && <div className="text-slate-500 text-sm">Loading…</div>}
+          {changelogLoading && <SkeletonBlock height="120px" />}
           {changelogError && <div className="text-slate-500 text-xs">{changelogError}</div>}
           {changelog && <ChangelogFeed data={changelog} />}
         </Panel>
