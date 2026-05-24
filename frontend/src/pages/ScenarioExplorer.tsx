@@ -5,13 +5,16 @@ import Panel from '../components/ui/Panel'
 import ProbabilityTripod from '../components/charts/ProbabilityTripod'
 import { useScenario } from '../hooks/useScenario'
 import { SLIDER_CONFIG, PRESETS, type ScenarioInputs } from '../lib/sliderConfig'
-import { DEFAULT_THRESHOLD } from '../lib/constants'
+import { DEFAULT_THRESHOLD, ALERT_THRESHOLD } from '../lib/constants'
 import { useModelDrivers } from '../hooks/useModelDrivers'
 import { buildScenarioVerdict, detectScenarioCharacter } from '../lib/narratives'
 import {
   selectDriverCards,
   getChangedInputPills,
 } from '../lib/scenarioDriverCards'
+import { useStateBanners } from '../hooks/useStateBanners'
+import StateBanner from '../components/ui/StateBanner'
+import { regimeColor } from '../lib/tokens'
 
 const DEFAULT_INPUTS: ScenarioInputs = {
   vix_level: 18, vix_chg_5d: 0, rv_20d_pct: 0.40,
@@ -120,9 +123,21 @@ export default function ScenarioExplorer() {
     }
   }, [data])
 
+  const { activeBanner, showBanner } = useStateBanners()
+  const riskModuleRef = useRef<HTMLDivElement>(null)
+  const probModuleRef = useRef<HTMLDivElement>(null)
+
+  const prevDominant = useRef<string | null>(null)
+  const prevRiskBucket = useRef<string>('low')
+
   const reset = useCallback(
-    () => setInputs(currentMarketInputs ?? DEFAULT_INPUTS),
-    [currentMarketInputs],
+    () => {
+      setInputs(currentMarketInputs ?? DEFAULT_INPUTS)
+      showBanner({ id: 'reset-applied', priority: 5, text: '↺ Reset to baseline', color: '#06b6d4' })
+      prevDominant.current = null
+      prevRiskBucket.current = 'low'
+    },
+    [currentMarketInputs, showBanner],
   )
 
   const sweepRow = modelData?.threshold_sweep?.find(r => Math.abs(r.threshold - threshold) < 0.05)
@@ -149,6 +164,49 @@ export default function ScenarioExplorer() {
         ? 'Elevated'
         : 'Turbulent')
     : null
+
+  function riskBucket(stress: number): string {
+    if (stress >= ALERT_THRESHOLD) return 'alert'
+    if (stress >= DEFAULT_THRESHOLD) return 'watch'
+    return 'low'
+  }
+
+  const flashModule = useCallback((el: HTMLDivElement | null) => {
+    if (!el) return
+    el.classList.remove('module-lit')
+    void el.offsetWidth
+    el.classList.add('module-lit')
+    setTimeout(() => el.classList.remove('module-lit'), 120)
+  }, [])
+
+  useEffect(() => {
+    if (!data) return
+    const newDominant = dominant
+    const stress = 1 - data.prob_calm
+    const newBucket = riskBucket(stress)
+
+    if (prevDominant.current && newDominant && newDominant !== prevDominant.current) {
+      showBanner({
+        id: 'regime-flip',
+        priority: 1,
+        text: `Dominant regime: ${prevDominant.current} → ${newDominant}`,
+        color: regimeColor[newDominant.toLowerCase()] ?? '#06b6d4',
+      })
+    }
+    if (newDominant) prevDominant.current = newDominant
+
+    if (newBucket !== prevRiskBucket.current) {
+      if (newBucket === 'watch' && prevRiskBucket.current === 'low')
+        showBanner({ id: 'banner-threshold', priority: 3, text: '⚠ Crossed watch threshold (20%)', color: '#fbbf24' })
+      else if (newBucket === 'alert' && prevRiskBucket.current !== 'alert')
+        showBanner({ id: 'banner-threshold', priority: 2, text: '⚠ Crossed alert threshold (40%)', color: '#f87171' })
+      else if (newBucket === 'low' && prevRiskBucket.current !== 'low')
+        showBanner({ id: 'banner-threshold', priority: 4, text: '✓ Back below watch threshold', color: '#4ade80' })
+      else if (newBucket === 'watch' && prevRiskBucket.current === 'alert')
+        showBanner({ id: 'banner-threshold', priority: 4, text: '↓ Pulled back from alert zone', color: '#fbbf24' })
+      prevRiskBucket.current = newBucket
+    }
+  }, [data, dominant])
 
   const dominantProb = data
     ? (dominant === 'Calm' ? data.prob_calm : dominant === 'Turbulent' ? data.prob_turbulent : data.prob_elevated)
@@ -184,7 +242,10 @@ export default function ScenarioExplorer() {
               {STANDARD_PRESETS.map(p => (
                 <button
                   key={p.id}
-                  onClick={() => setInputs(PRESETS[p.id])}
+                  onClick={() => {
+                    setInputs(PRESETS[p.id])
+                    showBanner({ id: 'preset-applied', priority: 5, text: `Preset: ${p.label}`, color: '#06b6d4' })
+                  }}
                   className="text-left px-3 py-2 rounded-lg w-full"
                   style={{ background: '#080b12', border: '1px solid #151d2e' }}
                 >
@@ -204,7 +265,10 @@ export default function ScenarioExplorer() {
               </div>
 
               <button
-                onClick={() => setInputs(PRESETS[CRISIS_PRESET.id])}
+                onClick={() => {
+                  setInputs(PRESETS[CRISIS_PRESET.id])
+                  showBanner({ id: 'preset-applied', priority: 5, text: `Preset: ${CRISIS_PRESET.label}`, color: '#06b6d4' })
+                }}
                 className="text-left py-2 rounded-lg w-full"
                 style={{
                   background: '#0e0505',
@@ -275,7 +339,11 @@ export default function ScenarioExplorer() {
                     max={cfg.max}
                     step={cfg.step}
                     value={val}
-                    onChange={e => setInputs(prev => ({ ...prev, [cfg.key]: parseFloat(e.target.value) }))}
+                    onChange={e => {
+                      setInputs(prev => ({ ...prev, [cfg.key]: parseFloat(e.target.value) }))
+                      flashModule(riskModuleRef.current)
+                      flashModule(probModuleRef.current)
+                    }}
                     className="w-full cursor-pointer"
                     style={{ accentColor: color }}
                   />
@@ -357,6 +425,7 @@ export default function ScenarioExplorer() {
 
         {/* ── Right column ── */}
         <div className="flex-1 space-y-4">
+          <StateBanner banner={activeBanner} />
           {loading && <div className="text-slate-500 text-sm">Calculating…</div>}
           {error && <div className="text-red-400 text-sm">{error}</div>}
 
@@ -364,7 +433,8 @@ export default function ScenarioExplorer() {
             <>
               {/* Verdict block */}
               <div
-                className="rounded-xl p-4"
+                ref={riskModuleRef}
+                className="module-base rounded-xl p-4"
                 style={{ border: '1px solid #1a3a5f', background: '#080d18' }}
               >
                 {/* Badge + dominant label */}
@@ -437,16 +507,18 @@ export default function ScenarioExplorer() {
               </div>
 
               {/* Probability Tripod */}
-              <Panel title="Regime probability — current market → your scenario">
-                <ProbabilityTripod
-                  baselineCalm={data.baseline_prob_calm}
-                  baselineElevated={data.baseline_prob_elevated}
-                  baselineTurbulent={data.baseline_prob_turbulent}
-                  scenarioCalm={data.prob_calm}
-                  scenarioElevated={data.prob_elevated}
-                  scenarioTurbulent={data.prob_turbulent}
-                />
-              </Panel>
+              <div ref={probModuleRef} className="module-base rounded-lg" style={{ border: '1px solid #151d2e' }}>
+                <Panel title="Regime probability — current market → your scenario">
+                  <ProbabilityTripod
+                    baselineCalm={data.baseline_prob_calm}
+                    baselineElevated={data.baseline_prob_elevated}
+                    baselineTurbulent={data.baseline_prob_turbulent}
+                    scenarioCalm={data.prob_calm}
+                    scenarioElevated={data.prob_elevated}
+                    scenarioTurbulent={data.prob_turbulent}
+                  />
+                </Panel>
+              </div>
 
               {/* Driver explanation */}
               <Panel title="What's driving this scenario">
