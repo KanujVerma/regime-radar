@@ -198,8 +198,8 @@ export default function ModelDrivers() {
             <p style={{ color: '#4a5568', fontSize: 9, marginBottom: 10, lineHeight: 1.5 }}>
               Relative importance across all historical periods — top 5 factors shown. Bars are proportional to each other, not a percentage breakdown.
             </p>
-            {topImportance.map(d => (
-              <DriverBar key={d.feature} feature={d.feature} importance={d.importance} maxImportance={maxImp} positive labelWidth={120} />
+            {topImportance.map((d, i) => (
+              <DriverBar key={d.feature} feature={d.feature} importance={d.importance} maxImportance={maxImp} positive labelWidth={120} delay={i * 40} />
             ))}
             <p style={{ color: '#4a5568', fontSize: 9, marginTop: 10, lineHeight: 1.5 }}>
               Left panel shows <em>what is driving the model today</em>. This panel shows <em>what the model typically relies on most</em>.

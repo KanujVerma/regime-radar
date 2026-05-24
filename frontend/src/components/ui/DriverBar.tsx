@@ -1,4 +1,5 @@
 import { labelFor } from '../../lib/featureLabels'
+import { colors } from '../../lib/tokens'
 
 interface DriverBarProps {
   feature: string
@@ -6,24 +7,30 @@ interface DriverBarProps {
   maxImportance: number
   positive?: boolean
   labelWidth?: number
+  delay?: number
 }
 
-export default function DriverBar({ feature, importance, maxImportance, positive = true, labelWidth = 180 }: DriverBarProps) {
+export default function DriverBar({ feature, importance, maxImportance, positive = true, labelWidth = 180, delay = 0 }: DriverBarProps) {
   const pct = maxImportance > 0 ? (importance / maxImportance) * 100 : 0
   const color = positive ? '#06b6d4' : '#f87171'
   return (
-    <div className="flex items-center gap-3 mb-2">
-      <div className="text-[10px] text-right shrink-0" style={{ width: labelWidth, color: '#94a3b8' }}>
-        {labelFor(feature)}
+    <div style={{ marginBottom: 10 }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+        <span style={{ fontSize: 11, color: colors.textSecondary, width: labelWidth, textAlign: 'right' }}>
+          {labelFor(feature)}
+        </span>
+        <span style={{ fontSize: 11, fontWeight: 700, color }}>{(importance * 100).toFixed(1)}%</span>
       </div>
-      <div className="flex-1 rounded-full h-1.5 overflow-hidden" style={{ background: '#151d2e' }}>
+      <div style={{ height: 4, background: '#1a2540', borderRadius: 2, overflow: 'hidden' }}>
         <div
-          className="h-full rounded-full"
-          style={{ width: `${pct}%`, background: color, opacity: 0.8 }}
+          style={{
+            height: '100%',
+            width: `${pct}%`,
+            background: color,
+            borderRadius: 2,
+            animation: `barFill 350ms ease-out ${delay}ms both`,
+          }}
         />
-      </div>
-      <div className="text-[10px] font-bold shrink-0 w-10 text-right" style={{ color }}>
-        {(importance * 100).toFixed(1)}%
       </div>
     </div>
   )

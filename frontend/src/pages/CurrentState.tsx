@@ -292,8 +292,8 @@ export default function CurrentState() {
                   ? 'Features with the largest positive (risk-raising) SHAP contribution today. This is not the full driver picture — risk-lowering signals are excluded.'
                   : 'Global model feature importance (live SHAP unavailable). Not specific to today\'s reading.'}
               </p>
-              {topDrivers.slice(0, 5).map(d => (
-                <DriverBar key={d.feature} feature={d.feature} importance={d.importance} maxImportance={maxImp} positive />
+              {topDrivers.slice(0, 5).map((d, i) => (
+                <DriverBar key={d.feature} feature={d.feature} importance={d.importance} maxImportance={maxImp} positive delay={i * 40} />
               ))}
             </Panel>
           </div>

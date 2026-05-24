@@ -58,3 +58,8 @@ button:active, [role="button"]:active {
   background: #0d1525;
   border-radius: 6px;
 }
+
+/* ── Driver bar fill animation ── */
+@keyframes barFill {
+  from { width: 0%; }
+}
