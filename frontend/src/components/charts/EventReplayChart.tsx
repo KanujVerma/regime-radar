@@ -4,6 +4,7 @@ import {
 } from 'recharts'
 import type { EventReplayPoint } from '../../types/api'
 import { DEFAULT_THRESHOLD } from '../../lib/constants'
+import ChartTooltip from './ChartTooltip'
 
 const REGIME_COLORS: Record<string, string> = {
   calm: '#4ade80',
@@ -34,7 +35,7 @@ interface DotProps {
 function ActualTransitionDot({ cx = 0, cy = 0, payload }: DotProps) {
   if (!payload?.transition_actual) return null
   return (
-    <text x={cx} y={cy} textAnchor="middle" fill="#f87171" fontSize={8}>✕</text>
+    <text x={cx} y={cy} textAnchor="middle" fill="#f87171" fontSize={10}>✕</text>
   )
 }
 
@@ -46,18 +47,23 @@ export default function EventReplayChart({ data }: { data: EventReplayPoint[] })
     <ResponsiveContainer width="100%" height={240}>
       <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="#151d2e" />
-        <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 9 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
+        <XAxis dataKey="date" tick={{ fill: '#64748b', fontSize: 10 }} tickLine={false} axisLine={false} interval="preserveStartEnd" />
         <YAxis
           tickFormatter={(v: number) => `${(v * 100).toFixed(0)}%`}
-          tick={{ fill: '#64748b', fontSize: 9 }}
+          tick={{ fill: '#64748b', fontSize: 10 }}
           tickLine={false} axisLine={false} domain={[0, 1]} width={40}
         />
         <Tooltip
-          contentStyle={{ background: '#0c1020', border: '1px solid #151d2e', fontSize: 10 }}
-          formatter={(v: unknown, name?: string | number) => {
-            if (name === 'transition_risk') return [`${(Number(v) * 100).toFixed(1)}%`, 'Risk']
-            return [String(v), String(name ?? '')]
-          }}
+          content={(props) => (
+            <ChartTooltip
+              active={props.active}
+              payload={props.payload as unknown as Array<{ value?: number | string | null | undefined; name?: string }>}
+              label={props.label != null ? String(props.label) : undefined}
+              accentColor="#06b6d4"
+              formatter={(v) => `${(v * 100).toFixed(1)}%`}
+            />
+          )}
+          wrapperStyle={{ pointerEvents: 'none' }}
         />
         {bands.map((b, i) => (
           <ReferenceArea

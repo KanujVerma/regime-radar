@@ -43,9 +43,9 @@ export default function EventReplay() {
   const content = EVENT_CONTENT[selected]
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
       <Topbar title="Event Replay" />
-      <div className="p-5 space-y-4">
+      <div className="px-6 py-5 space-y-6">
         {/* Event selector */}
         <div className="flex gap-2">
           {EVENTS.map(e => (
