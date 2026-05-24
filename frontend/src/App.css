@@ -32,6 +32,9 @@
 }
 
 /* ── Press feedback for all buttons ── */
+button, [role="button"] {
+  transition: transform 100ms ease-out;
+}
 button:active, [role="button"]:active {
   transform: scale(0.98);
 }

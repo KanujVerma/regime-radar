@@ -20,6 +20,7 @@ export const colors = {
   textDim: '#4a6080',
   // Glass surfaces — Tier 1 hero panels only
   glass: 'rgba(12,16,32,0.85)',
+  /** box-shadow value — use as style={{ boxShadow: colors.glassHighlight }}, not as a color */
   glassHighlight: 'inset 0 1px 0 rgba(255,255,255,0.05)',
   // Per-regime ambient glow (used as radial-gradient color, one per page)
   calmGlow: 'rgba(74,222,128,0.10)',
