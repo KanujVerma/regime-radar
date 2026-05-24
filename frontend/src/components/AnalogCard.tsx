@@ -13,7 +13,13 @@ interface AnalogCardProps {
 export default function AnalogCard({ analog }: AnalogCardProps) {
   const color = regimeColor[analog.regime.toLowerCase()] ?? regimeColor['unknown']
   return (
-    <div className="flex flex-col gap-2 rounded-xl border border-white/10 bg-white/5 p-4">
+    <div className="flex flex-col gap-2" style={{
+      background: '#0d1525',
+      border: `1px solid ${color}26`,
+      borderRadius: 10,
+      boxShadow: '0 2px 16px rgba(0,0,0,0.35)',
+      padding: '14px 16px',
+    }}>
       <div className="text-lg font-semibold text-white/60">{analog.display_date}</div>
 
       <div

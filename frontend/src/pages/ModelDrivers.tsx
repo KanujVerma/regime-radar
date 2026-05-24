@@ -110,7 +110,7 @@ export default function ModelDrivers() {
     : undefined
 
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}>
       <Topbar title="Signal Breakdown" subtitle="What is driving today's risk reading?" action={demoAction} />
 
       <div className="p-5 space-y-4">
@@ -118,7 +118,7 @@ export default function ModelDrivers() {
         {/* ── Hero ── */}
         <div style={{ background: '#0c1520', border: '1px solid #1e3a5f', borderRadius: 8, padding: '16px 18px', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
           <div style={{ flex: 1 }}>
-            <div style={{ color: '#64748b', fontSize: 9, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 6 }}>
+            <div style={{ color: '#64748b', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 6 }}>
               {stateData?.as_of_ts
                 ? new Date(stateData.as_of_ts).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
                 : '—'} · Today's reading
@@ -134,15 +134,15 @@ export default function ModelDrivers() {
             <div style={{ fontSize: 32, fontWeight: 800, color: rColor, lineHeight: 1, marginBottom: 3 }}>
               {formatRisk(risk)}
             </div>
-            <div style={{ fontSize: 9, color: '#64748b', textTransform: 'uppercase', lineHeight: 1.4 }}>
+            <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', lineHeight: 1.4 }}>
               5-day<br />transition risk
             </div>
-            <div style={{ fontSize: 8.5, color: '#4a5568', lineHeight: 1.4, marginTop: 2 }}>
+            <div style={{ fontSize: 10, color: '#4a5568', lineHeight: 1.4, marginTop: 2 }}>
               Chance conditions worsen<br />next 5 trading days
             </div>
             <div style={{
               display: 'inline-block', marginTop: 10, padding: '3px 8px', borderRadius: 99,
-              fontSize: 9, fontWeight: 700, textTransform: 'uppercase',
+              fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
               color: rRegimeColor,
               background: `${rRegimeColor}18`,
               border: `1px solid ${rRegimeColor}40`,
@@ -157,7 +157,7 @@ export default function ModelDrivers() {
 
           {/* Left: push/pull bullets */}
           <div style={{ background: '#080b12', border: '1px solid #151d2e', borderRadius: 6, padding: '12px 14px' }}>
-            <div style={{ color: '#64748b', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>
+            <div style={{ color: '#64748b', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>
               Why the model sees it this way today
             </div>
             {pushing.length === 0 && holding.length === 0 ? (
@@ -168,7 +168,7 @@ export default function ModelDrivers() {
               <>
                 {pushing.length > 0 && (
                   <div style={{ marginBottom: 10 }}>
-                    <div style={{ color: '#f87171', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>
+                    <div style={{ color: '#f87171', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>
                       ↑ Pushing risk higher
                     </div>
                     {pushing.map(([feat]) => (
@@ -182,7 +182,7 @@ export default function ModelDrivers() {
                 {holding.length > 0 && (
                   <>
                     <div style={{ borderTop: '1px solid #151d2e', margin: '0 0 8px' }} />
-                    <div style={{ color: '#4ade80', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>
+                    <div style={{ color: '#4ade80', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>
                       ↓ Holding risk in check
                     </div>
                     {holding.map(([feat]) => (
@@ -199,16 +199,16 @@ export default function ModelDrivers() {
 
           {/* Right: global importance bars */}
           <div style={{ background: '#080b12', border: '1px solid #151d2e', borderRadius: 6, padding: '12px 14px' }}>
-            <div style={{ color: '#64748b', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>
+            <div style={{ color: '#64748b', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>
               What always drives the model most
             </div>
-            <p style={{ color: '#4a5568', fontSize: 9, marginBottom: 10, lineHeight: 1.5 }}>
+            <p style={{ color: '#4a5568', fontSize: 10, marginBottom: 10, lineHeight: 1.5 }}>
               Relative importance across all historical periods — top 5 factors shown. Bars are proportional to each other, not a percentage breakdown.
             </p>
             {topImportance.map((d, i) => (
               <DriverBar key={d.feature} label={labelFor(d.feature)} value={d.importance} max={maxImp} direction="raising" delay={i * 40} />
             ))}
-            <p style={{ color: '#4a5568', fontSize: 9, marginTop: 10, lineHeight: 1.5 }}>
+            <p style={{ color: '#4a5568', fontSize: 10, marginTop: 10, lineHeight: 1.5 }}>
               Left panel shows <em>what is driving the model today</em>. This panel shows <em>what the model typically relies on most</em>.
             </p>
           </div>
@@ -216,7 +216,7 @@ export default function ModelDrivers() {
 
         {/* ── Forward-looking block ── */}
         <div style={{ background: '#0d0b18', border: '1px solid #2e1d48', borderRadius: 6, padding: '12px 14px' }}>
-          <div style={{ color: '#a78bfa', fontSize: 9, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
+          <div style={{ color: '#a78bfa', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
             What would raise risk further
           </div>
           {forwardBullets.map((b, i) => (
@@ -258,7 +258,7 @@ export default function ModelDrivers() {
                 <div style={{ color: reliabilityHover ? '#f1f5f9' : '#cbd5e1', fontSize: 10, fontWeight: 600, transition: 'color 0.15s' }}>
                   Model reliability and threshold tradeoffs
                 </div>
-                <div style={{ color: reliabilityHover ? '#64748b' : '#4a5568', fontSize: 9, marginTop: 2, transition: 'color 0.15s' }}>
+                <div style={{ color: reliabilityHover ? '#64748b' : '#4a5568', fontSize: 10, marginTop: 2, transition: 'color 0.15s' }}>
                   How often does flagging at different risk levels catch regime shifts?
                 </div>
               </div>
@@ -310,7 +310,7 @@ function ReliabilityTable({ rows }: { rows: ThresholdSweepRow[] }) {
         <thead>
           <tr>
             {['Alert threshold', 'Shifts caught', 'Avg. days early', 'False alarm rate'].map(h => (
-              <th key={h} style={{ color: '#64748b', fontSize: 9, textTransform: 'uppercase', fontWeight: 600, textAlign: 'left', paddingBottom: 8, paddingRight: 8, borderBottom: '1px solid #151d2e' }}>
+              <th key={h} style={{ color: '#64748b', fontSize: 10, textTransform: 'uppercase', fontWeight: 600, textAlign: 'left', paddingBottom: 8, paddingRight: 8, borderBottom: '1px solid #151d2e' }}>
                 {h}
               </th>
             ))}
@@ -335,7 +335,7 @@ function ReliabilityTable({ rows }: { rows: ThresholdSweepRow[] }) {
           ))}
         </tbody>
       </table>
-      <p style={{ color: '#4a5568', fontSize: 9, marginTop: 10, lineHeight: 1.6 }}>
+      <p style={{ color: '#4a5568', fontSize: 10, marginTop: 10, lineHeight: 1.6 }}>
         <strong style={{ color: '#94a3b8' }}>How to read this:</strong> At a lower threshold, the model catches more regime shifts but also produces more false alarms. At a higher threshold, it is more selective — when it flags, it tends to be meaningful. The model is not designed to time market exits; it identifies when conditions are becoming stress-prone.
       </p>
     </div>
