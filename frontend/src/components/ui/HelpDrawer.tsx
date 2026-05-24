@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { AnimatePresence, motion } from 'framer-motion'
 
 const TERMS = [
   {
@@ -52,34 +53,42 @@ export default function HelpDrawer() {
         How to read this
       </button>
 
-      {open && (
-        <div
-          style={{
-            position: 'absolute',
-            bottom: 'calc(100% + 10px)',
-            left: 0,
-            width: 220,
-            background: '#0c1020',
-            border: '1px solid #1e2a3a',
-            borderRadius: 8,
-            padding: '12px 14px',
-            zIndex: 50,
-            boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
-          }}
-        >
-          <div className="text-[9px] font-bold tracking-widest uppercase mb-3" style={{ color: '#4a6080' }}>
-            Key terms
-          </div>
-          <div className="space-y-3">
-            {TERMS.map(({ term, def }) => (
-              <div key={term}>
-                <div className="text-[10px] font-semibold mb-0.5" style={{ color: '#94a3b8' }}>{term}</div>
-                <p className="text-[9px] leading-relaxed" style={{ color: '#94a3b8' }}>{def}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+      <AnimatePresence>
+        {open && (
+          <motion.div
+            key="help-drawer"
+            initial={{ opacity: 0, y: 6, scale: 0.97 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 6, scale: 0.97 }}
+            transition={{ duration: 0.18, ease: 'easeOut' }}
+            style={{
+              position: 'absolute',
+              bottom: 'calc(100% + 10px)',
+              left: 0,
+              width: 220,
+              background: '#0c1020',
+              border: '1px solid #1e2a3a',
+              borderRadius: 8,
+              padding: '12px 14px',
+              zIndex: 50,
+              boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+              transformOrigin: 'bottom left',
+            }}
+          >
+            <div className="text-[9px] font-bold tracking-widest uppercase mb-3" style={{ color: '#4a6080' }}>
+              Key terms
+            </div>
+            <div className="space-y-3">
+              {TERMS.map(({ term, def }) => (
+                <div key={term}>
+                  <div className="text-[10px] font-semibold mb-0.5" style={{ color: '#94a3b8' }}>{term}</div>
+                  <p className="text-[9px] leading-relaxed" style={{ color: '#94a3b8' }}>{def}</p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

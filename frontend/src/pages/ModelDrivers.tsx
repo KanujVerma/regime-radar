@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import Topbar from '../components/layout/Topbar'
 import DriverBar from '../components/ui/DriverBar'
 import ClosestHistoricalSetups from '../components/ClosestHistoricalSetups'
@@ -255,11 +255,28 @@ export default function ModelDrivers() {
                   How often does flagging at different risk levels catch regime shifts?
                 </div>
               </div>
-              <span style={{ color: reliabilityHover ? '#94a3b8' : '#64748b', fontSize: 14, flexShrink: 0, transition: 'color 0.15s' }}>
-                {reliabilityOpen ? '▾' : '▸'}
-              </span>
+              <motion.span
+                animate={{ rotate: reliabilityOpen ? 90 : 0 }}
+                transition={{ duration: 0.15 }}
+                style={{ display: 'inline-block', color: reliabilityHover ? '#94a3b8' : '#64748b', fontSize: 14, flexShrink: 0 }}
+              >
+                ▸
+              </motion.span>
             </button>
-            {reliabilityOpen && <ReliabilityTable rows={data.threshold_sweep} />}
+            <AnimatePresence>
+              {reliabilityOpen && (
+                <motion.div
+                  key="reliability-table"
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.22, ease: 'easeOut' }}
+                  style={{ overflow: 'hidden' }}
+                >
+                  <ReliabilityTable rows={data.threshold_sweep} />
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         )}
 
