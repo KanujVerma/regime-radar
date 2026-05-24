@@ -10,7 +10,7 @@ interface PanelProps {
 export default function Panel({ title, children, className = '' }: PanelProps) {
   return (
     <div
-      className={`rounded-lg p-5 ${className}`}
+      className={`rounded-xl p-5 ${className}`}
       style={{
         background: colors.surface,
         border: `1px solid ${colors.border}`,
@@ -20,7 +20,7 @@ export default function Panel({ title, children, className = '' }: PanelProps) {
       {title && (
         <div
           className="text-[9px] font-bold tracking-widest uppercase mb-4 pb-2.5"
-          style={{ color: '#4a6080', borderBottom: '1px solid #131b2a' }}
+          style={{ color: colors.textDim, borderBottom: `1px solid ${colors.borderSubtle}` }}
         >
           {title}
         </div>
