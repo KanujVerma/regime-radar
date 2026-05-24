@@ -428,13 +428,10 @@ export default function ScenarioExplorer() {
         <div className="flex-1 min-w-0 space-y-4">
           <StateBanner banner={activeBanner} />
           {loading && (
-            <div className="p-5 flex gap-5">
-              <SkeletonBlock width="276px" height="400px" />
-              <div className="flex-1 space-y-4">
-                <SkeletonBlock height="100px" />
-                <SkeletonBlock height="120px" />
-                <SkeletonBlock height="200px" />
-              </div>
+            <div className="space-y-4">
+              <SkeletonBlock height="100px" />
+              <SkeletonBlock height="120px" />
+              <SkeletonBlock height="200px" />
             </div>
           )}
           {error && <div className="text-red-400 text-sm">{error}</div>}
