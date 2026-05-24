@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { colors } from '../../lib/tokens'
 
 interface PanelProps {
   title?: string
@@ -9,8 +10,12 @@ interface PanelProps {
 export default function Panel({ title, children, className = '' }: PanelProps) {
   return (
     <div
-      className={`rounded-xl p-5 ${className}`}
-      style={{ background: '#0c1020', border: '1px solid #151d2e' }}
+      className={`rounded-lg p-5 ${className}`}
+      style={{
+        background: colors.surface,
+        border: `1px solid ${colors.border}`,
+        boxShadow: '0 2px 16px rgba(0,0,0,0.3)',
+      }}
     >
       {title && (
         <div

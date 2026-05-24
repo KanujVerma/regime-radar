@@ -1,35 +1,36 @@
+import { colors } from '../../lib/tokens'
+
 interface MetricCardProps {
   label: string
   value: string
-  subtitle?: string
   valueColor?: string
-  delta?: { label: string; positive: boolean } | null
+  subtitle?: string
 }
 
-export default function MetricCard({ label, value, subtitle, valueColor = '#f1f5f9', delta }: MetricCardProps) {
+export default function MetricCard({ label, value, valueColor = colors.textPrimary, subtitle }: MetricCardProps) {
   return (
     <div
-      className="relative rounded-[10px] px-4 py-3.5"
-      style={{ background: '#0c1020', border: '1px solid #151d2e' }}
+      className="card-hover rounded-lg px-4 py-3"
+      style={{
+        background: colors.surfaceElevated,
+        border: `1px solid ${colors.borderElevated}`,
+        boxShadow: '0 2px 16px rgba(0,0,0,0.3)',
+      }}
     >
-      {delta && (
-        <span
-          className="absolute top-2.5 right-3 text-[9px] font-bold px-1.5 py-0.5 rounded"
-          style={{
-            background: delta.positive ? '#052e1620' : '#450a0a20',
-            color: delta.positive ? '#4ade80' : '#f87171',
-          }}
-        >
-          {delta.label}
-        </span>
-      )}
-      <div className="text-[9px] font-bold tracking-widest uppercase mb-1.5" style={{ color: '#7c8fa3' }}>
+      <div style={{
+        fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+        letterSpacing: '.1em', color: colors.textDim, marginBottom: 4,
+      }}>
         {label}
       </div>
-      <div className="text-[22px] font-extrabold tracking-tight leading-none" style={{ color: valueColor }}>
+      <div style={{ fontSize: 22, fontWeight: 800, color: valueColor, lineHeight: 1 }}>
         {value}
       </div>
-      {subtitle && <div className="text-[9px] mt-1" style={{ color: '#4a6080' }}>{subtitle}</div>}
+      {subtitle && (
+        <div style={{ fontSize: 10, color: colors.textMuted, marginTop: 3 }}>
+          {subtitle}
+        </div>
+      )}
     </div>
   )
 }
