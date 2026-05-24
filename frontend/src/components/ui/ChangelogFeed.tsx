@@ -1,7 +1,6 @@
 import type { ChangelogResponse } from '../../types/api'
 import { regimeColor } from '../../lib/tokens'
 
-
 function formatDate(isoDate: string): string {
   const d = new Date(isoDate + 'T12:00:00Z')
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()
@@ -25,7 +24,7 @@ export default function ChangelogFeed({ data }: { data: ChangelogResponse }) {
       }} />
 
       {data.entries.map((entry) => {
-        const color = regimeColor[entry.regime?.toLowerCase() ?? 'unknown'] ?? '#64748b'
+        const color = regimeColor[entry.regime.toLowerCase()] ?? '#64748b'
         return (
           <div key={entry.current_date} style={{ display: 'flex', gap: 14, marginBottom: 18, position: 'relative' }}>
             {/* Node */}

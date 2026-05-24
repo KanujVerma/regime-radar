@@ -33,7 +33,7 @@ export default function History() {
         background: showVix ? '#0e4d6e' : '#0c1020',
         border: `1px solid ${showVix ? '#06b6d4' : '#1a2540'}`,
         color: showVix ? '#06b6d4' : '#64748b',
-        transition: 'background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out',
+        transition: 'background 150ms ease-out, border-color 150ms ease-out, color 150ms ease-out, transform 150ms ease-out',
       }}
     >
       {showVix ? '▼ Hide VIX' : '▲ Overlay VIX'}
