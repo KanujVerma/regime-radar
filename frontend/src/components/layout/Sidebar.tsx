@@ -33,7 +33,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className="fixed top-0 left-0 h-full flex flex-col"
+      className="hidden lg:flex flex-col fixed top-0 left-0 h-full"
       style={{ width: 196, background: '#0a0d16', borderRight: '1px solid #151d2e' }}
     >
       <div className="flex items-center gap-2 px-5 py-5">
