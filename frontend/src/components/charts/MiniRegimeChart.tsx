@@ -4,16 +4,11 @@ import {
 } from 'recharts'
 import type { HistoricalPoint } from '../../types/api'
 import { buildHistoricalBands } from '../../lib/chartUtils'
+import ChartTooltip from './ChartTooltip'
 
 interface MiniRegimeChartProps {
   data: HistoricalPoint[]
   height?: number
-}
-
-const REGIME_COLORS: Record<string, string> = {
-  calm: '#4ade80',
-  elevated: '#fbbf24',
-  turbulent: '#ef4444',
 }
 
 // RGBA variants for CSS gradient (immune to SVG fill-opacity rendering quirks)
@@ -23,23 +18,6 @@ const REGIME_CSS: Record<string, string> = {
   turbulent: 'rgba(248, 113, 113, 0.18)',
 }
 
-interface TooltipProps {
-  active?: boolean
-  payload?: Array<{ payload: HistoricalPoint }>
-  label?: string
-}
-
-function MiniTooltip({ active, payload, label }: TooltipProps) {
-  if (!active || !payload?.length) return null
-  const pt = payload[0].payload
-  return (
-    <div style={{ background: '#0c1020', border: '1px solid #151d2e', padding: '6px 10px', borderRadius: 6, fontSize: 10 }}>
-      <div style={{ color: '#64748b', marginBottom: 3 }}>{label}</div>
-      <div style={{ color: '#f1f5f9' }}>SPY {pt.close != null ? `$${pt.close.toFixed(2)}` : '—'}</div>
-      <div style={{ color: REGIME_COLORS[pt.regime] ?? '#94a3b8', textTransform: 'capitalize', marginTop: 2 }}>{pt.regime}</div>
-    </div>
-  )
-}
 
 function buildCssGradient(bands: ReturnType<typeof buildHistoricalBands>, data: HistoricalPoint[]): string {
   const total = data.length - 1
@@ -78,7 +56,17 @@ export default function MiniRegimeChart({ data, height = 120 }: MiniRegimeChartP
         <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 0, left: 0 }}>
           <XAxis dataKey="date" hide />
           <YAxis yAxisId="spy" hide />
-          <Tooltip content={<MiniTooltip />} />
+          <Tooltip
+            content={(props) => (
+              <ChartTooltip
+                active={props.active}
+                payload={props.payload as unknown as Array<{ value?: number | string | null; name?: string; color?: string }>}
+                label={props.label as string}
+                formatter={(v) => `$${v.toFixed(2)}`}
+                labelFormatter={l => l}
+              />
+            )}
+          />
           <Line
             yAxisId="spy"
             dataKey="close"

@@ -4,6 +4,7 @@ import {
 } from 'recharts'
 import type { HistoricalPoint } from '../../types/api'
 import { buildHistoricalBands } from '../../lib/chartUtils'
+import ChartTooltip from './ChartTooltip'
 
 interface RegimeChartProps {
   data: HistoricalPoint[]
@@ -55,36 +56,15 @@ export default function RegimeChart({ data, showVix }: RegimeChartProps) {
           />
         )}
         <Tooltip
-          content={(props) => {
-            if (!props.active || !props.payload?.length) return null
-            const pt = props.payload[0]?.payload as HistoricalPoint
-            if (!pt) return null
-            return (
-              <div style={{
-                background: 'rgba(8,11,24,0.97)',
-                border: '1px solid #1e3a5f',
-                borderLeft: `3px solid ${REGIME_COLORS[pt.regime] ?? '#94a3b8'}`,
-                borderRadius: 8,
-                padding: '10px 14px',
-                pointerEvents: 'none',
-              }}>
-                <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>{pt.date}</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: REGIME_COLORS[pt.regime] ?? '#94a3b8', textTransform: 'capitalize' }}>
-                  {pt.regime}
-                </div>
-                {pt.close != null && (
-                  <div style={{ fontSize: 12, color: '#f1f5f9', marginTop: 2 }}>
-                    SPY ${pt.close.toFixed(2)}
-                  </div>
-                )}
-                {pt.transition_risk != null && (
-                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
-                    Risk: {(pt.transition_risk * 100).toFixed(1)}%
-                  </div>
-                )}
-              </div>
-            )
-          }}
+          content={(props) => (
+            <ChartTooltip
+              active={props.active}
+              payload={props.payload as unknown as Array<{ value?: number | string | null; name?: string; color?: string }>}
+              label={props.label as string}
+              formatter={(v, name) => name === 'VIX' ? v.toFixed(1) : v.toFixed(0)}
+              labelFormatter={l => l}
+            />
+          )}
           wrapperStyle={{ pointerEvents: 'none' }}
         />
         {bands.map((b, i) => (
