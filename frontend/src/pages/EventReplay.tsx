@@ -5,6 +5,7 @@ import Panel from '../components/ui/Panel'
 import MetricCard from '../components/ui/MetricCard'
 import EventReplayChart from '../components/charts/EventReplayChart'
 import RegimeLegend from '../components/ui/RegimeLegend'
+import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { useEventReplay } from '../hooks/useEventReplay'
 import { DEFAULT_THRESHOLD } from '../lib/constants'
 
@@ -63,7 +64,12 @@ export default function EventReplay() {
           ))}
         </div>
 
-        {loading && <div className="text-slate-500 text-sm">Loading…</div>}
+        {loading && (
+          <div className="p-5 space-y-4">
+            <SkeletonBlock height="240px" />
+            <SkeletonBlock height="80px" />
+          </div>
+        )}
         {error && <div className="text-red-400 text-sm">{error}</div>}
 
         {!loading && !error && data && (

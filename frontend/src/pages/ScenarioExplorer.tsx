@@ -3,6 +3,7 @@ import { motion } from 'framer-motion'
 import Topbar from '../components/layout/Topbar'
 import Panel from '../components/ui/Panel'
 import ProbabilityTripod from '../components/charts/ProbabilityTripod'
+import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { useScenario } from '../hooks/useScenario'
 import { SLIDER_CONFIG, PRESETS, type ScenarioInputs } from '../lib/sliderConfig'
 import { DEFAULT_THRESHOLD, ALERT_THRESHOLD } from '../lib/constants'
@@ -426,7 +427,16 @@ export default function ScenarioExplorer() {
         {/* ── Right column ── */}
         <div className="flex-1 space-y-4">
           <StateBanner banner={activeBanner} />
-          {loading && <div className="text-slate-500 text-sm">Calculating…</div>}
+          {loading && (
+            <div className="p-5 flex gap-5">
+              <SkeletonBlock width="276px" height="400px" />
+              <div className="flex-1 space-y-4">
+                <SkeletonBlock height="100px" />
+                <SkeletonBlock height="120px" />
+                <SkeletonBlock height="200px" />
+              </div>
+            </div>
+          )}
           {error && <div className="text-red-400 text-sm">{error}</div>}
 
           {data && verdict && (

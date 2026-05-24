@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Topbar from '../components/layout/Topbar'
 import DriverBar from '../components/ui/DriverBar'
+import SkeletonBlock from '../components/ui/SkeletonBlock'
 import ClosestHistoricalSetups from '../components/ClosestHistoricalSetups'
 import { useModelDrivers } from '../hooks/useModelDrivers'
 import { useCurrentState } from '../hooks/useCurrentState'
@@ -65,7 +66,13 @@ export default function ModelDrivers() {
   const [reliabilityOpen, setReliabilityOpen] = useState(false)
   const [reliabilityHover, setReliabilityHover] = useState(false)
 
-  if (loading || stateLoading) return <div className="p-6 text-slate-500 text-sm">Loading…</div>
+  if (loading || stateLoading) return (
+    <div className="p-5 space-y-4">
+      <SkeletonBlock height="120px" />
+      <SkeletonBlock height="200px" />
+      <SkeletonBlock height="80px" />
+    </div>
+  )
   if (error || stateError) return <div className="p-6 text-red-400 text-sm">{error ?? stateError}</div>
   if (!data) return null
 

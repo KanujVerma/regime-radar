@@ -10,6 +10,7 @@ import Topbar from '../components/layout/Topbar'
 import Panel from '../components/ui/Panel'
 import RegimeBadge from '../components/ui/RegimeBadge'
 import DriverBar from '../components/ui/DriverBar'
+import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { buildCurrentStateNarrative, formatRisk } from '../lib/narratives'
 import { reliabilityFor, reliabilityLine } from '../lib/reliability'
 import RegimeLegend from '../components/ui/RegimeLegend'
@@ -31,7 +32,18 @@ export default function CurrentState() {
   const { data: reliabilityTable } = useReliability()
   const { data: dailyDiff } = useDailyDiff()
 
-  if (loading) return <div className="p-6 text-slate-500 text-sm">Loading…</div>
+  if (loading) return (
+    <div className="px-6 py-5 space-y-6">
+      <SkeletonBlock height="160px" rounded={12} />
+      <div className="grid grid-cols-3 gap-3">
+        <SkeletonBlock height="72px" />
+        <SkeletonBlock height="72px" />
+        <SkeletonBlock height="72px" />
+      </div>
+      <SkeletonBlock height="80px" />
+      <SkeletonBlock height="200px" />
+    </div>
+  )
   if (error) return <div className="p-6 text-red-400 text-sm">{error}</div>
   if (!data) return null
 

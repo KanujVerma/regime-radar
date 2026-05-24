@@ -5,6 +5,7 @@ import Panel from '../components/ui/Panel'
 import RegimeLegend from '../components/ui/RegimeLegend'
 import RegimeChart from '../components/charts/RegimeChart'
 import RiskLineChart from '../components/charts/RiskLineChart'
+import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { useHistoricalState } from '../hooks/useHistoricalState'
 import { useChangelog } from '../hooks/useChangelog'
 import ChangelogFeed from '../components/ui/ChangelogFeed'
@@ -14,7 +15,13 @@ export default function History() {
   const { data, loading, error } = useHistoricalState()
   const { data: changelog, loading: changelogLoading, error: changelogError } = useChangelog()
 
-  if (loading) return <div className="p-6 text-slate-500 text-sm">Loading…</div>
+  if (loading) return (
+    <div className="p-6 space-y-5">
+      <SkeletonBlock height="280px" />
+      <SkeletonBlock height="220px" />
+      <SkeletonBlock height="120px" />
+    </div>
+  )
   if (error) return <div className="p-6 text-red-400 text-sm">{error}</div>
   if (!data) return null
 
