@@ -79,6 +79,12 @@ const PERCENTILE_KEYS = new Set(['rv_20d_pct', 'drawdown_pct_504d'])
 
 function notNull<T>(v: T | null | undefined): v is T { return v != null }
 
+function riskBucket(stress: number): string {
+  if (stress >= ALERT_THRESHOLD) return 'alert'
+  if (stress >= DEFAULT_THRESHOLD) return 'watch'
+  return 'low'
+}
+
 function getSliderSensitivity(
   key: string,
   globalImportance: { feature: string; importance: number }[] | undefined,
@@ -164,12 +170,6 @@ export default function ScenarioExplorer() {
         ? 'Elevated'
         : 'Turbulent')
     : null
-
-  function riskBucket(stress: number): string {
-    if (stress >= ALERT_THRESHOLD) return 'alert'
-    if (stress >= DEFAULT_THRESHOLD) return 'watch'
-    return 'low'
-  }
 
   const flashModule = useCallback((el: HTMLDivElement | null) => {
     if (!el) return
@@ -434,7 +434,7 @@ export default function ScenarioExplorer() {
               {/* Verdict block */}
               <div
                 ref={riskModuleRef}
-                className="module-base rounded-xl p-4"
+                className="module-base rounded-lg p-4"
                 style={{ border: '1px solid #1a3a5f', background: '#080d18' }}
               >
                 {/* Badge + dominant label */}
