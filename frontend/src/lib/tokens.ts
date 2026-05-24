@@ -46,3 +46,19 @@ export const regimeGlow: Record<string, string> = {
 export function regimeBorder(hexColor: string): string {
   return `${hexColor}26`
 }
+
+export const typography = {
+  microLabel: { fontSize: 9, letterSpacing: '0.10em', textTransform: 'uppercase' as const, color: colors.textMuted },
+  sectionTitle: { fontSize: 9, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase' as const },
+  statSm:  { fontSize: 22, fontWeight: 800 },
+  statMd:  { fontSize: 32, fontWeight: 800 },
+  statLg:  { fontSize: 40, fontWeight: 900 },
+  statXl:  { fontSize: 52, fontWeight: 900 },
+} as const
+
+export const spacing = {
+  pageX: '1.5rem',
+  pageY: '1.25rem',
+  sectionGap: '1.5rem',
+  panelPad: '1.25rem',
+} as const
