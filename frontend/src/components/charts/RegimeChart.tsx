@@ -3,7 +3,7 @@ import {
   ReferenceArea,
 } from 'recharts'
 import type { HistoricalPoint } from '../../types/api'
-import { buildRegimeBands } from '../../lib/chartUtils'
+import { buildHistoricalBands } from '../../lib/chartUtils'
 
 interface RegimeChartProps {
   data: HistoricalPoint[]
@@ -18,7 +18,7 @@ const REGIME_COLORS: Record<string, string> = {
 
 
 export default function RegimeChart({ data, showVix }: RegimeChartProps) {
-  const bands = buildRegimeBands(data)
+  const bands = buildHistoricalBands(data)
 
   return (
     <ResponsiveContainer width="100%" height={240}>

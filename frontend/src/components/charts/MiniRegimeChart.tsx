@@ -3,7 +3,7 @@ import {
   ReferenceLine, ReferenceDot, Tooltip,
 } from 'recharts'
 import type { HistoricalPoint } from '../../types/api'
-import { buildRegimeBands } from '../../lib/chartUtils'
+import { buildHistoricalBands } from '../../lib/chartUtils'
 
 interface MiniRegimeChartProps {
   data: HistoricalPoint[]
@@ -41,7 +41,7 @@ function MiniTooltip({ active, payload, label }: TooltipProps) {
   )
 }
 
-function buildCssGradient(bands: ReturnType<typeof buildRegimeBands>, data: HistoricalPoint[]): string {
+function buildCssGradient(bands: ReturnType<typeof buildHistoricalBands>, data: HistoricalPoint[]): string {
   const total = data.length - 1
   if (total <= 0) return 'transparent'
 
@@ -61,7 +61,7 @@ function buildCssGradient(bands: ReturnType<typeof buildRegimeBands>, data: Hist
 export default function MiniRegimeChart({ data, height = 120 }: MiniRegimeChartProps) {
   if (data.length === 0) return null
 
-  const bands = buildRegimeBands(data)
+  const bands = buildHistoricalBands(data)
   const last = data[data.length - 1]
   const gradient = buildCssGradient(bands, data)
 
