@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback, useRef, useEffect } from 'react'
 
 export const COOLDOWN_MS = 250
 const AUTO_DISMISS_MS = 2200
@@ -32,6 +32,12 @@ export function useStateBanners() {
   const lastFiredAt = useRef<Record<string, number>>({})
   const currentPriority = useRef<number>(Infinity)
   const dismissTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    return () => {
+      if (dismissTimer.current) clearTimeout(dismissTimer.current)
+    }
+  }, [])
 
   const showBanner = useCallback((banner: BannerState) => {
     const now = Date.now()

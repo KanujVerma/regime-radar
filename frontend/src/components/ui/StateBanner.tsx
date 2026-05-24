@@ -10,7 +10,7 @@ export default function StateBanner({ banner }: StateBannerProps) {
     <AnimatePresence mode="wait">
       {banner && (
         <motion.div
-          key={banner.id + banner.text}
+          key={`${banner.id}::${banner.text}`}
           initial={{ opacity: 0, y: -6 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -6 }}

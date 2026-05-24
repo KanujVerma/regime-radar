@@ -37,4 +37,8 @@ describe('canShowBanner', () => {
     lastFiredAt['alert'] = now - (COOLDOWN_MS + 10)
     expect(canShowBanner('alert', 2, Infinity, lastFiredAt, now)).toBe(true)
   })
+
+  it('blocks equal-priority banner when one is already active', () => {
+    expect(canShowBanner('other', 2, 2, lastFiredAt, Date.now())).toBe(false)
+  })
 })
