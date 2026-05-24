@@ -59,11 +59,10 @@ export default function ProbabilityTripod({
     : 'turbulent'
 
   const prevDominantRef = useRef<string | null>(null)
-  const tileRefs = {
-    calm: useRef<HTMLDivElement>(null),
-    elevated: useRef<HTMLDivElement>(null),
-    turbulent: useRef<HTMLDivElement>(null),
-  }
+  const calmRef = useRef<HTMLDivElement>(null)
+  const elevatedRef = useRef<HTMLDivElement>(null)
+  const turbulentRef = useRef<HTMLDivElement>(null)
+  const tileRefs = { calm: calmRef, elevated: elevatedRef, turbulent: turbulentRef }
 
   useEffect(() => {
     if (prevDominantRef.current && dominant !== prevDominantRef.current) {
@@ -72,7 +71,8 @@ export default function ProbabilityTripod({
         el.classList.remove(`pulse-${dominant}`)
         void el.offsetWidth
         el.classList.add(`pulse-${dominant}`)
-        setTimeout(() => el.classList.remove(`pulse-${dominant}`), 400)
+        const id = setTimeout(() => el.classList.remove(`pulse-${dominant}`), 400)
+        return () => clearTimeout(id)
       }
     }
     prevDominantRef.current = dominant
