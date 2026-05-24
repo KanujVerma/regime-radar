@@ -44,7 +44,7 @@ export default function Sidebar() {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 mt-2">
+      <nav aria-label="Main menu" className="flex-1 px-3 mt-2">
         {NAV.map(({ group, items }) => (
           <div key={group} className="mb-4">
             <div className="px-2 mb-1 text-[9px] font-bold tracking-widest uppercase text-slate-600">{group}</div>

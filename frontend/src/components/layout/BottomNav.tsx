@@ -12,9 +12,10 @@ const NAV_ITEMS = [
 export default function BottomNav() {
   return (
     <nav
+      aria-label="Primary navigation"
       className="lg:hidden fixed bottom-0 left-0 right-0 z-50 flex items-stretch"
       style={{
-        height: 60,
+        minHeight: 60,
         background: '#0a0d16',
         borderTop: '1px solid #151d2e',
         paddingBottom: 'env(safe-area-inset-bottom)',
