@@ -26,6 +26,9 @@ export default function SegmentedControl({ options, value, onChange }: Segmented
         return (
           <button
             key={opt.value}
+            type="button"
+            aria-selected={active}
+            role="tab"
             onClick={() => onChange(opt.value)}
             style={{
               padding: '5px 12px',

@@ -2,7 +2,7 @@ import { ReferenceLine } from 'recharts'
 import { colors } from '../../lib/tokens'
 
 interface AnnotationLabelProps {
-  viewBox?: { x?: number; y?: number; height?: number }
+  viewBox?: { x?: number; y?: number; width?: number; height?: number }
   label: string
   description?: string
   side?: 'left' | 'right'
