@@ -1,6 +1,6 @@
 import {
-  ComposedChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ReferenceArea, CartesianGrid,
+  ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
+  ReferenceArea,
 } from 'recharts'
 import type { HistoricalPoint } from '../../types/api'
 import { buildRegimeBands } from '../../lib/chartUtils'
@@ -16,29 +16,6 @@ const REGIME_COLORS: Record<string, string> = {
   turbulent: '#f87171',
 }
 
-interface TooltipProps {
-  active?: boolean
-  payload?: Array<{ payload: HistoricalPoint; name: string; value: number }>
-  label?: string
-}
-
-function RegimeTooltip({ active, payload, label }: TooltipProps) {
-  if (!active || !payload?.length) return null
-  const pt = payload[0].payload
-  return (
-    <div style={{ background: '#0c1020', border: '1px solid #151d2e', padding: '6px 10px', borderRadius: 6, fontSize: 10 }}>
-      <div style={{ color: '#64748b', marginBottom: 4 }}>{label}</div>
-      {payload.map(p => (
-        <div key={p.name} style={{ color: '#f1f5f9', marginBottom: 2 }}>{p.name}: {typeof p.value === 'number' ? p.value.toFixed(2) : p.value}</div>
-      ))}
-      {pt.regime && (
-        <div style={{ color: REGIME_COLORS[pt.regime] ?? '#94a3b8', textTransform: 'capitalize', marginTop: 4, fontWeight: 700 }}>
-          {pt.regime}
-        </div>
-      )}
-    </div>
-  )
-}
 
 export default function RegimeChart({ data, showVix }: RegimeChartProps) {
   const bands = buildRegimeBands(data)
@@ -46,17 +23,22 @@ export default function RegimeChart({ data, showVix }: RegimeChartProps) {
   return (
     <ResponsiveContainer width="100%" height={240}>
       <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
-        <CartesianGrid strokeDasharray="3 3" stroke="#151d2e" />
+        <defs>
+          <linearGradient id="spyGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.15} />
+            <stop offset="100%" stopColor="#06b6d4" stopOpacity={0} />
+          </linearGradient>
+        </defs>
         <XAxis
           dataKey="date"
-          tick={{ fill: '#64748b', fontSize: 9 }}
+          tick={{ fill: '#4a6080', fontSize: 10 }}
           tickLine={false}
           axisLine={false}
           interval="preserveStartEnd"
         />
         <YAxis
           yAxisId="spy"
-          tick={{ fill: '#64748b', fontSize: 9 }}
+          tick={{ fill: '#4a6080', fontSize: 10 }}
           tickLine={false}
           axisLine={false}
           width={48}
@@ -65,14 +47,46 @@ export default function RegimeChart({ data, showVix }: RegimeChartProps) {
           <YAxis
             yAxisId="vix"
             orientation="right"
-            tick={{ fill: '#64748b', fontSize: 9 }}
+            tick={{ fill: '#4a6080', fontSize: 10 }}
             tickLine={false}
             axisLine={false}
             width={32}
             label={{ value: 'VIX', angle: -90, position: 'insideRight', fill: '#64748b', fontSize: 9 }}
           />
         )}
-        <Tooltip content={<RegimeTooltip />} wrapperStyle={{ pointerEvents: 'none' }} />
+        <Tooltip
+          content={(props) => {
+            if (!props.active || !props.payload?.length) return null
+            const pt = props.payload[0]?.payload as HistoricalPoint
+            if (!pt) return null
+            return (
+              <div style={{
+                background: 'rgba(8,11,24,0.97)',
+                border: '1px solid #1e3a5f',
+                borderLeft: `3px solid ${REGIME_COLORS[pt.regime] ?? '#94a3b8'}`,
+                borderRadius: 8,
+                padding: '10px 14px',
+                pointerEvents: 'none',
+              }}>
+                <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4 }}>{pt.date}</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: REGIME_COLORS[pt.regime] ?? '#94a3b8', textTransform: 'capitalize' }}>
+                  {pt.regime}
+                </div>
+                {pt.close != null && (
+                  <div style={{ fontSize: 12, color: '#f1f5f9', marginTop: 2 }}>
+                    SPY ${pt.close.toFixed(2)}
+                  </div>
+                )}
+                {pt.transition_risk != null && (
+                  <div style={{ fontSize: 11, color: '#64748b', marginTop: 2 }}>
+                    Risk: {(pt.transition_risk * 100).toFixed(1)}%
+                  </div>
+                )}
+              </div>
+            )
+          }}
+          wrapperStyle={{ pointerEvents: 'none' }}
+        />
         {bands.map((b, i) => (
           <ReferenceArea
             key={i}
@@ -80,16 +94,19 @@ export default function RegimeChart({ data, showVix }: RegimeChartProps) {
             x1={b.start}
             x2={b.end}
             fill={REGIME_COLORS[b.regime] ?? '#64748b'}
-            fillOpacity={0.08}
+            fillOpacity={0.18}
           />
         ))}
-        <Line
+        <Area
           yAxisId="spy"
           dataKey="close"
-          stroke="#42a5f5"
-          strokeWidth={2}
+          fill="url(#spyGradient)"
+          stroke="#06b6d4"
+          strokeWidth={1.5}
           dot={false}
           name="SPY"
+          isAnimationActive={true}
+          animationDuration={800}
         />
         {showVix && (
           <Line
