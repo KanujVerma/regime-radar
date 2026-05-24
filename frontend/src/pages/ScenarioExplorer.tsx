@@ -427,7 +427,7 @@ export default function ScenarioExplorer() {
         {/* ── Right column ── */}
         <div className="flex-1 min-w-0 space-y-4">
           <StateBanner banner={activeBanner} />
-          {loading && (
+          {loading && !data && (
             <div className="space-y-4">
               <SkeletonBlock height="100px" />
               <SkeletonBlock height="120px" />
