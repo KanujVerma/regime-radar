@@ -602,6 +602,8 @@ export function useScrubber({ totalFrames, playbackMs = 80 }: UseScrubberOptions
 
   return { frame, playing, play, stop, seek }
 }
+
+export type UseScrubberReturn = ReturnType<typeof useScrubber>
 ```
 
 - [ ] **Update the test** to import `clampFrame` and `isAtEnd` from the module:
@@ -631,11 +633,8 @@ describe('scrubber logic', () => {
 import { colors } from '../../lib/tokens'
 import type { UseScrubberReturn } from '../../hooks/useScrubber'
 
-// Add this return type to useScrubber.ts:
-// export type UseScrubberReturn = ReturnType<typeof useScrubber>
-
 interface ScrubberProps {
-  scrubber: ReturnType<import('../../hooks/useScrubber').useScrubber>
+  scrubber: UseScrubberReturn
   totalFrames: number
   frameLabel?: (frame: number) => string
 }
@@ -897,7 +896,7 @@ import Panel from '../components/ui/Panel'
 import ChartShell from '../components/charts/ChartShell'
 import RegimeChart from '../components/charts/RegimeChart'
 import RiskLineChart from '../components/charts/RiskLineChart'
-import ChangelogFeed from '../components/ChangelogFeed'
+import ChangelogFeed from '../components/ui/ChangelogFeed'
 import { useHistoricalState } from '../hooks/useHistoricalState'
 import { useChangelog } from '../hooks/useChangelog'
 import { regimeColor } from '../lib/tokens'
@@ -1100,7 +1099,7 @@ git commit -m "feat(history): synced crosshair + brush-to-zoom on History charts
 ### Task 12: `ChangelogFeed` → chart annotation linking
 
 **Files:**
-- Modify: `frontend/src/components/ChangelogFeed.tsx`
+- Modify: `frontend/src/components/ui/ChangelogFeed.tsx`
 - Modify: `frontend/src/components/charts/RegimeChart.tsx`
 
 - [ ] **Add `onEntryClick` + `highlightDate` props to `ChangelogFeed.tsx`**
@@ -1145,7 +1144,7 @@ cd frontend && npm run build 2>&1 | tail -5
 - [ ] **Commit**
 
 ```bash
-git add frontend/src/components/ChangelogFeed.tsx frontend/src/components/charts/RegimeChart.tsx
+git add frontend/src/components/ui/ChangelogFeed.tsx frontend/src/components/charts/RegimeChart.tsx
 git commit -m "feat(history): changelog entry click pins chart annotation"
 ```
 
