@@ -97,8 +97,8 @@ export default function RiskLineChart({ data }: RiskLineChartProps) {
             strokeWidth={2.5}
             fill="url(#riskAreaGradient)"
             dot={false}
-            activeDot={(props: any) => (
-              <g key={`dot-${props.cx}`}>
+            activeDot={(props: { cx: number; cy: number; [k: string]: unknown }) => (
+              <g>
                 <circle cx={props.cx} cy={props.cy} r={8} fill={currentColor} fillOpacity={0.18} />
                 <circle cx={props.cx} cy={props.cy} r={4} fill={currentColor} />
               </g>
