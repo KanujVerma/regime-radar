@@ -8,18 +8,20 @@ import { useDailyDiff } from '../hooks/useDailyDiff'
 import MiniRegimeChart from '../components/charts/MiniRegimeChart'
 import Topbar from '../components/layout/Topbar'
 import Panel from '../components/ui/Panel'
-import MetricCard from '../components/ui/MetricCard'
 import RegimeBadge from '../components/ui/RegimeBadge'
 import DriverBar from '../components/ui/DriverBar'
 import { buildCurrentStateNarrative, formatRisk } from '../lib/narratives'
 import { reliabilityFor, reliabilityLine } from '../lib/reliability'
 import RegimeLegend from '../components/ui/RegimeLegend'
-import { regimeColor } from '../lib/tokens'
+import { regimeColor, colors } from '../lib/tokens'
 import { labelFor } from '../lib/featureLabels'
 
 const cardVariants = {
   hidden: { opacity: 0, y: 12 },
-  visible: (i: number) => ({ opacity: 1, y: 0, transition: { delay: i * 0.06, duration: 0.2 } }),
+  visible: (i: number) => ({
+    opacity: 1, y: 0,
+    transition: { delay: i * 0.06, duration: 0.35, ease: [0.16, 1, 0.3, 1] as [number, number, number, number] },
+  }),
 }
 
 export default function CurrentState() {
@@ -56,94 +58,186 @@ export default function CurrentState() {
   const refreshAction = (
     <button
       onClick={refresh}
-      className="text-[10px] font-bold px-3 py-1.5 rounded"
-      style={{ background: '#0c1020', border: '1px solid #151d2e', color: '#06b6d4' }}
+      disabled={loading}
+      className="text-[10px] font-bold px-3 py-1.5 rounded flex items-center gap-1.5"
+      style={{
+        background: '#0c1020',
+        border: '1px solid #151d2e',
+        color: '#06b6d4',
+        opacity: loading ? 0.5 : 1,
+        cursor: loading ? 'not-allowed' : 'pointer',
+        transition: 'opacity 150ms',
+      }}
     >
-      ↻ Refresh Data
+      <span className={loading ? 'spin' : ''}>↻</span>
+      Refresh
     </button>
   )
 
   const riskColor = data.transition_risk > 0.40 ? '#f87171' : data.transition_risk > 0.20 ? '#fbbf24' : '#4ade80'
 
-  // Regime is the hero — shown first and most prominent.
-  // Transition risk is secondary and always accompanied by its track record.
-  const heroCards = [
-    { label: 'Market Regime', value: data.regime, color: rColor, subtitle: 'Current market stress level' },
-    { label: 'VIX Level', value: data.vix_level != null ? data.vix_level.toFixed(1) : '—', color: '#f1f5f9', subtitle: 'Market fear gauge' },
-    { label: 'Trend', value: data.trend.replace('trend', ''), color: '#94a3b8', subtitle: 'Recent price direction' },
-  ]
-
   return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
+    <motion.div
+      initial={{ opacity: 0, y: 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
+    >
       <Topbar
         title="Current State"
-        subtitle={data.as_of_ts ? `As of ${new Date(data.as_of_ts).toLocaleString()}` : undefined}
+        subtitle={undefined}
         action={refreshAction}
       />
 
       {data.mode === 'demo' && (
         <div
-          className="mx-5 mt-3 px-4 py-2.5 rounded text-[11px] leading-relaxed"
+          className="mx-6 mt-3 px-4 py-2.5 rounded text-[11px] leading-relaxed"
           style={{ background: '#2d1f0a', border: '1px solid #92400e', color: '#fbbf24' }}
         >
-          <strong>Demo mode</strong> — Using cached snapshot data (as of {data.as_of_ts ? new Date(data.as_of_ts).toLocaleDateString() : 'unknown'}). Live refresh unavailable.
+          <strong>Demo mode</strong> — Using cached snapshot data (as of{' '}
+          {data.as_of_ts ? new Date(data.as_of_ts).toLocaleDateString() : 'unknown'}). Live refresh unavailable.
         </div>
       )}
 
-      <div className="p-5 space-y-5">
-        {/* Regime is the primary hero; transition risk gets its own evidence-anchored row below */}
-        <div className="grid grid-cols-3 gap-3">
-          {heroCards.map((card, i) => (
-            <motion.div key={card.label} custom={i} variants={cardVariants} initial="hidden" animate="visible">
-              <MetricCard label={card.label} value={card.value} valueColor={card.color} subtitle={card.subtitle} />
+      <div className="px-6 py-5 space-y-6">
+
+        {/* ── Block A: Regime Hero [NEW] ── */}
+        <motion.div custom={0} variants={cardVariants} initial="hidden" animate="visible">
+          <div
+            style={{
+              background: 'rgba(12,16,32,0.85)',
+              backdropFilter: 'blur(12px)',
+              WebkitBackdropFilter: 'blur(12px)',
+              border: `1px solid ${rColor}26`,
+              borderRadius: 12,
+              boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.05), 0 4px 32px rgba(0,0,0,0.5)',
+              padding: '24px 28px',
+              position: 'relative',
+              overflow: 'hidden',
+            }}
+          >
+            <div style={{
+              position: 'absolute', top: -80, left: -80,
+              width: 300, height: 300,
+              background: `radial-gradient(circle, ${rColor}1a 0%, transparent 70%)`,
+              pointerEvents: 'none',
+            }} />
+            <div className="flex items-center gap-2 mb-3" style={{ position: 'relative', zIndex: 1 }}>
+              <div className="live-dot" style={{ background: rColor }} />
+              <span style={{
+                fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+                letterSpacing: '.12em', color: rColor, opacity: 0.85,
+              }}>
+                LIVE · {data.as_of_ts
+                  ? new Date(data.as_of_ts).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+                  : '—'}
+              </span>
+            </div>
+            <div style={{
+              fontSize: 52, fontWeight: 900, color: rColor, lineHeight: 1,
+              marginBottom: 14, letterSpacing: '-0.02em', position: 'relative', zIndex: 1,
+            }}>
+              {data.regime}
+            </div>
+            <p style={{
+              fontSize: 14, color: '#94a3b8', lineHeight: 1.65,
+              maxWidth: 540, margin: 0, position: 'relative', zIndex: 1,
+            }}>
+              {narrative}
+            </p>
+          </div>
+        </motion.div>
+
+        {/* ── Block B: Secondary Metric Chips [NEW] ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {[
+            { label: 'VIX Level', value: data.vix_level != null ? data.vix_level.toFixed(1) : '—', color: '#f1f5f9', subtitle: 'Market fear gauge' },
+            {
+              label: 'VIX Change',
+              value: data.vix_chg_1d != null ? `${data.vix_chg_1d >= 0 ? '+' : ''}${data.vix_chg_1d.toFixed(2)}` : '—',
+              color: data.vix_chg_1d != null && data.vix_chg_1d > 0 ? colors.red : colors.green,
+              subtitle: '1-day change',
+            },
+            { label: 'Trend', value: data.trend.replace('trend', ''), color: '#94a3b8', subtitle: 'Recent price direction' },
+          ].map((chip, i) => (
+            <motion.div key={chip.label} custom={i + 1} variants={cardVariants} initial="hidden" animate="visible">
+              <div
+                className="card-hover rounded-lg px-4 py-3"
+                style={{ background: colors.surfaceElevated, border: `1px solid ${colors.borderElevated}` }}
+              >
+                <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: colors.textDim, marginBottom: 4 }}>
+                  {chip.label}
+                </div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: chip.color, lineHeight: 1 }}>
+                  {chip.value}
+                </div>
+                <div style={{ fontSize: 10, color: colors.textMuted, marginTop: 3 }}>
+                  {chip.subtitle}
+                </div>
+              </div>
             </motion.div>
           ))}
         </div>
 
-        {/* Transition risk — always shown with its empirical track record, never naked */}
-        <motion.div custom={3} variants={cardVariants} initial="hidden" animate="visible">
-          <div
-            className="rounded-lg px-4 py-3"
-            style={{ background: '#080d18', border: '1px solid #151d2e' }}
-          >
-            <div className="flex items-start gap-4 flex-wrap">
-              <div className="min-w-[120px]">
-                <div className="text-[9px] font-bold tracking-widest uppercase mb-1" style={{ color: '#4a6080' }}>
-                  Odds of worsening (next 5 trading days)
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="text-2xl font-bold" style={{ color: riskColor }}>
-                    {formatRisk(data.transition_risk)}
-                  </span>
-                  {reliability?.out_of_range && (
-                    <span
-                      className="text-[9px] font-bold px-2 py-0.5 rounded"
-                      style={{ background: '#2d1500', border: '1px solid #78350f', color: '#fbbf24' }}
-                    >
-                      ⚠ OUT OF RANGE
-                    </span>
-                  )}
-                </div>
-              </div>
-              {reliability && (
-                <div className="flex-1 min-w-[200px]">
-                  <p className="text-[10px] leading-relaxed" style={{ color: '#64748b' }}>
-                    {reliabilityLine(reliability)}
-                  </p>
-                </div>
-              )}
+        {/* ── Block C: Transition Risk Gauge Bar [NEW] ── */}
+        <motion.div custom={4} variants={cardVariants} initial="hidden" animate="visible">
+          <div className="rounded-xl px-5 py-4" style={{ background: '#080d18', border: `1px solid ${colors.border}` }}>
+            <div style={{ fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.1em', color: colors.textDim, marginBottom: 10 }}>
+              Odds of worsening · next 5 trading days
             </div>
+            {reliability?.out_of_range && (
+              <span
+                className="inline-block text-[10px] font-bold px-2 py-0.5 rounded mb-2"
+                style={{ background: '#2d1500', border: '1px solid #78350f', color: '#fbbf24' }}
+              >
+                ⚠ OUT OF RANGE
+              </span>
+            )}
+            <div className="flex items-center gap-4 flex-wrap">
+              <span style={{ fontSize: 38, fontWeight: 900, color: riskColor, lineHeight: 1 }}>
+                {formatRisk(data.transition_risk)}
+              </span>
+              <div style={{ flex: 1, minWidth: 80, height: 5, background: '#1a2540', borderRadius: 3, overflow: 'hidden' }}>
+                <div style={{
+                  height: '100%',
+                  width: `${Math.min(data.transition_risk * 100, 100)}%`,
+                  background: data.transition_risk > 0.40
+                    ? 'linear-gradient(90deg,#f87171,#fbbf24)'
+                    : data.transition_risk > 0.20
+                      ? 'linear-gradient(90deg,#fbbf24,#f87171)'
+                      : 'linear-gradient(90deg,#4ade80,#06b6d4)',
+                  boxShadow: `0 0 8px ${riskColor}66`,
+                  borderRadius: 3,
+                }} />
+              </div>
+              <span style={{
+                fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+                color: riskColor,
+                background: `${riskColor}15`,
+                border: `1px solid ${riskColor}30`,
+                borderRadius: 4, padding: '2px 8px',
+              }}>
+                {data.transition_risk > 0.40 ? 'ALERT' : data.transition_risk > 0.20 ? 'WATCH' : 'LOW'}
+              </span>
+            </div>
+            {reliability && (
+              <p className="text-[11px] leading-relaxed mt-3" style={{ color: colors.textMuted }}>
+                {reliabilityLine(reliability)}
+              </p>
+            )}
           </div>
         </motion.div>
 
+        {/* ── Block D: Daily Diff [KEEP — update motion custom from 4 → 5] ── */}
         {dailyDiff && (
-          <motion.div custom={4} variants={cardVariants} initial="hidden" animate="visible">
+          <motion.div custom={5} variants={cardVariants} initial="hidden" animate="visible">
             <DailyDiffBlock diff={dailyDiff} />
           </motion.div>
         )}
 
+        {/* ── Block E: Divider [KEEP — unchanged] ── */}
         <div className="h-px" style={{ background: '#151d2e' }} />
 
+        {/* ── Block F: Two-column grid [KEEP — original from file] ── */}
         <div className="grid gap-4 items-stretch" style={{ gridTemplateColumns: '1fr 320px' }}>
           <div className="flex flex-col gap-4">
             <Panel title="What this means right now">
@@ -204,6 +298,7 @@ export default function CurrentState() {
             </Panel>
           </div>
         </div>
+
       </div>
     </motion.div>
   )
