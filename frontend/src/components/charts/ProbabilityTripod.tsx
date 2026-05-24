@@ -1,4 +1,5 @@
-import { motion } from 'framer-motion'
+import { motion, useSpring, useTransform } from 'framer-motion'
+import { useEffect, useRef } from 'react'
 
 interface ProbabilityTripodProps {
   baselineCalm: number
@@ -33,6 +34,17 @@ const TILES = [
   },
 ]
 
+function AnimatedNumber({ value, suffix = '%' }: { value: number; suffix?: string }) {
+  const spring = useSpring(value, { stiffness: 180, damping: 18 })
+  const display = useTransform(spring, (v) => `${Math.round(v)}${suffix}`)
+
+  useEffect(() => {
+    spring.set(value)
+  }, [value, spring])
+
+  return <motion.span style={{ display: 'inline' }}>{display}</motion.span>
+}
+
 export default function ProbabilityTripod({
   baselineCalm, baselineElevated, baselineTurbulent,
   scenarioCalm, scenarioElevated, scenarioTurbulent,
@@ -45,6 +57,26 @@ export default function ProbabilityTripod({
     : scenarioElevated >= scenarioTurbulent
     ? 'elevated'
     : 'turbulent'
+
+  const prevDominantRef = useRef<string | null>(null)
+  const tileRefs = {
+    calm: useRef<HTMLDivElement>(null),
+    elevated: useRef<HTMLDivElement>(null),
+    turbulent: useRef<HTMLDivElement>(null),
+  }
+
+  useEffect(() => {
+    if (prevDominantRef.current && dominant !== prevDominantRef.current) {
+      const el = tileRefs[dominant as keyof typeof tileRefs].current
+      if (el) {
+        el.classList.remove(`pulse-${dominant}`)
+        void el.offsetWidth
+        el.classList.add(`pulse-${dominant}`)
+        setTimeout(() => el.classList.remove(`pulse-${dominant}`), 400)
+      }
+    }
+    prevDominantRef.current = dominant
+  }, [dominant])
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 8 }}>
@@ -61,6 +93,7 @@ export default function ProbabilityTripod({
         return (
           <div
             key={tile.key}
+            ref={tileRefs[tile.key]}
             style={{
               background: tile.bg,
               border: isDominant ? `1.5px solid ${tile.color}` : `1px solid ${tile.defaultBorder}`,
@@ -106,11 +139,11 @@ export default function ProbabilityTripod({
 
             <div style={{ display: 'flex', alignItems: 'baseline', gap: 3 }}>
               <span style={{ fontSize: 11, fontWeight: 500, color: tile.color, opacity: 0.4 }}>
-                {(baseVal * 100).toFixed(0)}%
+                <AnimatedNumber value={Math.round(baseVal * 100)} />
               </span>
               <span style={{ fontSize: 9, color: '#1e293b' }}>→</span>
               <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, color: tile.color }}>
-                {(scenVal * 100).toFixed(0)}%
+                <AnimatedNumber value={Math.round(scenVal * 100)} />
               </span>
             </div>
 

@@ -63,3 +63,11 @@ button:active, [role="button"]:active {
 @keyframes barFill {
   from { width: 0%; }
 }
+
+/* ── ProbabilityTripod dominant glow pulse ── */
+@keyframes dominant-pulse-green  { 0%,100%{box-shadow:0 0 20px rgba(74,222,128,0.1)} 40%{box-shadow:0 0 36px rgba(74,222,128,0.32)} }
+@keyframes dominant-pulse-amber  { 0%,100%{box-shadow:0 0 20px rgba(251,191,36,0.1)} 40%{box-shadow:0 0 36px rgba(251,191,36,0.32)} }
+@keyframes dominant-pulse-red    { 0%,100%{box-shadow:0 0 20px rgba(248,113,113,0.1)} 40%{box-shadow:0 0 36px rgba(248,113,113,0.32)} }
+.pulse-calm      { animation: dominant-pulse-green 380ms ease-out; }
+.pulse-elevated  { animation: dominant-pulse-amber 380ms ease-out; }
+.pulse-turbulent { animation: dominant-pulse-red   380ms ease-out; }
