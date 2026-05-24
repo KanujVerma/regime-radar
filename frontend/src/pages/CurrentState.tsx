@@ -35,7 +35,7 @@ export default function CurrentState() {
   if (loading) return (
     <div className="px-6 py-5 space-y-6">
       <SkeletonBlock height="160px" rounded={12} />
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
         <SkeletonBlock height="72px" />
         <SkeletonBlock height="72px" />
         <SkeletonBlock height="72px" />

@@ -14,7 +14,7 @@ export default function Topbar({ title, subtitle, action }: TopbarProps) {
     >
       <div>
         <div className="text-[17px] font-bold text-slate-100 leading-tight">{title}</div>
-        {subtitle && <div className="text-[10px] text-slate-500">{subtitle}</div>}
+        {subtitle && <div className="text-[10px] text-slate-500 hidden sm:block">{subtitle}</div>}
       </div>
       {action && <div>{action}</div>}
     </div>

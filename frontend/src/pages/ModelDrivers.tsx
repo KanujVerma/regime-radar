@@ -153,7 +153,7 @@ export default function ModelDrivers() {
         </div>
 
         {/* ── Two-column ── */}
-        <div className="grid grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
           {/* Left: push/pull bullets */}
           <div style={{ background: '#080b12', border: '1px solid #151d2e', borderRadius: 6, padding: '12px 14px' }}>

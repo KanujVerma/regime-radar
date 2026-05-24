@@ -232,10 +232,10 @@ export default function ScenarioExplorer() {
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
       <Topbar title="Scenario Explorer" action={resetBtn} />
-      <div className="p-5 flex gap-5">
+      <div className="px-6 py-5 flex flex-col lg:flex-row gap-5">
 
         {/* ── Left column ── */}
-        <div className="shrink-0 space-y-4" style={{ width: 276 }}>
+        <div className="w-full lg:w-[276px] shrink-0 space-y-4">
 
           {/* Presets */}
           <Panel title="Quick scenarios">
@@ -425,7 +425,7 @@ export default function ScenarioExplorer() {
         </div>
 
         {/* ── Right column ── */}
-        <div className="flex-1 space-y-4">
+        <div className="flex-1 min-w-0 space-y-4">
           <StateBanner banner={activeBanner} />
           {loading && (
             <div className="p-5 flex gap-5">
