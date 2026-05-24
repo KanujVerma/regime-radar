@@ -511,35 +511,46 @@ async def analogs(request: Request):
 
 @router.post("/scenario", response_model=ScenarioResponse)
 async def scenario(request: Request, body: ScenarioRequest):
-    from src.models.registry import artifact_exists, load_artifact, load_metadata
-    from src.utils.paths import PROCESSED_DIR
-    from pathlib import Path
     import numpy as np
 
-    for name in ("xgb_transition", "xgb_regime"):
-        if not artifact_exists(name):
-            raise HTTPException(status_code=503, detail=f"{name} artifact not found. Run bootstrap_data.py.")
+    app_state = _get_state(request)
+    cache = app_state._scenario_cache
 
-    transition_model = load_artifact("xgb_transition")
-    regime_model = load_artifact("xgb_regime")
-    meta = load_metadata("xgb_transition")
-    feature_names: list[str] = meta.get("feature_names", [])
-    feature_importances: list[float] = meta.get("feature_importances",
-        list(transition_model.feature_importances_))
-
-    # Build baseline vector from engineered features on latest panel row
-    panel_path = Path(PROCESSED_DIR) / "panel.parquet"
-    if panel_path.exists():
-        from src.features.build_market_features import build_features
-        from src.labeling.build_regime_labels import build_regime_labels
-        panel = pd.read_parquet(panel_path)
-        regime = build_regime_labels(panel)
-        features_df = build_features(panel, regime_series=regime).dropna()
-        last_feat_row = features_df.iloc[-1]
-        baseline_vec = {f: float(last_feat_row[f]) if f in last_feat_row.index else 0.0
-                        for f in feature_names}
+    if cache is not None:
+        transition_model = cache["transition_model"]
+        regime_model = cache["regime_model"]
+        feature_names: list[str] = cache["feature_names"]
+        feature_importances: list[float] = cache["feature_importances"]
+        baseline_vec: dict[str, float] = cache["baseline_vec"]
     else:
-        baseline_vec = {f: 0.0 for f in feature_names}
+        # Cache not yet populated — fall back to loading from disk
+        from src.models.registry import artifact_exists, load_artifact, load_metadata
+        from src.utils.paths import PROCESSED_DIR
+        from pathlib import Path
+
+        for name in ("xgb_transition", "xgb_regime"):
+            if not artifact_exists(name):
+                raise HTTPException(status_code=503, detail=f"{name} artifact not found. Run bootstrap_data.py.")
+
+        transition_model = load_artifact("xgb_transition")
+        regime_model = load_artifact("xgb_regime")
+        meta = load_metadata("xgb_transition")
+        feature_names = meta.get("feature_names", [])
+        feature_importances = meta.get("feature_importances",
+            list(transition_model.feature_importances_))
+
+        panel_path = Path(PROCESSED_DIR) / "panel.parquet"
+        if panel_path.exists():
+            from src.features.build_market_features import build_features
+            from src.labeling.build_regime_labels import build_regime_labels
+            panel = pd.read_parquet(panel_path)
+            regime = build_regime_labels(panel)
+            features_df = build_features(panel, regime_series=regime).dropna()
+            last_feat_row = features_df.iloc[-1]
+            baseline_vec = {f: float(last_feat_row[f]) if f in last_feat_row.index else 0.0
+                            for f in feature_names}
+        else:
+            baseline_vec = {f: 0.0 for f in feature_names}
 
     # Scenario vector = baseline overridden with request fields
     overrides: dict[str, float] = {

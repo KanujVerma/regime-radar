@@ -32,6 +32,7 @@ class AppState:
         self._analog_index: Any | None = None
         self._latest_features: Any | None = None
         self._latest_date: Any | None = None
+        self._scenario_cache: dict | None = None
 
     def _connect(self) -> sqlite3.Connection:
         conn = sqlite3.connect(self.db_path, check_same_thread=False)
@@ -200,6 +201,31 @@ class AppState:
         latest_row = panel.iloc[-1]
         latest_features = features.iloc[-1]
         trend_latest = trend.iloc[-1] if trend is not None else "neutral"
+
+        try:
+            from src.models.registry import load_artifact, load_metadata, artifact_exists
+            if artifact_exists("xgb_transition") and artifact_exists("xgb_regime"):
+                _t_model = load_artifact("xgb_transition")
+                _r_model = load_artifact("xgb_regime")
+                _meta = load_metadata("xgb_transition")
+                _feat_names: list[str] = _meta.get("feature_names", [])
+                self._scenario_cache = {
+                    "transition_model": _t_model,
+                    "regime_model": _r_model,
+                    "feature_names": _feat_names,
+                    "feature_importances": _meta.get("feature_importances",
+                        list(_t_model.feature_importances_)),
+                    "baseline_vec": {
+                        f: float(latest_features[f]) if f in latest_features.index else 0.0
+                        for f in _feat_names
+                    },
+                }
+                _logger.info("Scenario cache built: %d features", len(_feat_names))
+            else:
+                self._scenario_cache = None
+        except Exception as e:
+            _logger.error("Scenario cache build failed: %s", e)
+            self._scenario_cache = None
 
         try:
             from src.models.analogs import build_analog_index
