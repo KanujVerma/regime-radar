@@ -5,6 +5,7 @@ import {
 import type { HistoricalPoint } from '../../types/api'
 import { DEFAULT_THRESHOLD, ALERT_THRESHOLD } from '../../lib/constants'
 import ChartTooltip from './ChartTooltip'
+import { colors } from '../../lib/tokens'
 
 interface RiskLineChartProps {
   data: HistoricalPoint[]
@@ -18,7 +19,7 @@ function riskColor(value: number): string {
   return '#4ade80'
 }
 
-export default function RiskLineChart({ data }: RiskLineChartProps) {
+export default function RiskLineChart({ data, syncHoverX, onSyncHoverX }: RiskLineChartProps) {
   const lastPoint = data[data.length - 1]
   const currentColor = lastPoint ? riskColor(lastPoint.transition_risk ?? 0) : '#06b6d4'
 
@@ -44,8 +45,16 @@ export default function RiskLineChart({ data }: RiskLineChartProps) {
         </span>
       </div>
 
-      <ResponsiveContainer width="100%" height={240}>
-        <AreaChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+      <ResponsiveContainer width="100%" height="100%">
+        <AreaChart
+          data={data}
+          margin={{ top: 4, right: 8, bottom: 4, left: 0 }}
+          onMouseMove={(e) => {
+            const date = e?.activeLabel as string | undefined
+            if (date) onSyncHoverX?.(date)
+          }}
+          onMouseLeave={() => onSyncHoverX?.(null)}
+        >
           <defs>
             <linearGradient id="riskAreaGradient" x1="0" y1="0" x2="0" y2="1">
               <stop offset="0%" stopColor={currentColor} stopOpacity={0.22} />
@@ -68,6 +77,14 @@ export default function RiskLineChart({ data }: RiskLineChartProps) {
             domain={[0, 1]}
             width={38}
           />
+          {syncHoverX && (
+            <ReferenceLine
+              x={syncHoverX}
+              stroke={colors.textSecondary}
+              strokeDasharray="3 3"
+              strokeOpacity={0.5}
+            />
+          )}
           <Tooltip
             content={(props) => (
               <ChartTooltip

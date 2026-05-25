@@ -1,10 +1,12 @@
 import {
   ComposedChart, Area, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-  ReferenceArea,
+  ReferenceArea, ReferenceLine, Brush,
 } from 'recharts'
 import type { HistoricalPoint } from '../../types/api'
 import { buildHistoricalBands } from '../../lib/chartUtils'
 import ChartTooltip from './ChartTooltip'
+import { colors } from '../../lib/tokens'
+import ChartAnnotation from './ChartAnnotation'
 
 interface RegimeChartProps {
   data: HistoricalPoint[]
@@ -21,12 +23,20 @@ const REGIME_COLORS: Record<string, string> = {
 }
 
 
-export default function RegimeChart({ data, showVix }: RegimeChartProps) {
+export default function RegimeChart({ data, showVix, syncHoverX, onSyncHoverX, pinnedDate }: RegimeChartProps) {
   const bands = buildHistoricalBands(data)
 
   return (
-    <ResponsiveContainer width="100%" height={240}>
-      <ComposedChart data={data} margin={{ top: 4, right: 8, bottom: 4, left: 0 }}>
+    <ResponsiveContainer width="100%" height="100%">
+      <ComposedChart
+        data={data}
+        margin={{ top: 4, right: 8, bottom: 4, left: 0 }}
+        onMouseMove={(e) => {
+          const date = e?.activeLabel as string | undefined
+          if (date) onSyncHoverX?.(date)
+        }}
+        onMouseLeave={() => onSyncHoverX?.(null)}
+      >
         <defs>
           <linearGradient id="spyGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.15} />
@@ -80,6 +90,15 @@ export default function RegimeChart({ data, showVix }: RegimeChartProps) {
             fillOpacity={0.18}
           />
         ))}
+        {syncHoverX && (
+          <ReferenceLine
+            yAxisId="spy"
+            x={syncHoverX}
+            stroke={colors.textSecondary}
+            strokeDasharray="3 3"
+            strokeOpacity={0.5}
+          />
+        )}
         <Area
           yAxisId="spy"
           dataKey="close"
@@ -102,6 +121,24 @@ export default function RegimeChart({ data, showVix }: RegimeChartProps) {
             name="VIX"
           />
         )}
+        {pinnedDate && (
+          <ChartAnnotation
+            x={pinnedDate}
+            label={pinnedDate}
+            description="Notable day"
+            side="right"
+            color={colors.cyan}
+          />
+        )}
+        <Brush
+          dataKey="date"
+          height={20}
+          stroke={colors.border}
+          fill={colors.surfaceElevated}
+          travellerWidth={6}
+          startIndex={0}
+          endIndex={data.length > 0 ? data.length - 1 : 0}
+        />
       </ComposedChart>
     </ResponsiveContainer>
   )
