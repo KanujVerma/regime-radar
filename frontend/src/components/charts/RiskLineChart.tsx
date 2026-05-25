@@ -8,6 +8,8 @@ import ChartTooltip from './ChartTooltip'
 
 interface RiskLineChartProps {
   data: HistoricalPoint[]
+  syncHoverX?: string | null
+  onSyncHoverX?: (x: string | null) => void
 }
 
 function riskColor(value: number): string {

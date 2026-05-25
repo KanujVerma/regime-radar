@@ -9,6 +9,9 @@ import ChartTooltip from './ChartTooltip'
 interface RegimeChartProps {
   data: HistoricalPoint[]
   showVix: boolean
+  syncHoverX?: string | null
+  onSyncHoverX?: (x: string | null) => void
+  pinnedDate?: string | null
 }
 
 const REGIME_COLORS: Record<string, string> = {

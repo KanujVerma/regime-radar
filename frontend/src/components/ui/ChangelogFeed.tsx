@@ -1,13 +1,30 @@
 import type { ChangelogResponse } from '../../types/api'
 import { regimeColor } from '../../lib/tokens'
 
+interface ChangelogFeedProps {
+  entries: ChangelogResponse['entries']
+  loading?: boolean
+  highlightDate?: string | null
+  onEntryClick?: (date: string) => void
+}
+
 function formatDate(isoDate: string): string {
   const d = new Date(isoDate + 'T12:00:00Z')
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()
 }
 
-export default function ChangelogFeed({ data }: { data: ChangelogResponse }) {
-  if (data.entries.length === 0) {
+export default function ChangelogFeed({ entries, loading, highlightDate, onEntryClick }: ChangelogFeedProps) {
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        {[80, 100, 70].map((w, i) => (
+          <div key={i} style={{ height: 14, borderRadius: 4, background: '#1e2940', width: `${w}%` }} />
+        ))}
+      </div>
+    )
+  }
+
+  if (entries.length === 0) {
     return <p style={{ color: '#64748b', fontSize: 10 }}>No notable changes in the available data.</p>
   }
 
@@ -23,15 +40,24 @@ export default function ChangelogFeed({ data }: { data: ChangelogResponse }) {
         background: 'linear-gradient(to bottom, #1e2940, #0f1929)',
       }} />
 
-      {data.entries.map((entry) => {
+      {entries.map((entry) => {
         const color = regimeColor[entry.regime.toLowerCase()] ?? '#64748b'
+        const isHighlighted = entry.current_date === highlightDate
         return (
-          <div key={entry.current_date} style={{ display: 'flex', gap: 14, marginBottom: 18, position: 'relative' }}>
+          <div
+            key={entry.current_date}
+            onClick={() => onEntryClick?.(entry.current_date)}
+            style={{
+              display: 'flex', gap: 14, marginBottom: 18, position: 'relative',
+              cursor: onEntryClick ? 'pointer' : 'default',
+            }}
+          >
             {/* Node */}
             <div style={{
               width: 14, height: 14, borderRadius: '50%',
-              background: `${color}20`,
+              background: isHighlighted ? `${color}40` : `${color}20`,
               border: `2px solid ${color}`,
+              boxShadow: isHighlighted ? `0 0 6px ${color}` : 'none',
               flexShrink: 0,
               marginTop: 2,
               position: 'relative',
@@ -40,7 +66,7 @@ export default function ChangelogFeed({ data }: { data: ChangelogResponse }) {
             {/* Content */}
             <div style={{ flex: 1, paddingBottom: 4 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: '#64748b' }}>{formatDate(entry.current_date)}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: isHighlighted ? '#94a3b8' : '#64748b' }}>{formatDate(entry.current_date)}</span>
                 {entry.regime && (
                   <span style={{
                     fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em',
