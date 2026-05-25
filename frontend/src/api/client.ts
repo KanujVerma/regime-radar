@@ -33,8 +33,11 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 export const api = {
   health: (signal?: AbortSignal) => get<HealthResponse>('/health', signal),
   currentState: () => get<CurrentStateResponse>('/current-state'),
-  historicalState: (start = '2020-01-01') =>
-    get<HistoricalStateResponse>(`/historical-state?start=${start}`),
+  historicalState: (start = '2020-01-01', end?: string) => {
+    const params = new URLSearchParams({ start })
+    if (end) params.set('end', end)
+    return get<HistoricalStateResponse>(`/historical-state?${params}`)
+  },
   eventReplay: (name: string) =>
     get<EventReplayResponse>(`/event-replay/${name}`),
   modelDrivers: () => get<ModelDriversResponse>('/model-drivers'),
