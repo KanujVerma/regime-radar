@@ -40,18 +40,35 @@ def create_app(app_state: AppState | None = None, start_scheduler: bool = True) 
 
     @app.on_event("startup")
     async def startup():
+        import threading
         _logger.info("RegimeRadar API starting up")
+
+        # Step 1: immediately load committed snapshots so the server can serve
+        # requests in demo mode within ~2–3 seconds — no network calls required.
         try:
-            app_state._do_refresh()
-            _logger.info("Startup warmup complete — live data seeded")
-        except Exception as exc:
-            _logger.warning("Live refresh failed on startup (%s), loading committed snapshots", exc)
-            try:
-                app_state._load_from_snapshots()
-            except Exception as snap_exc:
-                _logger.error("Snapshot fallback also failed: %s", snap_exc)
+            app_state._load_from_snapshots()
+            _logger.info("Snapshot data loaded — serving in demo mode")
+        except Exception as snap_exc:
+            _logger.error("Snapshot load failed on startup: %s", snap_exc)
+
+        # Step 2: start the recurring refresh scheduler.
         if start_scheduler:
             app_state.start_scheduler()
+
+        # Step 3: attempt a live yfinance+FRED refresh in a background thread so
+        # it never blocks the event loop or delays the first response. If it
+        # succeeds the state flips to live; if it fails demo mode persists and
+        # the scheduler retries on its normal interval.
+        def _bg_live_refresh() -> None:
+            try:
+                app_state._do_refresh()
+                _logger.info("Background startup refresh succeeded — now in live mode")
+            except Exception as exc:
+                _logger.warning("Background startup refresh failed, staying in demo: %s", exc)
+
+        threading.Thread(
+            target=_bg_live_refresh, daemon=True, name="startup-live-refresh"
+        ).start()
 
     @app.on_event("shutdown")
     async def shutdown():
