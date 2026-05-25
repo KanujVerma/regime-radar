@@ -40,30 +40,30 @@ Finnhub is optional. The backend fetches a real-time SPY quote if a key is confi
 
 | Page | What it shows |
 |---|---|
-| **Current State** | Live regime, transition risk gauge, probability distribution across all three states, key risk drivers, 30-day mini chart |
-| **History** | Day-by-day SPY regime timeline with color-coded market-state bands and a daily transition risk chart; optional VIX overlay. Includes a **Notable Days** changelog panel surfacing significant model events and retrain dates. |
-| **Event Replay** | Walk the model through named historical events (2020 COVID crash, 2022 rate shock, etc.) |
-| **Signal Breakdown** | Narrative-first layout: plain-English case brief explaining today's reading, push/pull panel (today's top drivers vs. global importance), forward-looking risk conditions, and a collapsible reliability/threshold tradeoff table |
-| **Scenario Explorer** | Six named presets (Calm Recovery → Crisis Peak) plus manual sliders across 6 features. Each scenario shows a verdict badge, a probability tripod (Calm / Elevated / Turbulent baseline vs. scenario with animated deltas), and a driver-cards panel showing which inputs are raising or lowering risk — with contextual interpretation for each driver |
+| **Current State** | Live regime hero (Calm / Elevated / Turbulent), 5-day transition-risk gauge with track record, model confidence tripod across all three states, what's raising risk now (top SHAP drivers), last 30-day mini chart |
+| **History** | Two-column layout: linked time-chart stack (Regime & SPY + Transition Risk, shared X-axis and date-range controls, VIX overlay toggle) on the left; **Notable Days** companion column on the right surfacing significant model events and retrain dates |
+| **Event Replay** | Segmented event selector (2008 / COVID-2020 / 2022) + a real **scrubber/playback** timeline with play/pause and draggable playhead. Stat cards (Days into event, Risk today, Peak risk so far, Alert days so far) update live as the playhead moves. |
+| **Signal Breakdown** | Narrative case brief, push/pull driver grid (today's top features raising vs. holding risk), horizontal contribution/waterfall chart of SHAP values, global importance bars, closest historical analog setups, and a collapsible reliability/threshold tradeoff table |
+| **Scenario Explorer** | Balanced two-column layout (desktop): collapsible control panel on the left (Quick Scenarios chip presets, six driver sliders, Alert Threshold section) + sticky result column on the right (verdict badge, probability tripod with animated deltas, "What's driving this scenario" driver cards). Stacks vertically on mobile. |
 
 ---
 
 ## Screenshots
 
 ![Current State](docs/screenshots/current-state.png)
-*Current State — live regime, transition risk gauge, VIX level, and top SHAP risk drivers.*
+*Current State — regime hero, 5-day transition risk gauge with track-record calibration, model confidence tripod, and top SHAP risk drivers.*
 
 ![History](docs/screenshots/history.png)
-*History — full regime timeline with color-coded market-state bands and daily transition risk signal.*
+*History — linked chart stack (Regime & SPY + Transition Risk with shared X-axis and date-range controls) alongside a Notable Days companion panel.*
 
 ![Event Replay](docs/screenshots/event-replay.png)
-*Event Replay — COVID-19 2020: warning lead time, peak transition risk, and alert-day count.*
-
-![Scenario Explorer](docs/screenshots/scenario-explorer.png)
-*Scenario Explorer — Crisis Peak preset: "Turbulent" verdict, probability tripod at 98% turbulent, and driver cards explaining what's raising risk (VIX level, recent high-stress days) with plain-English interpretation per signal.*
+*Event Replay — 2008 Financial Crisis: scrubber playback timeline, live stat cards (days in, risk today, peak risk, alert days), and regime chart.*
 
 ![Signal Breakdown](docs/screenshots/model-drivers.png)
-*Signal Breakdown — narrative case brief, push/pull panel (what's pushing risk higher vs. holding it in check), global importance bars, and forward-looking risk conditions.*
+*Signal Breakdown — narrative case brief, SHAP contribution chart (diverging waterfall), global importance bars, closest historical analog setups, and reliability table.*
+
+![Scenario Explorer](docs/screenshots/scenario-explorer.png)
+*Scenario Explorer — current-market baseline: collapsible driver sliders on the left, sticky probability tripod and driver-cards result column on the right.*
 
 ---
 
@@ -234,7 +234,7 @@ The Crisis Peak preset is designed to show turbulent-dominant output. It sets `t
 
 ## Event Replay
 
-Walk the model forward through named historical stress events using committed snapshot data. Available events: 2008 Financial Crisis, 2020 COVID crash, and 2022 rate tightening. Each replay shows the model's out-of-sample daily risk score alongside the actual regime, including warning lead time and peak transition-risk reading before each event's peak.
+Walk the model forward through named historical stress events (2008 Financial Crisis, COVID-2020, 2022 rate tightening) using committed snapshot data. A scrubber transport (play/pause + draggable playhead) animates the risk line day by day. Four stat cards — Days into event, Risk today, Peak risk so far, Alert days so far — update live with the playhead position. The chart uses a first-crossing `ReferenceLine` annotation and regime-band glow to mark when conditions actually shifted.
 
 ---
 
