@@ -3,14 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Topbar from '../components/layout/Topbar'
 import DriverBar from '../components/ui/DriverBar'
 import SkeletonBlock from '../components/ui/SkeletonBlock'
+import Panel from '../components/ui/Panel'
+import ReliabilityTable from '../components/ui/ReliabilityTable'
 import ClosestHistoricalSetups from '../components/ClosestHistoricalSetups'
 import { useModelDrivers } from '../hooks/useModelDrivers'
 import { useCurrentState } from '../hooks/useCurrentState'
 import { useAnalogs } from '../hooks/useAnalogs'
 import { buildDriversNarrative, getDriverHeadline, formatRisk } from '../lib/narratives'
 import { sentenceFor, labelFor } from '../lib/featureLabels'
-import { regimeColor } from '../lib/tokens'
-import type { ThresholdSweepRow } from '../types/api'
+import { colors, regimeColor, regimeGlow, regimeBorder, typography } from '../lib/tokens'
 
 const VOL_FEATURES = new Set([
   'rv_20d', 'rv_20d_pct', 'vix_level', 'vix_pct_504d',
@@ -78,7 +79,7 @@ export default function ModelDrivers() {
 
   const regime = (stateData?.regime ?? 'unknown').toLowerCase()
   const risk = stateData?.transition_risk ?? 0
-  const rColor = risk > 0.40 ? '#f87171' : risk > 0.20 ? '#fbbf24' : '#4ade80'
+  const rColor = risk > 0.40 ? colors.red : risk > 0.20 ? colors.amber : colors.green
   const rRegimeColor = regimeColor[regime] ?? regimeColor['unknown']
 
   const localEntries = Object.entries(data.local_explanation)
@@ -106,7 +107,7 @@ export default function ModelDrivers() {
   const forwardBullets = buildForwardBullets(pushing[0]?.[0])
 
   const demoAction = stateData?.mode === 'demo'
-    ? <span className="text-[10px] px-2 py-1 rounded" style={{ background: '#2d1f0a', color: '#fbbf24', border: '1px solid #92400e' }}>Demo data</span>
+    ? <span className="text-[10px] px-2 py-1 rounded" style={{ background: '#2d1f0a', color: colors.amber, border: `1px solid ${colors.amberDim}` }}>Demo data</span>
     : undefined
 
   return (
@@ -116,38 +117,54 @@ export default function ModelDrivers() {
       <div className="p-5 space-y-4">
 
         {/* ── Hero ── */}
-        <div style={{ background: '#0c1520', border: '1px solid #1e3a5f', borderRadius: 8, padding: '16px 18px', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ color: '#64748b', fontSize: 10, textTransform: 'uppercase', letterSpacing: '.1em', marginBottom: 6 }}>
-              {stateData?.as_of_ts
-                ? new Date(stateData.as_of_ts).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-                : '—'} · Today's reading
+        <div style={{
+          background: colors.glass,
+          backdropFilter: 'blur(12px)',
+          WebkitBackdropFilter: 'blur(12px)',
+          border: `1px solid ${regimeBorder(rColor)}`,
+          borderRadius: 12,
+          boxShadow: `${colors.glassHighlight}, 0 4px 32px rgba(0,0,0,0.5)`,
+          padding: '20px 24px',
+          position: 'relative',
+          overflow: 'hidden',
+        }}>
+          <div style={{
+            position: 'absolute', inset: 0, pointerEvents: 'none',
+            background: `radial-gradient(ellipse 60% 60% at 80% 50%, ${regimeGlow[regime] ?? 'transparent'}, transparent)`,
+          }} />
+          <div style={{ position: 'relative', display: 'flex', gap: 20, alignItems: 'flex-start' }}>
+            <div style={{ flex: 1 }}>
+              <div style={{ ...typography.microLabel, marginBottom: 6 }}>
+                {stateData?.as_of_ts
+                  ? new Date(stateData.as_of_ts).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+                  : '—'} · Today's reading
+              </div>
+              <div style={{ color: colors.textPrimary, fontSize: 15, fontWeight: 800, lineHeight: 1.3, marginBottom: 10 }}>
+                {getDriverHeadline(regime)}
+              </div>
+              <p style={{ color: colors.textSecondary, fontSize: 11, lineHeight: 1.75, margin: 0 }}>
+                {narrative}
+              </p>
             </div>
-            <div style={{ color: '#f1f5f9', fontSize: 15, fontWeight: 800, lineHeight: 1.3, marginBottom: 10 }}>
-              {getDriverHeadline(regime)}
-            </div>
-            <p style={{ color: '#94a3b8', fontSize: 11, lineHeight: 1.75, margin: 0 }}>
-              {narrative}
-            </p>
-          </div>
-          <div style={{ textAlign: 'center', minWidth: 72, flexShrink: 0 }}>
-            <div style={{ fontSize: 32, fontWeight: 800, color: rColor, lineHeight: 1, marginBottom: 3 }}>
-              {formatRisk(risk)}
-            </div>
-            <div style={{ fontSize: 10, color: '#64748b', textTransform: 'uppercase', lineHeight: 1.4 }}>
-              5-day<br />transition risk
-            </div>
-            <div style={{ fontSize: 10, color: '#4a5568', lineHeight: 1.4, marginTop: 2 }}>
-              Chance conditions worsen<br />next 5 trading days
-            </div>
-            <div style={{
-              display: 'inline-block', marginTop: 10, padding: '3px 8px', borderRadius: 99,
-              fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
-              color: rRegimeColor,
-              background: `${rRegimeColor}18`,
-              border: `1px solid ${rRegimeColor}40`,
-            }}>
-              {stateData?.regime ?? '—'}
+            <div style={{ textAlign: 'center', minWidth: 72, flexShrink: 0 }}>
+              <div style={{ ...typography.statMd, color: rColor, lineHeight: 1, marginBottom: 3 }}>
+                {formatRisk(risk)}
+              </div>
+              <div style={{ fontSize: 10, color: colors.textMuted, textTransform: 'uppercase', lineHeight: 1.4 }}>
+                5-day<br />transition risk
+              </div>
+              <div style={{ fontSize: 10, color: colors.textDim, lineHeight: 1.4, marginTop: 2 }}>
+                Chance conditions worsen<br />next 5 trading days
+              </div>
+              <div style={{
+                display: 'inline-block', marginTop: 10, padding: '3px 8px', borderRadius: 99,
+                fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
+                color: rRegimeColor,
+                background: `${rRegimeColor}18`,
+                border: `1px solid ${rRegimeColor}40`,
+              }}>
+                {stateData?.regime ?? '—'}
+              </div>
             </div>
           </div>
         </div>
@@ -156,76 +173,67 @@ export default function ModelDrivers() {
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
           {/* Left: push/pull bullets */}
-          <div style={{ background: '#080b12', border: '1px solid #151d2e', borderRadius: 6, padding: '12px 14px' }}>
-            <div style={{ color: '#64748b', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>
-              Why the model sees it this way today
-            </div>
+          <Panel title="Why the model sees it this way today">
             {pushing.length === 0 && holding.length === 0 ? (
-              <p style={{ color: '#64748b', fontSize: 10, lineHeight: 1.5 }}>
+              <p style={{ color: colors.textMuted, fontSize: 10, lineHeight: 1.5 }}>
                 Today's factor breakdown is unavailable — showing global importance instead.
               </p>
             ) : (
               <>
                 {pushing.length > 0 && (
                   <div style={{ marginBottom: 10 }}>
-                    <div style={{ color: '#f87171', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>
+                    <div style={{ color: colors.red, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>
                       ↑ Pushing risk higher
                     </div>
                     {pushing.map(([feat]) => (
                       <div key={feat} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 4 }}>
-                        <span style={{ color: '#f87171', fontSize: 11, marginTop: 1, flexShrink: 0 }}>•</span>
-                        <span style={{ color: '#cbd5e1', fontSize: 10, lineHeight: 1.55 }}>{sentenceFor(feat, 'up')}</span>
+                        <span style={{ color: colors.red, fontSize: 11, marginTop: 1, flexShrink: 0 }}>•</span>
+                        <span style={{ color: colors.textSecondary, fontSize: 10, lineHeight: 1.55 }}>{sentenceFor(feat, 'up')}</span>
                       </div>
                     ))}
                   </div>
                 )}
                 {holding.length > 0 && (
                   <>
-                    <div style={{ borderTop: '1px solid #151d2e', margin: '0 0 8px' }} />
-                    <div style={{ color: '#4ade80', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>
+                    <div style={{ borderTop: `1px solid ${colors.border}`, margin: '0 0 8px' }} />
+                    <div style={{ color: colors.green, fontSize: 10, fontWeight: 700, textTransform: 'uppercase', marginBottom: 6 }}>
                       ↓ Holding risk in check
                     </div>
                     {holding.map(([feat]) => (
                       <div key={feat} style={{ display: 'flex', alignItems: 'flex-start', gap: 5, marginBottom: 4 }}>
-                        <span style={{ color: '#4ade80', fontSize: 11, marginTop: 1, flexShrink: 0 }}>•</span>
-                        <span style={{ color: '#cbd5e1', fontSize: 10, lineHeight: 1.55 }}>{sentenceFor(feat, 'down')}</span>
+                        <span style={{ color: colors.green, fontSize: 11, marginTop: 1, flexShrink: 0 }}>•</span>
+                        <span style={{ color: colors.textSecondary, fontSize: 10, lineHeight: 1.55 }}>{sentenceFor(feat, 'down')}</span>
                       </div>
                     ))}
                   </>
                 )}
               </>
             )}
-          </div>
+          </Panel>
 
           {/* Right: global importance bars */}
-          <div style={{ background: '#080b12', border: '1px solid #151d2e', borderRadius: 6, padding: '12px 14px' }}>
-            <div style={{ color: '#64748b', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 10 }}>
-              What always drives the model most
-            </div>
-            <p style={{ color: '#4a5568', fontSize: 10, marginBottom: 10, lineHeight: 1.5 }}>
+          <Panel title="What always drives the model most">
+            <p style={{ color: colors.textDim, fontSize: 10, marginBottom: 10, lineHeight: 1.5 }}>
               Relative importance across all historical periods — top 5 factors shown. Bars are proportional to each other, not a percentage breakdown.
             </p>
             {topImportance.map((d, i) => (
               <DriverBar key={d.feature} label={labelFor(d.feature)} value={d.importance} max={maxImp} direction="raising" delay={i * 40} />
             ))}
-            <p style={{ color: '#4a5568', fontSize: 10, marginTop: 10, lineHeight: 1.5 }}>
+            <p style={{ color: colors.textDim, fontSize: 10, marginTop: 10, lineHeight: 1.5 }}>
               Left panel shows <em>what is driving the model today</em>. This panel shows <em>what the model typically relies on most</em>.
             </p>
-          </div>
+          </Panel>
         </div>
 
         {/* ── Forward-looking block ── */}
-        <div style={{ background: '#0d0b18', border: '1px solid #2e1d48', borderRadius: 6, padding: '12px 14px' }}>
-          <div style={{ color: '#a78bfa', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.08em', marginBottom: 8 }}>
-            What would raise risk further
-          </div>
+        <Panel title="What would raise risk further">
           {forwardBullets.map((b, i) => (
             <div key={i} style={{ display: 'flex', alignItems: 'flex-start', gap: 6, marginBottom: 4 }}>
               <span style={{ color: '#a78bfa', flexShrink: 0, fontWeight: 700, fontSize: 10, lineHeight: 1.55, marginTop: 1 }}>→</span>
               <span style={{ color: '#c4b5fd', fontSize: 10, lineHeight: 1.55 }}>{b}</span>
             </div>
           ))}
-        </div>
+        </Panel>
 
         {/* ── Closest Historical Setups ── */}
         {analogsData && analogsData.analogs.length > 0 && (
@@ -242,8 +250,8 @@ export default function ModelDrivers() {
               aria-expanded={reliabilityOpen}
               className="w-full text-left"
               style={{
-                background: reliabilityOpen ? '#0c1028' : reliabilityHover ? '#0c1520' : '#080b12',
-                border: `1px solid ${reliabilityOpen || reliabilityHover ? '#1e3a5f' : '#1a2540'}`,
+                background: reliabilityOpen ? colors.surface : reliabilityHover ? colors.surfaceElevated : colors.bg,
+                border: `1px solid ${colors.borderElevated}`,
                 borderRadius: reliabilityOpen ? '6px 6px 0 0' : 6,
                 padding: '10px 14px',
                 cursor: 'pointer',
@@ -255,17 +263,17 @@ export default function ModelDrivers() {
               }}
             >
               <div>
-                <div style={{ color: reliabilityHover ? '#f1f5f9' : '#cbd5e1', fontSize: 10, fontWeight: 600, transition: 'color 0.15s' }}>
+                <div style={{ color: reliabilityHover ? colors.textPrimary : colors.textSecondary, fontSize: 10, fontWeight: 600, transition: 'color 0.15s' }}>
                   Model reliability and threshold tradeoffs
                 </div>
-                <div style={{ color: reliabilityHover ? '#64748b' : '#4a5568', fontSize: 10, marginTop: 2, transition: 'color 0.15s' }}>
+                <div style={{ color: reliabilityHover ? colors.textMuted : colors.textDim, fontSize: 10, marginTop: 2, transition: 'color 0.15s' }}>
                   How often does flagging at different risk levels catch regime shifts?
                 </div>
               </div>
               <motion.span
                 animate={{ rotate: reliabilityOpen ? 90 : 0 }}
                 transition={{ duration: 0.15 }}
-                style={{ display: 'inline-block', color: reliabilityHover ? '#94a3b8' : '#64748b', fontSize: 14, flexShrink: 0 }}
+                style={{ display: 'inline-block', color: reliabilityHover ? colors.textSecondary : colors.textMuted, fontSize: 14, flexShrink: 0 }}
               >
                 ▸
               </motion.span>
@@ -290,54 +298,5 @@ export default function ModelDrivers() {
 
       </div>
     </motion.div>
-  )
-}
-
-function fmtPct(v: number | null | undefined): string {
-  if (v == null || isNaN(v)) return '—'
-  return `${(v * 100).toFixed(0)}%`
-}
-
-function fmtDays(v: number | null | undefined): string {
-  if (v == null || isNaN(v)) return '—'
-  return `${v.toFixed(0)} days`
-}
-
-function ReliabilityTable({ rows }: { rows: ThresholdSweepRow[] }) {
-  return (
-    <div style={{ background: '#080b12', border: '1px solid #151d2e', borderTop: 'none', borderRadius: '0 0 6px 6px', padding: '12px 14px' }}>
-      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            {['Alert threshold', 'Shifts caught', 'Avg. days early', 'False alarm rate'].map(h => (
-              <th key={h} style={{ color: '#64748b', fontSize: 10, textTransform: 'uppercase', fontWeight: 600, textAlign: 'left', paddingBottom: 8, paddingRight: 8, borderBottom: '1px solid #151d2e' }}>
-                {h}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map(row => (
-            <tr key={row.threshold}>
-              <td style={{ color: '#f1f5f9', fontSize: 10, padding: '5px 8px 5px 0', borderBottom: '1px solid #0f1929' }}>
-                {fmtPct(row.threshold)}
-              </td>
-              <td style={{ color: '#94a3b8', fontSize: 10, padding: '5px 8px 5px 0', borderBottom: '1px solid #0f1929' }}>
-                {fmtPct(row.recall)}
-              </td>
-              <td style={{ color: '#94a3b8', fontSize: 10, padding: '5px 8px 5px 0', borderBottom: '1px solid #0f1929' }}>
-                {fmtDays(row.avg_lead_time_days)}
-              </td>
-              <td style={{ color: '#94a3b8', fontSize: 10, padding: '5px 8px 5px 0', borderBottom: '1px solid #0f1929' }}>
-                {fmtPct(row.false_alert_rate)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      <p style={{ color: '#4a5568', fontSize: 10, marginTop: 10, lineHeight: 1.6 }}>
-        <strong style={{ color: '#94a3b8' }}>How to read this:</strong> At a lower threshold, the model catches more regime shifts but also produces more false alarms. At a higher threshold, it is more selective — when it flags, it tends to be meaningful. The model is not designed to time market exits; it identifies when conditions are becoming stress-prone.
-      </p>
-    </div>
   )
 }

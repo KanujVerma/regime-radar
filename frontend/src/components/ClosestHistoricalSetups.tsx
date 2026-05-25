@@ -1,5 +1,6 @@
 import AnalogCard from './AnalogCard'
 import type { AnalogsResponse } from '../types/api'
+import { colors } from '../lib/tokens'
 
 interface ClosestHistoricalSetupsProps {
   data: AnalogsResponse
@@ -7,10 +8,18 @@ interface ClosestHistoricalSetupsProps {
 
 export default function ClosestHistoricalSetups({ data }: ClosestHistoricalSetupsProps) {
   return (
-    <div className="rounded-xl border border-white/10 bg-white/[0.03] p-4 flex flex-col gap-3">
+    <div style={{
+      borderRadius: 12,
+      border: `1px solid ${colors.border}`,
+      background: colors.surfaceElevated,
+      padding: '1rem',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '0.75rem',
+    }}>
       <div>
-        <div className="text-sm font-semibold text-white/80">Closest Historical Setups</div>
-        <div className="text-xs text-white/40 mt-0.5">
+        <div style={{ fontSize: 14, fontWeight: 600, color: colors.textSecondary }}>Closest Historical Setups</div>
+        <div style={{ fontSize: 12, color: colors.textDim, marginTop: 2 }}>
           Nearest matches in RegimeRadar&apos;s 22-feature signal space — not price-pattern matching
         </div>
       </div>
@@ -21,7 +30,7 @@ export default function ClosestHistoricalSetups({ data }: ClosestHistoricalSetup
         ))}
       </div>
 
-      <div className="text-xs text-white/30 leading-snug">
+      <div style={{ fontSize: 12, color: colors.textDim, lineHeight: 1.4 }}>
         Outcome variance is the honest answer — these are three different histories, not an average.
       </div>
     </div>
