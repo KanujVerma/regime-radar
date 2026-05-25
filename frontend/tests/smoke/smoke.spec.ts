@@ -398,6 +398,69 @@ test.describe('Scenario Explorer page', () => {
     await waitForLoad(page)
     await expect(page.getByText('Regime probability — current market → your scenario')).toBeVisible()
   })
+
+  test('preset chip strip is visible without opening any section', async ({ page }) => {
+    await page.goto('/scenario')
+    await waitForLoad(page)
+    // Presets always visible — no section click required
+    await expect(page.getByText('Calm Recovery')).toBeVisible()
+    await expect(page.getByText('Volatility Pickup')).toBeVisible()
+    await expect(page.getByText('Panic Shock')).toBeVisible()
+  })
+
+  test('customized indicator appears after clicking preset then moving a slider', async ({ page }) => {
+    const done = page.waitForResponse(
+      r => r.url().includes('/scenario') && r.status() === 200,
+      { timeout: 15_000 },
+    )
+    await page.goto('/scenario')
+    await done
+    await page.waitForTimeout(400)
+    await page.getByText('Calm Recovery').click()
+    await page.waitForTimeout(400)
+    await page.locator('input[type="range"]').first().evaluate((el: HTMLInputElement) => {
+      el.value = String(parseFloat(el.max) * 0.8)
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+      el.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await page.waitForTimeout(400)
+    await expect(page.getByText(/Modified from/)).toBeVisible()
+  })
+
+  test('inline "Reset to preset" button clears customized state', async ({ page }) => {
+    const done = page.waitForResponse(
+      r => r.url().includes('/scenario') && r.status() === 200,
+      { timeout: 15_000 },
+    )
+    await page.goto('/scenario')
+    await done
+    await page.waitForTimeout(400)
+    await page.getByText('Calm Recovery').click()
+    await page.waitForTimeout(400)
+    await page.locator('input[type="range"]').first().evaluate((el: HTMLInputElement) => {
+      el.value = String(parseFloat(el.max) * 0.8)
+      el.dispatchEvent(new Event('input', { bubbles: true }))
+      el.dispatchEvent(new Event('change', { bubbles: true }))
+    })
+    await page.waitForTimeout(400)
+    await expect(page.getByText(/Modified from/)).toBeVisible()
+    await page.getByRole('button', { name: /reset to preset/i }).click()
+    await page.waitForTimeout(300)
+    await expect(page.getByText(/Modified from/)).not.toBeVisible()
+  })
+
+  test('Drivers section can be toggled collapsed and re-expanded', async ({ page }) => {
+    await page.goto('/scenario')
+    await waitForLoad(page)
+    // Drivers open by default on desktop viewport (1280px default)
+    await expect(page.locator('input[type="range"]').first()).toBeVisible()
+    await page.getByRole('button', { name: /Drivers/i }).click()
+    await page.waitForTimeout(250)
+    await expect(page.locator('input[type="range"]').first()).not.toBeVisible()
+    await page.getByRole('button', { name: /Drivers/i }).click()
+    await page.waitForTimeout(250)
+    await expect(page.locator('input[type="range"]').first()).toBeVisible()
+  })
 })
 
 // ─── No-error across all pages ───────────────────────────────────────────────
