@@ -15,7 +15,9 @@ import {
 } from '../lib/scenarioDriverCards'
 import { useStateBanners } from '../hooks/useStateBanners'
 import StateBanner from '../components/ui/StateBanner'
-import { regimeColor } from '../lib/tokens'
+import { regimeColor, colors } from '../lib/tokens'
+import ScenarioSlider from '../components/ui/ScenarioSlider'
+import { AnimatePresence } from 'framer-motion'
 
 const DEFAULT_INPUTS: ScenarioInputs = {
   vix_level: 18, vix_chg_5d: 0, rv_20d_pct: 0.40,
@@ -74,7 +76,6 @@ const SLIDER_KEYS_FOR_SENSITIVITY = [
   'vix_level', 'vix_chg_5d', 'rv_20d_pct', 'drawdown_pct_504d', 'ret_20d', 'dist_sma50',
 ] as const
 
-const SENSITIVITY_COLORS = { high: '#f87171', medium: '#fbbf24', low: '#475569' } as const
 
 const PERCENTILE_KEYS = new Set(['rv_20d_pct', 'drawdown_pct_504d'])
 
@@ -101,11 +102,6 @@ function getSliderSensitivity(
   return 'low'
 }
 
-function sliderColor(cfg: (typeof SLIDER_CONFIG)[0], val: number): string {
-  if (val <= cfg.calmMax) return '#06b6d4'
-  if (val >= cfg.stressMin) return '#f87171'
-  return '#fbbf24'
-}
 
 function formatDriverVal(feature: string, val: number): string {
   return PERCENTILE_KEYS.has(feature)
@@ -116,6 +112,7 @@ function formatDriverVal(feature: string, val: number): string {
 export default function ScenarioExplorer() {
   const [inputs, setInputs] = useState<ScenarioInputs>(DEFAULT_INPUTS)
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD)
+  const [openSection, setOpenSection] = useState<'presets' | 'drivers' | 'threshold'>('drivers')
   const { data, loading, error } = useScenario(inputs)
   const { data: modelData } = useModelDrivers()
 
@@ -229,203 +226,227 @@ export default function ScenarioExplorer() {
     </button>
   )
 
+  function SectionHeader({ id, label, summary }: { id: 'presets' | 'drivers' | 'threshold'; label: string; summary?: string }) {
+    const open = openSection === id
+    return (
+      <button
+        type="button"
+        onClick={() => setOpenSection(id)}
+        style={{
+          width: '100%', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '8px 0', background: 'none', border: 'none',
+          borderBottom: `1px solid ${colors.border}`,
+          cursor: 'pointer', color: colors.textSecondary, fontSize: 11,
+        }}
+      >
+        <span style={{ fontWeight: 600 }}>{label}</span>
+        {summary && !open && <span style={{ color: colors.textMuted, fontSize: 10 }}>{summary}</span>}
+        <span style={{ color: colors.textMuted }}>{open ? '▲' : '▼'}</span>
+      </button>
+    )
+  }
+
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
       <Topbar title="Scenario Explorer" action={resetBtn} />
-      <div className="px-6 py-5 flex flex-col lg:flex-row gap-5">
+      <div style={{ padding: '1.25rem 1.5rem' }}>
+        <div style={{ display: 'grid', gap: '1.25rem', alignItems: 'start' }}
+          className="grid-cols-1 lg:grid-cols-[38fr_62fr]">
 
         {/* ── Left column ── */}
-        <div className="w-full lg:w-[276px] shrink-0 space-y-4">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
           {/* Presets */}
-          <Panel title="Quick scenarios">
-            <div className="flex flex-col gap-2">
-              {STANDARD_PRESETS.map(p => (
-                <button
-                  key={p.id}
-                  onClick={() => {
-                    setInputs(PRESETS[p.id])
-                    showBanner({ id: 'preset-applied', priority: 5, text: `Preset: ${p.label}`, color: '#06b6d4' })
-                  }}
-                  className="text-left px-3 py-2 rounded-lg w-full"
-                  style={{ background: '#080b12', border: '1px solid #151d2e' }}
-                >
-                  <div className="text-[11px] font-semibold" style={{ color: '#94a3b8' }}>
-                    {p.icon} {p.label}
-                  </div>
-                  <div className="text-[9px] mt-0.5" style={{ color: '#475569' }}>{p.desc}</div>
-                </button>
-              ))}
-
-              <div style={{ height: 1, background: '#1a0a0a', margin: '2px 0' }} />
-              <div
-                className="text-[7px] font-bold tracking-widest uppercase"
-                style={{ color: '#5a2020' }}
-              >
-                Sustained Crisis
-              </div>
-
-              <button
-                onClick={() => {
-                  setInputs(PRESETS[CRISIS_PRESET.id])
-                  showBanner({ id: 'preset-applied', priority: 5, text: `Preset: ${CRISIS_PRESET.label}`, color: '#06b6d4' })
-                }}
-                className="text-left py-2 rounded-lg w-full"
-                style={{
-                  background: '#0e0505',
-                  border: '1px solid #7f1d1d',
-                  borderLeft: '3px solid #f87171',
-                  paddingLeft: 10,
-                  paddingRight: 12,
-                }}
-              >
-                <div className="text-[11px] font-semibold" style={{ color: '#fca5a5' }}>
-                  {CRISIS_PRESET.icon} {CRISIS_PRESET.label}
-                </div>
-                <div className="text-[9px] mt-0.5" style={{ color: '#6b3030' }}>{CRISIS_PRESET.desc}</div>
-              </button>
-            </div>
-          </Panel>
-
-          <div className="h-px" style={{ background: '#151d2e' }} />
-
-          {/* Sensitivity legend */}
-          <div className="flex items-center gap-3">
-            <span className="text-[8px] font-bold tracking-widest uppercase" style={{ color: '#4a6080' }}>
-              Model weight
-            </span>
-            {(['high', 'medium', 'low'] as const).map(s => (
-              <span key={s} className="flex items-center gap-1 text-[8px]" style={{ color: '#475569' }}>
-                <span
-                  style={{
-                    width: 6, height: 6, borderRadius: '50%',
-                    background: SENSITIVITY_COLORS[s], display: 'inline-block',
-                  }}
-                />
-                {s.charAt(0).toUpperCase() + s.slice(1)}
-              </span>
-            ))}
-          </div>
-
-          {/* Sliders */}
-          <div className="space-y-4">
-            {SLIDER_CONFIG.map(cfg => {
-              const val = inputs[cfg.key]
-              const color = sliderColor(cfg, val)
-              const sensitivity = getSliderSensitivity(cfg.key, modelData?.global_importance)
-              return (
-                <div key={cfg.key}>
-                  <div className="flex justify-between mb-1 items-center">
-                    <span
-                      className="text-[10px] font-semibold flex items-center gap-1.5"
-                      style={{ color: '#94a3b8' }}
-                    >
-                      <span
-                        style={{
-                          width: 6, height: 6, borderRadius: '50%',
-                          background: SENSITIVITY_COLORS[sensitivity],
-                          display: 'inline-block', flexShrink: 0,
-                        }}
-                      />
-                      {cfg.label}
-                    </span>
-                    <span className="text-[10px] font-bold" style={{ color }}>
-                      {val.toFixed(cfg.step < 0.1 ? 2 : 1)}
-                    </span>
-                  </div>
-                  <p className="text-[9px] mb-1.5" style={{ color: '#94a3b8' }}>{cfg.helper}</p>
-                  <input
-                    type="range"
-                    min={cfg.min}
-                    max={cfg.max}
-                    step={cfg.step}
-                    value={val}
-                    onChange={e => {
-                      setInputs(prev => ({ ...prev, [cfg.key]: parseFloat(e.target.value) }))
-                      flashModule(riskModuleRef.current)
-                      flashModule(probModuleRef.current)
-                    }}
-                    className="w-full cursor-pointer"
-                    style={{ accentColor: color }}
-                  />
-                </div>
-              )
-            })}
-          </div>
-
-          <div className="h-px" style={{ background: '#151d2e' }} />
-
-          {/* Threshold section */}
           <div>
-            <div
-              className="text-[9px] font-bold tracking-widest uppercase mb-2"
-              style={{ color: '#4a6080' }}
-            >
-              Alert threshold
-            </div>
-            <div className="flex justify-between mb-1">
-              <span className="text-[10px]" style={{ color: '#94a3b8' }}>Threshold</span>
-              <span className="text-[10px] font-bold" style={{ color: '#fbbf24' }}>
-                {(threshold * 100).toFixed(0)}%
-              </span>
-            </div>
-            <input
-              type="range" min={0.10} max={0.70} step={0.10}
-              value={threshold}
-              onChange={e => setThreshold(parseFloat(e.target.value))}
-              className="w-full cursor-pointer mb-3"
-              style={{ accentColor: '#fbbf24' }}
-            />
-
-            {/* Alert connection block */}
-            {data && thresholdGap != null && (
-              <div
-                className="rounded-lg px-3 py-2 mb-3"
-                style={thresholdGap < 0
-                  ? { background: '#0f2a1a', border: '1px solid #14532d' }
-                  : { background: '#1a0505', border: '1px solid #7f1d1d' }}
-              >
-                <div
-                  className="text-[10px] font-semibold"
-                  style={{ color: thresholdGap < 0 ? '#4ade80' : '#f87171' }}
+            <SectionHeader id="presets" label="Quick Scenarios" />
+            <AnimatePresence initial={false}>
+              {openSection === 'presets' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ overflow: 'hidden', paddingTop: 8 }}
                 >
-                  {thresholdGap < 0
-                    ? '✓ This scenario stays below your alert threshold'
-                    : '⚠ This scenario would cross your alert threshold'}
-                </div>
-                <div className="text-[9px] mt-1" style={{ color: '#475569' }}>
-                  {thresholdGap < 0
-                    ? `Stress probability ${(scenarioStress! * 100).toFixed(0)}% — ${Math.abs(thresholdGap * 100).toFixed(0)}pp below the ${(threshold * 100).toFixed(0)}% threshold`
-                    : `Stress probability ${(scenarioStress! * 100).toFixed(0)}% exceeds the ${(threshold * 100).toFixed(0)}% threshold by ${(thresholdGap * 100).toFixed(0)}pp`}
-                </div>
-              </div>
-            )}
+                  <div className="flex flex-col gap-2">
+                    {STANDARD_PRESETS.map(p => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          setInputs(PRESETS[p.id])
+                          showBanner({ id: 'preset-applied', priority: 5, text: `Preset: ${p.label}`, color: '#06b6d4' })
+                        }}
+                        className="text-left px-3 py-2 rounded-lg w-full"
+                        style={{ background: '#080b12', border: '1px solid #151d2e' }}
+                      >
+                        <div className="text-[11px] font-semibold" style={{ color: '#94a3b8' }}>
+                          {p.icon} {p.label}
+                        </div>
+                        <div className="text-[9px] mt-0.5" style={{ color: '#475569' }}>{p.desc}</div>
+                      </button>
+                    ))}
 
-            {sweepRow ? (
-              <div className="grid grid-cols-3 gap-2">
-                {[
-                  { label: 'Crises caught', value: `${(sweepRow.recall * 100).toFixed(0)}%` },
-                  { label: 'False alarms',  value: `${(sweepRow.false_alert_rate * 100).toFixed(0)}%` },
-                  { label: 'Avg warning',   value: `${sweepRow.avg_lead_time_days.toFixed(0)}d` },
-                ].map(m => (
-                  <div
-                    key={m.label}
-                    className="rounded-lg p-2 text-center"
-                    style={{ background: '#080b12', border: '1px solid #151d2e' }}
-                  >
-                    <div className="text-[8px] tracking-wide uppercase" style={{ color: '#4a6080' }}>{m.label}</div>
-                    <div className="text-[14px] font-extrabold" style={{ color: '#94a3b8' }}>{m.value}</div>
+                    <div style={{ height: 1, background: '#1a0a0a', margin: '2px 0' }} />
+                    <div
+                      className="text-[7px] font-bold tracking-widest uppercase"
+                      style={{ color: '#5a2020' }}
+                    >
+                      Sustained Crisis
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        setInputs(PRESETS[CRISIS_PRESET.id])
+                        showBanner({ id: 'preset-applied', priority: 5, text: `Preset: ${CRISIS_PRESET.label}`, color: '#06b6d4' })
+                      }}
+                      className="text-left py-2 rounded-lg w-full"
+                      style={{
+                        background: '#0e0505',
+                        border: '1px solid #7f1d1d',
+                        borderLeft: '3px solid #f87171',
+                        paddingLeft: 10,
+                        paddingRight: 12,
+                      }}
+                    >
+                      <div className="text-[11px] font-semibold" style={{ color: '#fca5a5' }}>
+                        {CRISIS_PRESET.icon} {CRISIS_PRESET.label}
+                      </div>
+                      <div className="text-[9px] mt-0.5" style={{ color: '#6b3030' }}>{CRISIS_PRESET.desc}</div>
+                    </button>
                   </div>
-                ))}
-              </div>
-            ) : (
-              <p className="text-[9px]" style={{ color: '#94a3b8' }}>Threshold data unavailable</p>
-            )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Drivers */}
+          <div>
+            <SectionHeader id="drivers" label="Drivers" />
+            <AnimatePresence initial={false}>
+              {openSection === 'drivers' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ overflow: 'hidden', paddingTop: 8 }}
+                >
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {SLIDER_CONFIG.map(cfg => {
+                      const sensitivity = getSliderSensitivity(cfg.key, modelData?.global_importance)
+                      return (
+                        <ScenarioSlider
+                          key={cfg.key}
+                          label={cfg.label}
+                          value={inputs[cfg.key]}
+                          min={cfg.min}
+                          max={cfg.max}
+                          step={cfg.step}
+                          sensitivityLevel={sensitivity}
+                          decimals={cfg.step < 0.1 ? 2 : 1}
+                          onChange={v => {
+                            setInputs(prev => ({ ...prev, [cfg.key]: v }))
+                            flashModule(riskModuleRef.current)
+                            flashModule(probModuleRef.current)
+                          }}
+                        />
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Threshold */}
+          <div>
+            <SectionHeader id="threshold" label="Alert Threshold" />
+            <AnimatePresence initial={false}>
+              {openSection === 'threshold' && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.2 }}
+                  style={{ overflow: 'hidden', paddingTop: 8 }}
+                >
+                  <div>
+                    <div className="flex justify-between mb-1">
+                      <span className="text-[10px]" style={{ color: '#94a3b8' }}>Threshold</span>
+                      <span className="text-[10px] font-bold" style={{ color: '#fbbf24' }}>
+                        {(threshold * 100).toFixed(0)}%
+                      </span>
+                    </div>
+                    <input
+                      type="range" min={0.10} max={0.70} step={0.10}
+                      value={threshold}
+                      onChange={e => setThreshold(parseFloat(e.target.value))}
+                      className="w-full cursor-pointer mb-3"
+                      style={{ accentColor: '#fbbf24' }}
+                    />
+
+                    {/* Alert connection block */}
+                    {data && thresholdGap != null && (
+                      <div
+                        className="rounded-lg px-3 py-2 mb-3"
+                        style={thresholdGap < 0
+                          ? { background: '#0f2a1a', border: '1px solid #14532d' }
+                          : { background: '#1a0505', border: '1px solid #7f1d1d' }}
+                      >
+                        <div
+                          className="text-[10px] font-semibold"
+                          style={{ color: thresholdGap < 0 ? '#4ade80' : '#f87171' }}
+                        >
+                          {thresholdGap < 0
+                            ? '✓ This scenario stays below your alert threshold'
+                            : '⚠ This scenario would cross your alert threshold'}
+                        </div>
+                        <div className="text-[9px] mt-1" style={{ color: '#475569' }}>
+                          {thresholdGap < 0
+                            ? `Stress probability ${(scenarioStress! * 100).toFixed(0)}% — ${Math.abs(thresholdGap * 100).toFixed(0)}pp below the ${(threshold * 100).toFixed(0)}% threshold`
+                            : `Stress probability ${(scenarioStress! * 100).toFixed(0)}% exceeds the ${(threshold * 100).toFixed(0)}% threshold by ${(thresholdGap * 100).toFixed(0)}pp`}
+                        </div>
+                      </div>
+                    )}
+
+                    {sweepRow ? (
+                      <div className="grid grid-cols-3 gap-2">
+                        {[
+                          { label: 'Crises caught', value: `${(sweepRow.recall * 100).toFixed(0)}%` },
+                          { label: 'False alarms',  value: `${(sweepRow.false_alert_rate * 100).toFixed(0)}%` },
+                          { label: 'Avg warning',   value: `${sweepRow.avg_lead_time_days.toFixed(0)}d` },
+                        ].map(m => (
+                          <div
+                            key={m.label}
+                            className="rounded-lg p-2 text-center"
+                            style={{ background: '#080b12', border: '1px solid #151d2e' }}
+                          >
+                            <div className="text-[8px] tracking-wide uppercase" style={{ color: '#4a6080' }}>{m.label}</div>
+                            <div className="text-[14px] font-extrabold" style={{ color: '#94a3b8' }}>{m.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-[9px]" style={{ color: '#94a3b8' }}>Threshold data unavailable</p>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
         {/* ── Right column ── */}
-        <div className="flex-1 min-w-0 space-y-4">
+          <div style={{
+            position: 'sticky',
+            top: '1.25rem',
+            maxHeight: 'calc(100vh - 5rem)',
+            overflowY: 'auto',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '1rem',
+            transform: 'translateZ(0)',
+          }}>
           <StateBanner banner={activeBanner} />
           {loading && !data && (
             <div className="space-y-4">
@@ -568,7 +589,7 @@ export default function ScenarioExplorer() {
                 ) : (
                   /* Active state */
                   <div>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                       {([primary, secondary] as const).filter(notNull).map((card) => {
                         const raisesRisk = card.delta_value > 0
                         const interp = DRIVER_INTERP[card.feature]
@@ -737,6 +758,7 @@ export default function ScenarioExplorer() {
           )}
         </div>
 
+        </div>
       </div>
     </motion.div>
   )

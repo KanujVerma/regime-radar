@@ -1,5 +1,6 @@
 import { motion, useSpring, useTransform } from 'framer-motion'
 import { useEffect, useRef } from 'react'
+import { typography } from '../../lib/tokens'
 
 interface ProbabilityTripodProps {
   baselineCalm: number
@@ -100,6 +101,7 @@ export default function ProbabilityTripod({
               borderRadius: 8,
               padding: '12px 10px',
               position: 'relative',
+              boxShadow: isDominant ? `0 0 28px ${tile.color}50, 0 0 0 1px ${tile.color}26` : 'none',
             }}
           >
             {isDominant && (
@@ -142,7 +144,7 @@ export default function ProbabilityTripod({
                 <AnimatedNumber value={Math.round(baseVal * 100)} />
               </span>
               <span style={{ fontSize: 9, color: '#1e293b' }}>→</span>
-              <span style={{ fontSize: 20, fontWeight: 800, lineHeight: 1, color: tile.color }}>
+              <span style={{ ...(isDominant ? typography.statXl : typography.statLg), lineHeight: 1, color: tile.color }}>
                 <AnimatedNumber value={Math.round(scenVal * 100)} />
               </span>
             </div>
