@@ -12,6 +12,7 @@ import { useAnalogs } from '../hooks/useAnalogs'
 import { buildDriversNarrative, getDriverHeadline, formatRisk } from '../lib/narratives'
 import { sentenceFor, labelFor } from '../lib/featureLabels'
 import { colors, regimeColor, regimeGlow, regimeBorder, typography } from '../lib/tokens'
+import ContributionChart from '../components/charts/ContributionChart'
 
 const VOL_FEATURES = new Set([
   'rv_20d', 'rv_20d_pct', 'vix_level', 'vix_pct_504d',
@@ -105,6 +106,10 @@ export default function ModelDrivers() {
   const maxImp = topImportance[0]?.importance ?? 0.001
 
   const forwardBullets = buildForwardBullets(pushing[0]?.[0])
+  const [focusedDriver, setFocusedDriver] = useState<string | null>(null)
+
+  const contributionData = Object.entries(data.local_explanation)
+    .map(([feature, value]) => ({ label: labelFor(feature), value }))
 
   const demoAction = stateData?.mode === 'demo'
     ? <span className="text-[10px] px-2 py-1 rounded" style={{ background: '#2d1f0a', color: colors.amber, border: `1px solid ${colors.amberDim}` }}>Demo data</span>
@@ -217,13 +222,42 @@ export default function ModelDrivers() {
               Relative importance across all historical periods — top 5 factors shown. Bars are proportional to each other, not a percentage breakdown.
             </p>
             {topImportance.map((d, i) => (
-              <DriverBar key={d.feature} label={labelFor(d.feature)} value={d.importance} max={maxImp} direction="raising" delay={i * 40} />
+              <div
+                key={d.feature}
+                onMouseEnter={() => setFocusedDriver(labelFor(d.feature))}
+                onMouseLeave={() => setFocusedDriver(null)}
+              >
+                <DriverBar
+                  label={labelFor(d.feature)}
+                  value={d.importance}
+                  max={maxImp}
+                  direction="raising"
+                  delay={i * 40}
+                  focused={focusedDriver === labelFor(d.feature)}
+                  dimmed={focusedDriver !== null && focusedDriver !== labelFor(d.feature)}
+                />
+              </div>
             ))}
             <p style={{ color: colors.textDim, fontSize: 10, marginTop: 10, lineHeight: 1.5 }}>
               Left panel shows <em>what is driving the model today</em>. This panel shows <em>what the model typically relies on most</em>.
             </p>
           </Panel>
         </div>
+
+        {/* ── Contribution chart ── */}
+        {contributionData.length > 0 && (
+          <div style={{ background: colors.surface, border: `1px solid ${colors.border}`, borderRadius: 12, paddingBottom: 4 }}>
+            <div style={{ padding: '10px 16px 6px', borderBottom: `1px solid ${colors.border}`, marginBottom: 8 }}>
+              <span style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.10em', textTransform: 'uppercase' as const, color: colors.textMuted }}>
+                What's driving the signal today
+              </span>
+            </div>
+            <ContributionChart
+              data={contributionData}
+              onHover={setFocusedDriver}
+            />
+          </div>
+        )}
 
         {/* ── Forward-looking block ── */}
         <Panel title="What would raise risk further">

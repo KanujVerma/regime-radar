@@ -6,9 +6,11 @@ interface DriverBarProps {
   max: number
   direction?: 'raising' | 'calming' | 'neutral'
   delay?: number
+  focused?: boolean
+  dimmed?: boolean
 }
 
-export default function DriverBar({ label, value, max, direction = 'neutral', delay = 0 }: DriverBarProps) {
+export default function DriverBar({ label, value, max, direction = 'neutral', delay = 0, focused: _focused = false, dimmed = false }: DriverBarProps) {
   const pct = Math.min((value / (max || 1)) * 100, 100)
   const barColor = direction === 'raising'
     ? 'linear-gradient(90deg, #f87171, #fbbf24)'
@@ -18,7 +20,7 @@ export default function DriverBar({ label, value, max, direction = 'neutral', de
   const scoreColor = direction === 'raising' ? colors.red : direction === 'calming' ? colors.green : colors.cyan
 
   return (
-    <div style={{ marginBottom: 10 }}>
+    <div style={{ marginBottom: 10, opacity: dimmed ? 0.35 : 1, transition: 'opacity 0.2s' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
         <span style={{ fontSize: 11, color: colors.textSecondary }}>{label}</span>
         <span style={{ fontSize: 11, fontWeight: 700, color: scoreColor }}>
