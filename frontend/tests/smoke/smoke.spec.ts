@@ -400,8 +400,13 @@ test.describe('Scenario Explorer page', () => {
   })
 
   test('preset chip strip is visible without opening any section', async ({ page }) => {
+    const done = page.waitForResponse(
+      r => r.url().includes('/scenario') && r.status() === 200,
+      { timeout: 15_000 },
+    )
     await page.goto('/scenario')
-    await waitForLoad(page)
+    await done
+    await page.waitForTimeout(400)
     // Presets always visible — no section click required
     await expect(page.getByText('Calm Recovery')).toBeVisible()
     await expect(page.getByText('Volatility Pickup')).toBeVisible()
@@ -450,15 +455,23 @@ test.describe('Scenario Explorer page', () => {
   })
 
   test('Drivers section can be toggled collapsed and re-expanded', async ({ page }) => {
+    const done = page.waitForResponse(
+      r => r.url().includes('/scenario') && r.status() === 200,
+      { timeout: 15_000 },
+    )
     await page.goto('/scenario')
-    await waitForLoad(page)
+    await done
+    await page.waitForTimeout(400)
+    const driversBtn = page.getByRole('button', { name: /Drivers/i })
     // Drivers open by default on desktop viewport (1280px default)
     await expect(page.locator('input[type="range"]').first()).toBeVisible()
-    await page.getByRole('button', { name: /Drivers/i }).click()
+    await driversBtn.click()
     await page.waitForTimeout(250)
+    await expect(driversBtn).toHaveAttribute('aria-expanded', 'false')
     await expect(page.locator('input[type="range"]').first()).not.toBeVisible()
-    await page.getByRole('button', { name: /Drivers/i }).click()
+    await driversBtn.click()
     await page.waitForTimeout(250)
+    await expect(driversBtn).toHaveAttribute('aria-expanded', 'true')
     await expect(page.locator('input[type="range"]').first()).toBeVisible()
   })
 })
