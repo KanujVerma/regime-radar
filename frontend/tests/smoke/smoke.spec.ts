@@ -13,11 +13,6 @@ async function waitForLoad(page: Page) {
   await expect(page.getByText('Loading…')).toHaveCount(0, { timeout: 20_000 })
 }
 
-/** Assert an element matching `selector` is visible */
-async function visible(page: Page, selector: string) {
-  await expect(page.locator(selector).first()).toBeVisible()
-}
-
 // ─── API health ──────────────────────────────────────────────────────────────
 
 test.describe('API health', () => {
@@ -110,12 +105,12 @@ test.describe('API health', () => {
 test.describe('Navigation', () => {
   test('sidebar renders all 5 nav items', async ({ page }) => {
     await page.goto('/')
-    // Nav links (exact text match, sidebar context)
-    await expect(page.locator('nav').getByText('Current State')).toBeVisible()
-    await expect(page.locator('nav').getByText('History')).toBeVisible()
-    await expect(page.locator('nav').getByText('Event Replay')).toBeVisible()
-    await expect(page.locator('nav').getByText('Model Drivers')).toBeVisible()
-    await expect(page.locator('nav').getByText('Scenario Explorer')).toBeVisible()
+    // Use getByRole('link') to avoid strict-mode violations from nested spans
+    await expect(page.getByRole('link', { name: 'Current State' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'History' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Event Replay' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Signal Breakdown' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Scenario Explorer' })).toBeVisible()
   })
 
   test('sidebar brand shows RegimeRadar', async ({ page }) => {
@@ -125,25 +120,25 @@ test.describe('Navigation', () => {
 
   test('clicking History nav navigates to /history', async ({ page }) => {
     await page.goto('/')
-    await page.getByText('History').click()
+    await page.getByRole('link', { name: 'History' }).click()
     await expect(page).toHaveURL(/\/history/)
   })
 
   test('clicking Event Replay nav navigates to /event-replay', async ({ page }) => {
     await page.goto('/')
-    await page.getByText('Event Replay').click()
+    await page.getByRole('link', { name: 'Event Replay' }).click()
     await expect(page).toHaveURL(/\/event-replay/)
   })
 
-  test('clicking Model Drivers nav navigates to /model-drivers', async ({ page }) => {
+  test('clicking Signal Breakdown nav navigates to /model-drivers', async ({ page }) => {
     await page.goto('/')
-    await page.getByText('Model Drivers').click()
+    await page.getByRole('link', { name: 'Signal Breakdown' }).click()
     await expect(page).toHaveURL(/\/model-drivers/)
   })
 
   test('clicking Scenario Explorer nav navigates to /scenario', async ({ page }) => {
     await page.goto('/')
-    await page.getByText('Scenario Explorer').click()
+    await page.getByRole('link', { name: 'Scenario Explorer' }).click()
     await expect(page).toHaveURL(/\/scenario/)
   })
 })
@@ -160,10 +155,8 @@ test.describe('Current State page', () => {
     await expect(page.getByText('Current State').first()).toBeVisible()
   })
 
-  test('Market Regime card shows a regime value', async ({ page }) => {
-    const card = page.locator('text=Market Regime')
-    await expect(card).toBeVisible()
-    // regime value should be one of calm / elevated / turbulent
+  test('regime value is shown on the page', async ({ page }) => {
+    // Regime is displayed as a hero value (Calm / Elevated / Turbulent), not under a "Market Regime" label
     const regimeValues = page.locator('text=/^(Calm|Elevated|Turbulent)$/i')
     await expect(regimeValues.first()).toBeVisible()
   })
@@ -186,28 +179,24 @@ test.describe('Current State page', () => {
 
   test('Transition risk gauge SVG renders', async ({ page }) => {
     await expect(page.getByText('Transition risk gauge')).toBeVisible()
-    // SVG gauge rendered inside the panel
     await expect(page.locator('svg').first()).toBeVisible()
   })
 
-  test('"What is pushing risk" panel renders driver bars', async ({ page }) => {
-    await expect(page.getByText('What is pushing risk right now')).toBeVisible()
+  test('"What is raising risk right now" panel renders driver bars', async ({ page }) => {
+    await expect(page.getByText('What is raising risk right now')).toBeVisible()
   })
 
   test('"Last 30 Trading Days" panel renders with a chart', async ({ page }) => {
     const panelTitle = page.getByText('Last 30 Trading Days')
     await expect(panelTitle).toBeVisible()
-    // Panel.tsx structure: title div is a direct child of the Panel root div.
-    // One level up from the title div lands on the Panel root, which contains the chart SVG.
     const panel = panelTitle.locator('..')
     await expect(panel.locator('svg').first()).toBeVisible()
   })
 
-  test('Refresh Data button works without error', async ({ page }) => {
-    const refreshBtn = page.getByText('↻ Refresh Data')
+  test('Refresh button works without error', async ({ page }) => {
+    const refreshBtn = page.getByRole('button', { name: /refresh/i }).first()
     await expect(refreshBtn).toBeVisible()
     await refreshBtn.click()
-    // After click page should still not show error
     await expect(page.locator('text=Error').first()).toHaveCount(0)
     await waitForLoad(page)
   })
@@ -226,7 +215,6 @@ test.describe('History page', () => {
   })
 
   test('chart container renders', async ({ page }) => {
-    // Recharts renders a <svg> inside a responsive container
     await expect(page.locator('.recharts-responsive-container, svg').first()).toBeVisible()
   })
 
@@ -235,10 +223,9 @@ test.describe('History page', () => {
     await expect(page.getByText(/Alert/)).toBeVisible()
   })
 
-  test('regime color legend shows Calm, Elevated, Turbulent chips', async ({ page }) => {
-    await expect(page.getByText('Calm').first()).toBeVisible()
-    await expect(page.getByText('Elevated').first()).toBeVisible()
-    await expect(page.getByText('Turbulent').first()).toBeVisible()
+  test('chart shell titles render for both linked charts', async ({ page }) => {
+    await expect(page.getByText('Regime & SPY').first()).toBeVisible()
+    await expect(page.getByText('Transition Risk').first()).toBeVisible()
   })
 })
 
@@ -255,28 +242,33 @@ test.describe('Event Replay page', () => {
   })
 
   test('all three event tabs render', async ({ page }) => {
-    // Buttons rendered as flex row at top of page
-    await expect(page.getByRole('button', { name: '2008 Financial Crisis' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'COVID-19 2020' })).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Rate Tightening 2022' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: '2008 Financial Crisis' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'COVID-19 2020' })).toBeVisible()
+    await expect(page.getByRole('tab', { name: 'Rate Tightening 2022' })).toBeVisible()
   })
 
-  test('2008 event loads warning lead time and peak risk cards', async ({ page }) => {
-    await expect(page.getByText('Warning Lead Time')).toBeVisible()
-    await expect(page.getByText('Peak Transition Risk')).toBeVisible()
+  test('2008 event loads live stat cards', async ({ page }) => {
+    await expect(page.getByText('Days into event')).toBeVisible()
+    await expect(page.getByText('Risk today')).toBeVisible()
+    await expect(page.getByText('Peak risk so far')).toBeVisible()
+    await expect(page.getByText('Alert days so far')).toBeVisible()
   })
 
   test('switching to COVID-19 2020 loads new data', async ({ page }) => {
-    await page.getByText('COVID-19 2020').click()
+    await page.getByRole('tab', { name: 'COVID-19 2020' }).click()
     await waitForLoad(page)
-    await expect(page.getByText('Warning Lead Time')).toBeVisible()
-    await expect(page.getByText('Peak Transition Risk')).toBeVisible()
+    await expect(page.getByText('Days into event')).toBeVisible()
+    await expect(page.getByText('Peak risk so far')).toBeVisible()
   })
 
   test('switching to Rate Tightening 2022 loads new data', async ({ page }) => {
-    await page.getByText('Rate Tightening 2022').click()
+    await page.getByRole('tab', { name: 'Rate Tightening 2022' }).click()
     await waitForLoad(page)
-    await expect(page.getByText('Warning Lead Time')).toBeVisible()
+    await expect(page.getByText('Days into event')).toBeVisible()
+  })
+
+  test('"What happened" panel renders with content', async ({ page }) => {
+    await expect(page.getByText('What happened')).toBeVisible()
   })
 
   test('Takeaway panel renders with content', async ({ page }) => {
@@ -287,37 +279,41 @@ test.describe('Event Replay page', () => {
     await expect(page.locator('.recharts-responsive-container, svg').first()).toBeVisible()
   })
 
-  test('Alert Days metric card renders', async ({ page }) => {
-    await expect(page.getByText('Alert Days')).toBeVisible()
-  })
-
-  test('First Threshold Crossing card renders', async ({ page }) => {
-    await expect(page.getByText('First Threshold Crossing')).toBeVisible()
+  test('scrubber transport controls render', async ({ page }) => {
+    await expect(page.getByRole('button', { name: /play|pause/i }).first()).toBeVisible()
   })
 })
 
-// ─── Model Drivers page ──────────────────────────────────────────────────────
+// ─── Model Drivers (Signal Breakdown) page ───────────────────────────────────
 
 test.describe('Model Drivers page', () => {
   test.beforeEach(async ({ page }) => {
+    // Page renders skeleton until BOTH /model-drivers and /current-state resolve
+    const modelDone = page.waitForResponse(
+      resp => resp.url().includes('/model-drivers') && resp.status() === 200,
+      { timeout: 15_000 },
+    )
+    const stateDone = page.waitForResponse(
+      resp => resp.url().includes('/current-state') && resp.status() === 200,
+      { timeout: 15_000 },
+    )
     await page.goto('/model-drivers')
-    await waitForLoad(page)
+    await Promise.all([modelDone, stateDone])
   })
 
-  test('renders Model Drivers title', async ({ page }) => {
-    await expect(page.getByText('Model Drivers').first()).toBeVisible()
+  test('renders Signal Breakdown title', async ({ page }) => {
+    await expect(page.getByText('Signal Breakdown').first()).toBeVisible()
   })
 
-  test('"What usually raises risk" panel renders', async ({ page }) => {
-    await expect(page.getByText('What usually raises risk')).toBeVisible()
+  test('"What always drives the model most" panel renders', async ({ page }) => {
+    await expect(page.getByText('What always drives the model most')).toBeVisible()
   })
 
-  test('"Why the latest reading" panel renders', async ({ page }) => {
-    await expect(page.getByText('Why the latest reading looks this way')).toBeVisible()
+  test('"Why the model sees it this way today" panel renders', async ({ page }) => {
+    await expect(page.getByText('Why the model sees it this way today')).toBeVisible()
   })
 
   test('driver bars render for at least one feature', async ({ page }) => {
-    // Feature labels are rendered inside DriverBar — check for any known feature name
     await expect(page.getByText(/VIX|Volatility|Drawdown|Return|Momentum/i).first()).toBeVisible()
   })
 })
@@ -334,7 +330,7 @@ test.describe('Scenario Explorer page', () => {
     await expect(page.getByText('Scenario Explorer').first()).toBeVisible()
   })
 
-  test('all 6 sliders render', async ({ page }) => {
+  test('all 6 driver sliders render (Drivers section open by default)', async ({ page }) => {
     await expect(page.getByText('VIX Level')).toBeVisible()
     await expect(page.getByText('VIX 5-day Change')).toBeVisible()
     await expect(page.getByText('Realized Vol Percentile')).toBeVisible()
@@ -343,83 +339,64 @@ test.describe('Scenario Explorer page', () => {
     await expect(page.getByText('Distance from SMA-50')).toBeVisible()
   })
 
-  test('quick scenario preset buttons render', async ({ page }) => {
-    await expect(page.getByText(/Calm/)).toBeVisible()
-    await expect(page.getByText(/Choppy/)).toBeVisible()
-    await expect(page.getByText(/Stress/)).toBeVisible()
+  test('quick scenario presets render when section is opened', async ({ page }) => {
+    await page.locator('button', { hasText: 'Quick Scenarios' }).click()
+    await expect(page.getByText(/Calm Recovery/)).toBeVisible()
+    await expect(page.getByText(/Panic Shock/)).toBeVisible()
+    await expect(page.getByText(/Crisis Peak/)).toBeVisible()
   })
 
-  test('Alert Threshold slider renders with metric cards', async ({ page }) => {
-    await expect(page.getByText('Alert threshold').first()).toBeVisible()
-    await expect(page.locator('text=Recall, text=False Alerts, text=Lead Time').first()).toBeVisible().catch(() => {
-      // metrics may render individually
-    })
+  test('Alert Threshold section renders metric cards when opened', async ({ page }) => {
+    await page.locator('button', { hasText: 'Alert Threshold' }).click()
+    await expect(page.getByText(/Crises caught|False alarms|Avg warning/i).first()).toBeVisible()
   })
 
-  test('RiskRail renders with Baseline and Scenario values', async ({ page }) => {
-    await expect(page.getByText('Baseline').first()).toBeVisible()
-    await expect(page.getByText('Scenario').first()).toBeVisible()
-    await expect(page.locator('text=B').first()).toBeVisible()
-    await expect(page.locator('text=S').first()).toBeVisible()
-  })
-
-  test('Regime probability shift panel renders', async ({ page }) => {
-    await expect(page.getByText('Regime probability shift')).toBeVisible()
+  test('Regime probability tripod panel renders with Calm/Turbulent tiles', async ({ page }) => {
+    await expect(page.getByText('Regime probability — current market → your scenario')).toBeVisible()
     await expect(page.getByText(/calm/i).first()).toBeVisible()
     await expect(page.getByText(/turbulent/i).first()).toBeVisible()
   })
 
-  test('Calm preset updates values without error', async ({ page }) => {
-    await page.getByText('🌤 Calm').click()
+  test('"What\'s driving this scenario" driver panel renders', async ({ page }) => {
+    await expect(page.getByText("What's driving this scenario")).toBeVisible()
+  })
+
+  test('Calm Recovery preset updates values without error', async ({ page }) => {
+    await page.locator('button', { hasText: 'Quick Scenarios' }).click()
+    await page.getByText('🌤 Calm Recovery').click()
     await waitForLoad(page)
     await expect(page.locator('text=error', { exact: false }).first()).toHaveCount(0)
-    await expect(page.getByText('Baseline').first()).toBeVisible()
   })
 
-  test('Choppy preset updates values without error', async ({ page }) => {
-    await page.getByText('⚡ Choppy').click()
+  test('Panic Shock preset updates values without error', async ({ page }) => {
+    await page.locator('button', { hasText: 'Quick Scenarios' }).click()
+    await page.getByText('⚡ Panic Shock').click()
     await waitForLoad(page)
-    await expect(page.getByText('Baseline').first()).toBeVisible()
+    await expect(page.getByText('Regime probability — current market → your scenario')).toBeVisible()
   })
 
-  test('Stress Spike preset updates values without error', async ({ page }) => {
-    await page.getByText('🔴 Stress Spike').click()
+  test('Crisis Peak preset updates values without error', async ({ page }) => {
+    await page.locator('button', { hasText: 'Quick Scenarios' }).click()
+    await page.getByText('🔴 Crisis Peak').click()
     await waitForLoad(page)
-    await expect(page.getByText('Baseline').first()).toBeVisible()
+    await expect(page.getByText('Regime probability — current market → your scenario')).toBeVisible()
   })
 
-  test('Stress Spike shows higher turbulent region on RiskRail than Calm', async ({ page }) => {
-    // Click Calm first, capture scenario value
-    await page.getByText('🌤 Calm').click()
+  test('Crisis Peak preset renders tripod with Turbulent regime visible', async ({ page }) => {
+    await page.locator('button', { hasText: 'Quick Scenarios' }).click()
+    await page.getByText('🔴 Crisis Peak').click()
     await waitForLoad(page)
-    // Get scenario % text from RiskRail numbers row
-    const scenarioEl = page.locator('text=Scenario').first().locator('..').locator('..').locator('[class*="text-[28px]"]').last()
-    const calmText = await scenarioEl.textContent().catch(() => '0%')
-
-    // Click Stress Spike
-    await page.getByText('🔴 Stress Spike').click()
-    await waitForLoad(page)
-    const stressText = await scenarioEl.textContent().catch(() => '100%')
-
-    const calmVal = parseInt((calmText ?? '0').replace('%', ''))
-    const stressVal = parseInt((stressText ?? '0').replace('%', ''))
-    expect(stressVal).toBeGreaterThanOrEqual(calmVal)
-  })
-
-  test('"What this scenario means" narrative panel renders', async ({ page }) => {
-    await expect(page.getByText('What this scenario means')).toBeVisible()
-  })
-
-  test('"What changed the most" driver deltas panel renders', async ({ page }) => {
-    await expect(page.getByText('What changed the most')).toBeVisible()
+    await expect(page.getByText('Regime probability — current market → your scenario')).toBeVisible()
+    await expect(page.getByText('Turbulent').first()).toBeVisible()
   })
 
   test('Reset to current market button works', async ({ page }) => {
-    await page.getByText('🔴 Stress Spike').click()
+    await page.locator('button', { hasText: 'Quick Scenarios' }).click()
+    await page.getByText('🔴 Crisis Peak').click()
     await waitForLoad(page)
     await page.getByText('↺ Reset to current market').click()
     await waitForLoad(page)
-    await expect(page.getByText('Baseline').first()).toBeVisible()
+    await expect(page.getByText('Regime probability — current market → your scenario')).toBeVisible()
   })
 })
 
@@ -445,7 +422,6 @@ test.describe('No runtime errors across pages', () => {
       await page.goto(path)
       await waitForLoad(page)
 
-      // No visible red error div
       const errDiv = page.locator('.text-red-400').first()
       const errVisible = await errDiv.isVisible().catch(() => false)
       expect(errVisible).toBe(false)

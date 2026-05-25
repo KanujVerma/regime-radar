@@ -67,6 +67,7 @@ export default function ModelDrivers() {
   const { data: analogsData } = useAnalogs()
   const [reliabilityOpen, setReliabilityOpen] = useState(false)
   const [reliabilityHover, setReliabilityHover] = useState(false)
+  const [focusedDriver, setFocusedDriver] = useState<string | null>(null)
 
   if (loading || stateLoading) return (
     <div className="p-5 space-y-4">
@@ -106,7 +107,6 @@ export default function ModelDrivers() {
   const maxImp = topImportance[0]?.importance ?? 0.001
 
   const forwardBullets = buildForwardBullets(pushing[0]?.[0])
-  const [focusedDriver, setFocusedDriver] = useState<string | null>(null)
 
   const contributionData = Object.entries(data.local_explanation)
     .map(([feature, value]) => ({ label: labelFor(feature), value }))
