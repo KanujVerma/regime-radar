@@ -22,6 +22,10 @@ describe('roundToStep', () => {
     expect(roundToStep(24.0, 0.5)).toBe(24.0)
     expect(roundToStep(0.40, 0.01)).toBeCloseTo(0.40, 10)
   })
+
+  it('rounds up at exact midpoint (.5)', () => {
+    expect(roundToStep(18.25, 0.5)).toBe(18.5)
+  })
 })
 
 describe('isChanged detection (snapped comparison)', () => {
