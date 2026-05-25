@@ -65,18 +65,30 @@ No ✦ badge. Clean selection state.
 ```
 background:  #080c18
 border:      1.5px dashed #3a5070
-color:       #6a80a0             ← slightly lighter than inactive; still reads as "selected"
+color:       #8099bb             ← clearly legible as selected; dashed border + ✦ carry the divergence signal
 font-weight: 500
 label:       "{icon} {name} ✦"  ← ✦ (U+2726) appended inline, color #3b6fa8
 ```
-The chip must still read as "I own this preset as my starting point," not "this is abandoned." The dashed border and ✦ signal divergence without fully deactivating the chip.
+The chip reads as "I own this preset as my starting point," not "this is abandoned." The dashed border and ✦ signal divergence; text brightness keeps it clearly selected.
 
 **Logic for State 3 vs State 4:**
-- Track `activePresetId: string | null` — set when a preset chip is clicked
-- Compare current `inputs` against `PRESETS[activePresetId]` for each key in `SLIDER_KEYS_FOR_SENSITIVITY`
-- If any key differs by more than its `step` value: State 4. Otherwise: State 3.
-- On reset: restore inputs to `PRESETS[activePresetId]`, return to State 3
-- On a different preset click: new `activePresetId`, clear customized state
+
+```typescript
+function roundToStep(value: number, step: number): number {
+  return Math.round(value / step) * step
+}
+
+const isCustomized = activePresetId != null &&
+  SLIDER_KEYS_FOR_SENSITIVITY.some(key => {
+    const cfg = SLIDER_CONFIG.find(c => c.key === key)!
+    return roundToStep(inputs[key], cfg.step) !== roundToStep(PRESETS[activePresetId][key], cfg.step)
+  })
+```
+
+Comparison operates on snapped values — identical to what the slider displays. No epsilon or fuzzy threshold.
+
+- On reset: restore inputs to `PRESETS[activePresetId]`, `isCustomized` becomes false → State 3
+- On a different preset click: new `activePresetId`, inputs set to new preset → State 3 immediately
 
 ---
 
@@ -154,7 +166,7 @@ The sensitivity dot (6×6px colored circle before the label) is retained as-is.
 When chip is in State 4 (active modified) and a specific slider's value differs from `PRESETS[activePresetId][key]`:
 
 - **Value display:** `color: #60a5fa` (accent blue) instead of `#94a3b8`
-- **Preset annotation:** append `" (preset: {presetValue})"` in `font-size: 9px, color: #2d4a6a` next to the value
+- **Preset annotation:** append `" (preset: {presetValue})"` in `font-size: 9px, color: #2d4a6a` next to the value. Show on **all changed sliders** — at `9px / #2d4a6a` the annotation is quiet enough that even 6 rows with it reads as systematic context, not noise. If in-browser review reveals clutter, cap to the **3 sliders with the largest absolute delta** (measured as `|current - preset| / (max - min)` — proportion of range).
 - **Track:** render two fills — a dim `#1e3a5c` fill up to the preset position, then a bright `#3b82f6` fill from preset to current position. If current < preset, the bright fill is to the left of the dim.
 
 When chip returns to State 3 (reset or matching): all slider values revert to normal styling.
@@ -198,7 +210,8 @@ This section is not collapsible.
 **Add:**
 - `activePresetId: string | null` state (replaces implicit "which preset is selected" tracking)
 - `driversOpen: boolean` state with localStorage init
-- `isCustomized: boolean` derived value — `activePresetId != null` and at least one slider key differs from `PRESETS[activePresetId]`
+- `presetThreshold: number | null` state — set to the preset's defined threshold when a preset is applied (currently always `null` since no preset defines `alertThreshold`). Kept in state so future preset definitions or UI can expose it without a state-model change.
+- `isCustomized: boolean` derived value — `activePresetId != null` and at least one slider key differs using `roundToStep` comparison (see Chip State System)
 
 **Preset click handler update:**
 ```typescript
