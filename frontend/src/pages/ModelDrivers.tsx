@@ -109,7 +109,7 @@ export default function ModelDrivers() {
   const forwardBullets = buildForwardBullets(pushing[0]?.[0])
 
   const contributionData = Object.entries(data.local_explanation)
-    .map(([feature, value]) => ({ label: labelFor(feature), value }))
+    .map(([feature, value]) => ({ name: feature, label: labelFor(feature), value }))
 
   const demoAction = stateData?.mode === 'demo'
     ? <span className="text-[10px] px-2 py-1 rounded" style={{ background: '#2d1f0a', color: colors.amber, border: `1px solid ${colors.amberDim}` }}>Demo data</span>
@@ -231,7 +231,7 @@ export default function ModelDrivers() {
                   label={labelFor(d.feature)}
                   value={d.importance}
                   max={maxImp}
-                  direction="raising"
+                  direction="neutral"
                   delay={i * 40}
                   focused={focusedDriver === labelFor(d.feature)}
                   dimmed={focusedDriver !== null && focusedDriver !== labelFor(d.feature)}

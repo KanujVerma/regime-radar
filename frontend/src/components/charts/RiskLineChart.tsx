@@ -24,9 +24,9 @@ export default function RiskLineChart({ data, syncHoverX, onSyncHoverX }: RiskLi
   const currentColor = lastPoint ? riskColor(lastPoint.transition_risk ?? 0) : '#06b6d4'
 
   return (
-    <div style={{ position: 'relative' }}>
-      {/* Reference line annotation badges — positioned above chart */}
-      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginBottom: 6 }}>
+    <div style={{ position: 'relative', height: '100%', display: 'flex', flexDirection: 'column' }}>
+      {/* Reference line annotation badges */}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, padding: '8px 8px 4px', flexShrink: 0 }}>
         <span style={{
           fontSize: 10, fontWeight: 700, textTransform: 'uppercase',
           color: '#fbbf24', background: 'rgba(251,191,36,0.08)',
@@ -45,6 +45,7 @@ export default function RiskLineChart({ data, syncHoverX, onSyncHoverX }: RiskLi
         </span>
       </div>
 
+      <div style={{ flex: 1, minHeight: 0 }}>
       <ResponsiveContainer width="100%" height="100%">
         <AreaChart
           data={data}
@@ -129,6 +130,7 @@ export default function RiskLineChart({ data, syncHoverX, onSyncHoverX }: RiskLi
           />
         </AreaChart>
       </ResponsiveContainer>
+      </div>
     </div>
   )
 }

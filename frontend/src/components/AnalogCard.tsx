@@ -15,10 +15,12 @@ export default function AnalogCard({ analog }: AnalogCardProps) {
   return (
     <div style={{
       display: 'flex', flexDirection: 'column', gap: 8,
-      background: colors.surfaceElevated,
-      border: `1px solid ${color}26`,
-      borderRadius: 10,
-      boxShadow: '0 2px 16px rgba(0,0,0,0.35)',
+      background: `rgba(12, 18, 36, 0.55)`,
+      backdropFilter: 'blur(14px)',
+      WebkitBackdropFilter: 'blur(14px)',
+      border: `1px solid ${color}38`,
+      borderRadius: 12,
+      boxShadow: `0 4px 24px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.04), 0 0 0 1px ${color}18`,
       padding: '14px 16px',
     }}>
       <div style={{ fontSize: 18, fontWeight: 600, color: colors.textSecondary }}>{analog.display_date}</div>

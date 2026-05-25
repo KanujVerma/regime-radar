@@ -10,6 +10,13 @@ import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { useScrubber } from '../hooks/useScrubber'
 import { useEventReplay } from '../hooks/useEventReplay'
 import { colors } from '../lib/tokens'
+import { ALERT_THRESHOLD, DEFAULT_THRESHOLD } from '../lib/constants'
+
+function riskColor(v: number) {
+  if (v > ALERT_THRESHOLD) return colors.red
+  if (v > DEFAULT_THRESHOLD) return colors.amber
+  return colors.green
+}
 import { EVENTS, EVENT_CONTENT } from '../lib/eventContent'
 
 export default function EventReplay() {
@@ -56,13 +63,22 @@ export default function EventReplay() {
           <>
             {/* Stat cards — live at playhead */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-              <MetricCard label="Days into event" value={String(frame + 1)} />
+              <MetricCard label="Days into event" value={String(frame + 1)} valueColor={colors.cyan} />
               <MetricCard
                 label="Risk today"
                 value={currentPoint?.transition_risk != null ? `${(currentPoint.transition_risk * 100).toFixed(1)}%` : '—'}
+                valueColor={currentPoint?.transition_risk != null ? riskColor(currentPoint.transition_risk) : colors.textPrimary}
               />
-              <MetricCard label="Peak risk so far" value={`${(peakSoFar * 100).toFixed(1)}%`} />
-              <MetricCard label="Alert days so far" value={String(alertDaysSoFar)} />
+              <MetricCard
+                label="Peak risk so far"
+                value={`${(peakSoFar * 100).toFixed(1)}%`}
+                valueColor={riskColor(peakSoFar)}
+              />
+              <MetricCard
+                label="Alert days so far"
+                value={String(alertDaysSoFar)}
+                valueColor={alertDaysSoFar > 0 ? colors.red : colors.textPrimary}
+              />
             </div>
 
             {/* Replay chart + scrubber */}
