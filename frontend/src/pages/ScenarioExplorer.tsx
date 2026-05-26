@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, type CSSProperties } from 'react'
 import { motion } from 'framer-motion'
 import Topbar from '../components/layout/Topbar'
 import Panel from '../components/ui/Panel'
@@ -35,6 +35,12 @@ const STANDARD_PRESETS = [
 const CRISIS_PRESET = {
   id: 'crisis_peak', icon: '🔴', label: 'Crisis Peak',
   desc: 'Already 2 weeks into sustained turbulence',
+}
+
+const ALL_PRESETS = [...STANDARD_PRESETS, CRISIS_PRESET]
+
+const microLabelStyle: CSSProperties = {
+  fontSize: 9, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#334155',
 }
 
 const DRIVER_INTERP: Record<string, { raisesRisk: string; lowersRisk: string }> = {
@@ -252,14 +258,10 @@ export default function ScenarioExplorer() {
     </button>
   )
 
-  const microLabelStyle: React.CSSProperties = {
-    fontSize: 9, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#334155',
-  }
-
-  const getChipStyle = (presetId: string): React.CSSProperties => {
+  const getChipStyle = (presetId: string): CSSProperties => {
     const isActive = activePresetId === presetId
     const isCrisis = presetId === 'crisis_peak'
-    const base: React.CSSProperties = {
+    const base: CSSProperties = {
       borderRadius: 14, fontSize: 11, cursor: 'pointer', textAlign: 'left' as const,
     }
     if (!isActive) {
@@ -276,8 +278,6 @@ export default function ScenarioExplorer() {
       ? { ...base, background: '#150505', border: '2px solid #f87171', color: '#fca5a5', fontWeight: 600, padding: '3px 12px' }
       : { ...base, background: '#0d1a30', border: '2px solid #3b82f6', color: '#93c5fd', fontWeight: 600, padding: '3px 12px' }
   }
-
-  const ALL_PRESETS = [...STANDARD_PRESETS, CRISIS_PRESET]
 
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
