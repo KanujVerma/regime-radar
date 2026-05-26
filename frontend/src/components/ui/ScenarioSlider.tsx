@@ -97,15 +97,20 @@ export default function ScenarioSlider({
             background: '#3b82f6', borderRadius: 2,
           }} />
         )}
-        {/* Thumb — shows current position, makes it clear this is a slider */}
+        {/* Thumb — glass-style with inner highlight and ambient glow */}
         <div style={{
           position: 'absolute',
           left: `${currentFrac * 100}%`,
           transform: 'translateX(-50%)',
-          width: 10, height: 10,
+          width: 12, height: 12,
           borderRadius: '50%',
-          background: isChanged ? '#60a5fa' : '#3b82f6',
-          border: '1.5px solid #060c1a',
+          background: isChanged
+            ? 'radial-gradient(circle at 35% 35%, #93c5fd, #3b82f6)'
+            : 'radial-gradient(circle at 35% 35%, #60a5fa, #1d4ed8)',
+          border: '1px solid rgba(147,197,253,0.25)',
+          boxShadow: isChanged
+            ? '0 0 6px 1px rgba(96,165,250,0.5), inset 0 1px 0 rgba(255,255,255,0.15)'
+            : '0 0 6px 1px rgba(59,130,246,0.4), inset 0 1px 0 rgba(255,255,255,0.15)',
           pointerEvents: 'none',
           flexShrink: 0,
         }} />
