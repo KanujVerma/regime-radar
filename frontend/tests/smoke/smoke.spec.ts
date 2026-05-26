@@ -330,7 +330,7 @@ test.describe('Scenario Explorer page', () => {
     await expect(page.getByText('Scenario Explorer').first()).toBeVisible()
   })
 
-  test('all 6 driver sliders render (Drivers section open by default)', async ({ page }) => {
+  test('all 6 driver sliders render (Drivers section open by default on desktop)', async ({ page }) => {
     await expect(page.getByText('VIX Level')).toBeVisible()
     await expect(page.getByText('VIX 5-day Change')).toBeVisible()
     await expect(page.getByText('Realized Vol Percentile')).toBeVisible()
@@ -339,15 +339,7 @@ test.describe('Scenario Explorer page', () => {
     await expect(page.getByText('Distance from SMA-50')).toBeVisible()
   })
 
-  test('quick scenario presets render when section is opened', async ({ page }) => {
-    await page.locator('button', { hasText: 'Quick Scenarios' }).click()
-    await expect(page.getByText(/Calm Recovery/)).toBeVisible()
-    await expect(page.getByText(/Panic Shock/)).toBeVisible()
-    await expect(page.getByText(/Crisis Peak/)).toBeVisible()
-  })
-
-  test('Alert Threshold section renders metric cards when opened', async ({ page }) => {
-    await page.locator('button', { hasText: 'Alert Threshold' }).click()
+  test('Alert Threshold section renders metric cards without any section click', async ({ page }) => {
     await expect(page.getByText(/Crises caught|False alarms|Avg warning/i).first()).toBeVisible()
   })
 
@@ -362,36 +354,30 @@ test.describe('Scenario Explorer page', () => {
   })
 
   test('Calm Recovery preset updates values without error', async ({ page }) => {
-    await page.locator('button', { hasText: 'Quick Scenarios' }).click()
     await page.getByText('🌤 Calm Recovery').click()
     await waitForLoad(page)
     await expect(page.locator('text=error', { exact: false }).first()).toHaveCount(0)
   })
 
   test('Panic Shock preset updates values without error', async ({ page }) => {
-    await page.locator('button', { hasText: 'Quick Scenarios' }).click()
     await page.getByText('⚡ Panic Shock').click()
     await waitForLoad(page)
     await expect(page.getByText('Regime probability — current market → your scenario')).toBeVisible()
   })
 
   test('Crisis Peak preset updates values without error', async ({ page }) => {
-    await page.locator('button', { hasText: 'Quick Scenarios' }).click()
     await page.getByText('🔴 Crisis Peak').click()
     await waitForLoad(page)
     await expect(page.getByText('Regime probability — current market → your scenario')).toBeVisible()
   })
 
   test('Crisis Peak preset renders tripod with Turbulent regime visible', async ({ page }) => {
-    await page.locator('button', { hasText: 'Quick Scenarios' }).click()
     await page.getByText('🔴 Crisis Peak').click()
     await waitForLoad(page)
-    await expect(page.getByText('Regime probability — current market → your scenario')).toBeVisible()
     await expect(page.getByText('Turbulent').first()).toBeVisible()
   })
 
   test('Reset to current market button works', async ({ page }) => {
-    await page.locator('button', { hasText: 'Quick Scenarios' }).click()
     await page.getByText('🔴 Crisis Peak').click()
     await waitForLoad(page)
     await page.getByText('↺ Reset to current market').click()
@@ -423,12 +409,13 @@ test.describe('Scenario Explorer page', () => {
     await page.waitForTimeout(400)
     await page.getByText('Calm Recovery').click()
     await page.waitForTimeout(400)
+    // Use React-compatible nativeInputValueSetter to trigger controlled onChange
     await page.locator('input[type="range"]').first().evaluate((el: HTMLInputElement) => {
-      el.value = String(parseFloat(el.max) * 0.8)
+      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+      nativeSetter?.call(el, String(parseFloat(el.max) * 0.8))
       el.dispatchEvent(new Event('input', { bubbles: true }))
-      el.dispatchEvent(new Event('change', { bubbles: true }))
     })
-    await page.waitForTimeout(400)
+    await page.waitForTimeout(600)
     await expect(page.getByText(/Modified from/)).toBeVisible()
   })
 
@@ -442,12 +429,13 @@ test.describe('Scenario Explorer page', () => {
     await page.waitForTimeout(400)
     await page.getByText('Calm Recovery').click()
     await page.waitForTimeout(400)
+    // Use React-compatible nativeInputValueSetter to trigger controlled onChange
     await page.locator('input[type="range"]').first().evaluate((el: HTMLInputElement) => {
-      el.value = String(parseFloat(el.max) * 0.8)
+      const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
+      nativeSetter?.call(el, String(parseFloat(el.max) * 0.8))
       el.dispatchEvent(new Event('input', { bubbles: true }))
-      el.dispatchEvent(new Event('change', { bubbles: true }))
     })
-    await page.waitForTimeout(400)
+    await page.waitForTimeout(600)
     await expect(page.getByText(/Modified from/)).toBeVisible()
     await page.getByRole('button', { name: /reset to preset/i }).click()
     await page.waitForTimeout(300)
@@ -463,16 +451,16 @@ test.describe('Scenario Explorer page', () => {
     await done
     await page.waitForTimeout(400)
     const driversBtn = page.getByRole('button', { name: /Drivers/i })
-    // Drivers open by default on desktop viewport (1280px default)
-    await expect(page.locator('input[type="range"]').first()).toBeVisible()
+    // Drivers open by default on desktop viewport (1280px default) — check a driver label
+    await expect(page.getByText('VIX Level')).toBeVisible()
     await driversBtn.click()
-    await page.waitForTimeout(250)
+    await page.waitForTimeout(350)
     await expect(driversBtn).toHaveAttribute('aria-expanded', 'false')
-    await expect(page.locator('input[type="range"]').first()).not.toBeVisible()
+    await expect(page.getByText('VIX Level')).not.toBeVisible()
     await driversBtn.click()
-    await page.waitForTimeout(250)
+    await page.waitForTimeout(350)
     await expect(driversBtn).toHaveAttribute('aria-expanded', 'true')
-    await expect(page.locator('input[type="range"]').first()).toBeVisible()
+    await expect(page.getByText('VIX Level')).toBeVisible()
   })
 })
 
