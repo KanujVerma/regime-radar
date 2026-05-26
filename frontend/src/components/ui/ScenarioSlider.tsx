@@ -72,31 +72,43 @@ export default function ScenarioSlider({
         </div>
       </div>
 
-      {/* Track with optional two-fill for preset delta */}
-      <div style={{ position: 'relative', height: 3 }}>
-        <div style={{ position: 'absolute', inset: 0, background: '#1e2a3a', borderRadius: 2 }} />
+      {/* Track + thumb — outer div is taller for hit area, track is vertically centered */}
+      <div style={{ position: 'relative', height: 16, display: 'flex', alignItems: 'center' }}>
+        {/* Track background */}
+        <div style={{ position: 'absolute', left: 0, right: 0, height: 3, background: '#1e2a3a', borderRadius: 2 }} />
+        {/* Track fill */}
         {isChanged && presetFrac !== null ? (
           <>
-            {/* Dim fill from 0 to the lower of current/preset positions */}
             <div style={{
-              position: 'absolute', left: 0, top: 0, bottom: 0,
+              position: 'absolute', left: 0, height: 3,
               width: `${loFrac * 100}%`,
               background: '#1e3a5c', borderRadius: 2,
             }} />
-            {/* Bright delta fill between preset and current */}
             <div style={{
-              position: 'absolute', left: `${loFrac * 100}%`, top: 0, bottom: 0,
+              position: 'absolute', left: `${loFrac * 100}%`, height: 3,
               width: `${(hiFrac - loFrac) * 100}%`,
               background: '#3b82f6', borderRadius: 2,
             }} />
           </>
         ) : (
           <div style={{
-            position: 'absolute', left: 0, top: 0, bottom: 0,
+            position: 'absolute', left: 0, height: 3,
             width: `${currentFrac * 100}%`,
             background: '#3b82f6', borderRadius: 2,
           }} />
         )}
+        {/* Thumb — shows current position, makes it clear this is a slider */}
+        <div style={{
+          position: 'absolute',
+          left: `${currentFrac * 100}%`,
+          transform: 'translateX(-50%)',
+          width: 10, height: 10,
+          borderRadius: '50%',
+          background: isChanged ? '#60a5fa' : '#3b82f6',
+          border: '1.5px solid #060c1a',
+          pointerEvents: 'none',
+          flexShrink: 0,
+        }} />
         {/* Invisible range input overlaid for interaction */}
         <input
           type="range"
@@ -108,7 +120,7 @@ export default function ScenarioSlider({
           style={{
             position: 'absolute', inset: 0,
             width: '100%', height: '100%',
-            opacity: 0, cursor: 'pointer', margin: 0,
+            opacity: 0, cursor: 'grab', margin: 0,
           }}
         />
       </div>
