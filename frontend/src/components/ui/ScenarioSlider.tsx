@@ -73,28 +73,39 @@ export default function ScenarioSlider({
       </div>
 
       {/* Track + thumb — outer div is taller for hit area, track is vertically centered */}
-      <div style={{ position: 'relative', height: 16, display: 'flex', alignItems: 'center' }}>
-        {/* Track background */}
-        <div style={{ position: 'absolute', left: 0, right: 0, height: 3, background: '#1e2a3a', borderRadius: 2 }} />
+      <div style={{ position: 'relative', height: 18, display: 'flex', alignItems: 'center' }}>
+        {/* Track shell — recessed glass groove */}
+        <div style={{
+          position: 'absolute', left: 0, right: 0, height: 5,
+          background: 'rgba(10,15,28,0.7)',
+          border: '1px solid rgba(255,255,255,0.06)',
+          borderRadius: 4,
+          boxShadow: 'inset 0 1px 4px rgba(0,0,0,0.7), inset 0 0 1px rgba(0,0,0,0.5)',
+        }} />
         {/* Track fill */}
         {isChanged && presetFrac !== null ? (
           <>
             <div style={{
-              position: 'absolute', left: 0, height: 3,
+              position: 'absolute', left: 0, height: 5,
               width: `${loFrac * 100}%`,
-              background: '#1e3a5c', borderRadius: 2,
+              background: 'linear-gradient(180deg, #1e4a70 0%, #1a3a5c 100%)',
+              borderRadius: 4,
             }} />
             <div style={{
-              position: 'absolute', left: `${loFrac * 100}%`, height: 3,
+              position: 'absolute', left: `${loFrac * 100}%`, height: 5,
               width: `${(hiFrac - loFrac) * 100}%`,
-              background: '#3b82f6', borderRadius: 2,
+              background: 'linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%)',
+              borderRadius: 4,
+              boxShadow: '0 0 8px rgba(59,130,246,0.55)',
             }} />
           </>
         ) : (
           <div style={{
-            position: 'absolute', left: 0, height: 3,
+            position: 'absolute', left: 0, height: 5,
             width: `${currentFrac * 100}%`,
-            background: '#3b82f6', borderRadius: 2,
+            background: 'linear-gradient(180deg, #60a5fa 0%, #3b82f6 100%)',
+            borderRadius: 4,
+            boxShadow: '0 0 8px rgba(59,130,246,0.4)',
           }} />
         )}
         {/* Thumb — glass-style with inner highlight and ambient glow */}
