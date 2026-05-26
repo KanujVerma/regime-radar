@@ -411,6 +411,8 @@ export default function ScenarioExplorer() {
                             sensitivityLevel={sensitivity}
                             decimals={cfg.step < 0.1 ? 2 : 1}
                             presetValue={presetVal}
+                            calmMax={cfg.calmMax}
+                            stressMin={cfg.stressMin}
                             onChange={v => {
                               setInputs(prev => ({ ...prev, [cfg.key]: v }))
                               flashModule(riskModuleRef.current)
