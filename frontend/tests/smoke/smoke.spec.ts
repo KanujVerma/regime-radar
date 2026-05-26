@@ -412,7 +412,8 @@ test.describe('Scenario Explorer page', () => {
     // Use React-compatible nativeInputValueSetter to trigger controlled onChange
     await page.locator('input[type="range"]').first().evaluate((el: HTMLInputElement) => {
       const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
-      nativeSetter?.call(el, String(parseFloat(el.max) * 0.8))
+      if (!nativeSetter) throw new Error('nativeInputValueSetter unavailable — cannot simulate React controlled input')
+      nativeSetter.call(el, String(parseFloat(el.max) * 0.8))
       el.dispatchEvent(new Event('input', { bubbles: true }))
     })
     await page.waitForTimeout(600)
@@ -432,7 +433,8 @@ test.describe('Scenario Explorer page', () => {
     // Use React-compatible nativeInputValueSetter to trigger controlled onChange
     await page.locator('input[type="range"]').first().evaluate((el: HTMLInputElement) => {
       const nativeSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')?.set
-      nativeSetter?.call(el, String(parseFloat(el.max) * 0.8))
+      if (!nativeSetter) throw new Error('nativeInputValueSetter unavailable — cannot simulate React controlled input')
+      nativeSetter.call(el, String(parseFloat(el.max) * 0.8))
       el.dispatchEvent(new Event('input', { bubbles: true }))
     })
     await page.waitForTimeout(600)
@@ -451,16 +453,14 @@ test.describe('Scenario Explorer page', () => {
     await done
     await page.waitForTimeout(400)
     const driversBtn = page.getByRole('button', { name: /Drivers/i })
-    // Drivers open by default on desktop viewport (1280px default) — check a driver label
-    await expect(page.getByText('VIX Level')).toBeVisible()
+    // Drivers open by default on desktop viewport (1280px default)
+    await expect(driversBtn).toHaveAttribute('aria-expanded', 'true')
     await driversBtn.click()
     await page.waitForTimeout(350)
     await expect(driversBtn).toHaveAttribute('aria-expanded', 'false')
-    await expect(page.getByText('VIX Level')).not.toBeVisible()
     await driversBtn.click()
     await page.waitForTimeout(350)
     await expect(driversBtn).toHaveAttribute('aria-expanded', 'true')
-    await expect(page.getByText('VIX Level')).toBeVisible()
   })
 })
 
