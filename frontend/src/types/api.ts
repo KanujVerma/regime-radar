@@ -30,6 +30,7 @@ export interface CurrentStateResponse {
   prob_elevated: number | null
   prob_turbulent: number | null
   delta: StateDelta | null
+  condition_values: Record<string, number>
 }
 
 export interface HistoricalPoint {

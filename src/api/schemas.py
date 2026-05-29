@@ -1,7 +1,7 @@
 """Pydantic response schemas for RegimeRadar API."""
 from __future__ import annotations
 from typing import Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class HealthResponse(BaseModel):
@@ -37,6 +37,7 @@ class CurrentStateResponse(BaseModel):
     prob_elevated: float | None = None
     prob_turbulent: float | None = None
     delta: StateDelta | None = None
+    condition_values: dict[str, float] = Field(default_factory=dict)
 
 
 class HistoricalPoint(BaseModel):
