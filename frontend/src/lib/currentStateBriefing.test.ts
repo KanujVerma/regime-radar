@@ -16,6 +16,15 @@ const historical: HistoricalPoint[] = [
   { date: '2026-05-23', regime: 'elevated', transition_risk: 0.40, vix_level: 28, close: 510 },
 ]
 
+const historyFromRisks = (risks: Array<number | null>): HistoricalPoint[] =>
+  risks.map((transition_risk, index) => ({
+    date: `2026-05-${String(index + 1).padStart(2, '0')}`,
+    regime: 'calm',
+    transition_risk,
+    vix_level: 15,
+    close: 500 + index,
+  }))
+
 const current: CurrentStateResponse = {
   regime: 'elevated',
   transition_risk: 0.20,
@@ -111,12 +120,38 @@ describe('current state briefing derivation helpers', () => {
     expect(percentileRank(0.20, historical)).toBe(75)
   })
 
+  it('ignores null and non-finite transition risk values in percentile rank', () => {
+    const mixedHistory = historyFromRisks([0.05, null, Number.NaN, 0.10, Infinity, 0.20, 0.40])
+
+    expect(percentileRank(0.20, mixedHistory)).toBe(75)
+  })
+
+  it('returns null percentile rank when history has no valid risk values', () => {
+    expect(percentileRank(0.20, historyFromRisks([null, Number.NaN, Infinity]))).toBeNull()
+  })
+
   it('builds risk temperature from current risk and history', () => {
     expect(buildRiskTemperature(current.transition_risk, historical)).toEqual({
       currentRisk: 0.20,
       percentile: 75,
       label: 'Above normal',
     })
+  })
+
+  it('labels risk temperature thresholds', () => {
+    expect(buildRiskTemperature(0.20, historyFromRisks([0.10, 0.20, 0.30, 0.40])).label).toBe('Normal')
+    expect(buildRiskTemperature(0.20, historical).label).toBe('Above normal')
+    expect(buildRiskTemperature(0.20, historyFromRisks([
+      0.01, 0.02, 0.03, 0.04, 0.05,
+      0.06, 0.07, 0.08, 0.20, 0.40,
+    ])).label).toBe('Stretched')
+    expect(buildRiskTemperature(0.20, historyFromRisks([
+      0.01, 0.02, 0.03, 0.04, 0.05,
+      0.06, 0.07, 0.08, 0.09, 0.10,
+      0.11, 0.12, 0.13, 0.14, 0.15,
+      0.16, 0.17, 0.18, 0.20, 0.40,
+    ])).label).toBe('Extreme')
+    expect(buildRiskTemperature(0.20, historyFromRisks([null, Number.NaN])).label).toBe('No history')
   })
 
   it('builds exactly the V1 what-changed rows in order', () => {
@@ -134,6 +169,43 @@ describe('current state briefing derivation helpers', () => {
     expect(rows[3].summary).toContain('Uptrend to Neutral')
   })
 
+  it('keeps regime and trend directions flat when changed flags lack prior values', () => {
+    const currentWithoutPrior: CurrentStateResponse = {
+      ...current,
+      delta: current.delta ? { ...current.delta, prior_regime: null } : null,
+    }
+    const diffWithoutPrior: DailyDiffResponse = {
+      ...dailyDiff,
+      diff: {
+        ...dailyDiff.diff,
+        prior_regime: null,
+        prior_trend: null,
+        regime_changed: true,
+        trend_changed: true,
+      },
+    }
+    const rows = buildWhatChangedRows(currentWithoutPrior, diffWithoutPrior)
+    const regimeRow = rows.find((row) => row.feature === 'regime')
+    const trendRow = rows.find((row) => row.feature === 'trend')
+
+    expect(regimeRow?.summary).toBe('No regime change')
+    expect(regimeRow?.direction).toBe('flat')
+    expect(trendRow?.summary).toBe('No trend change')
+    expect(trendRow?.direction).toBe('flat')
+  })
+
+  it('handles unavailable VIX in what-changed rows', () => {
+    const rows = buildWhatChangedRows({ ...current, vix_level: null }, {
+      ...dailyDiff,
+      diff: { ...dailyDiff.diff, vix_delta: null },
+    })
+    const vixRow = rows.find((row) => row.feature === 'vix_level')
+
+    expect(vixRow?.value).toBe('Unavailable')
+    expect(vixRow?.summary).toBe('Latest VIX change unavailable')
+    expect(vixRow?.direction).toBe('flat')
+  })
+
   it('builds directional stress ladder rows from slider config values', () => {
     const rows = buildStressLadderRows(current.condition_values, dailyDiff)
     const forbidden = /flip|trigger|breakpoint|regime changes/i
@@ -145,6 +217,25 @@ describe('current state briefing derivation helpers', () => {
     expect(rows[0].watchHigher).not.toMatch(forbidden)
     expect(rows[0].watchLower).toContain('likely ease pressure')
     expect(rows[0].watchLower).not.toMatch(forbidden)
+  })
+
+  it('uses inverted stress ladder scales where lower values are more stressful', () => {
+    const forbidden = /flip|trigger|breakpoint|regime changes/i
+    const [row] = buildStressLadderRows({ ret_20d: -0.10 }, null)
+
+    expect(row.feature).toBe('ret_20d')
+    expect(row.status).toBe('stress')
+    expect(row.watchHigher).toContain('likely ease pressure')
+    expect(row.watchHigher).not.toMatch(forbidden)
+    expect(row.watchLower).toContain('likely add pressure')
+    expect(row.watchLower).not.toMatch(forbidden)
+  })
+
+  it('sets VIX delta only on the VIX stress ladder row', () => {
+    const rows = buildStressLadderRows(current.condition_values, dailyDiff)
+
+    expect(rows.find((row) => row.feature === 'vix_level')?.delta).toBe(2)
+    expect(rows.filter((row) => row.feature !== 'vix_level').every((row) => row.delta === null)).toBe(true)
   })
 
   it('classifies current regime persistence against prior completed runs', () => {
@@ -161,6 +252,48 @@ describe('current state briefing derivation helpers', () => {
     expect(classifyRegimePersistence('elevated', regimeHistory)).toEqual({
       daysInRegime: 2,
       label: 'Typical',
+    })
+  })
+
+  it('returns null regime persistence when history is empty', () => {
+    expect(classifyRegimePersistence('elevated', [])).toBeNull()
+  })
+
+  it('classifies short regime persistence', () => {
+    const regimeHistory: HistoricalPoint[] = [
+      { date: '2026-05-17', regime: 'elevated', transition_risk: 0.32, vix_level: 23, close: 500 },
+      { date: '2026-05-18', regime: 'elevated', transition_risk: 0.30, vix_level: 22, close: 501 },
+      { date: '2026-05-19', regime: 'elevated', transition_risk: 0.28, vix_level: 21, close: 502 },
+      { date: '2026-05-20', regime: 'elevated', transition_risk: 0.26, vix_level: 20, close: 503 },
+      { date: '2026-05-21', regime: 'elevated', transition_risk: 0.24, vix_level: 19, close: 504 },
+      { date: '2026-05-22', regime: 'elevated', transition_risk: 0.22, vix_level: 18, close: 505 },
+      { date: '2026-05-23', regime: 'calm', transition_risk: 0.08, vix_level: 15, close: 510 },
+      { date: '2026-05-24', regime: 'elevated', transition_risk: 0.20, vix_level: 20, close: 508 },
+    ]
+
+    expect(classifyRegimePersistence('elevated', regimeHistory)).toEqual({
+      daysInRegime: 1,
+      label: 'Short',
+    })
+  })
+
+  it('classifies stretched regime persistence', () => {
+    const regimeHistory: HistoricalPoint[] = [
+      { date: '2026-05-14', regime: 'elevated', transition_risk: 0.32, vix_level: 23, close: 500 },
+      { date: '2026-05-15', regime: 'elevated', transition_risk: 0.30, vix_level: 22, close: 501 },
+      { date: '2026-05-16', regime: 'elevated', transition_risk: 0.28, vix_level: 21, close: 502 },
+      { date: '2026-05-17', regime: 'calm', transition_risk: 0.08, vix_level: 15, close: 510 },
+      { date: '2026-05-18', regime: 'elevated', transition_risk: 0.20, vix_level: 20, close: 508 },
+      { date: '2026-05-19', regime: 'elevated', transition_risk: 0.22, vix_level: 21, close: 507 },
+      { date: '2026-05-20', regime: 'elevated', transition_risk: 0.24, vix_level: 22, close: 506 },
+      { date: '2026-05-21', regime: 'elevated', transition_risk: 0.26, vix_level: 23, close: 505 },
+      { date: '2026-05-22', regime: 'elevated', transition_risk: 0.28, vix_level: 24, close: 504 },
+      { date: '2026-05-23', regime: 'elevated', transition_risk: 0.30, vix_level: 25, close: 503 },
+    ]
+
+    expect(classifyRegimePersistence('elevated', regimeHistory)).toEqual({
+      daysInRegime: 6,
+      label: 'Stretched',
     })
   })
 
