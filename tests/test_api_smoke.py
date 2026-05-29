@@ -62,6 +62,45 @@ class TestCurrentStateEndpoint:
         assert data["transition_risk"] == pytest.approx(0.12)
         assert data["mode"] == "demo"
 
+    def test_current_state_returns_condition_values_from_scenario_cache(self, app_with_state):
+        app, state = app_with_state
+        state.write_state({
+            "as_of_ts": "2024-01-01T00:00:00+00:00",
+            "regime": "elevated",
+            "transition_risk": 0.25,
+            "trend": "neutral",
+            "vix_level": 22.0,
+            "vix_chg_1d": 0.5,
+            "top_drivers": [],
+            "mode": "demo",
+            "price_card_price": None,
+        })
+        state._scenario_cache = {
+            "baseline_vec": {
+                "vix_level": 22.0,
+                "vix_chg_5d": 4.0,
+                "rv_20d_pct": 0.62,
+                "drawdown_pct_504d": 0.10,
+                "ret_20d": -0.02,
+                "dist_sma50": -0.01,
+                "unrelated_feature": 99.0,
+            }
+        }
+
+        client = TestClient(app)
+        resp = client.get("/current-state")
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["condition_values"] == {
+            "vix_level": 22.0,
+            "vix_chg_5d": 4.0,
+            "rv_20d_pct": 0.62,
+            "drawdown_pct_504d": 0.1,
+            "ret_20d": -0.02,
+            "dist_sma50": -0.01,
+        }
+
 
 class TestRefreshEndpoint:
     def test_refresh_returns_500_without_data(self, app_with_state, monkeypatch):

@@ -24,6 +24,39 @@ def _get_state(request: Request):
     return request.app.state.app_state
 
 
+CURRENT_STATE_CONDITION_FEATURES = [
+    "vix_level",
+    "vix_chg_5d",
+    "rv_20d_pct",
+    "drawdown_pct_504d",
+    "ret_20d",
+    "dist_sma50",
+]
+
+SCENARIO_BASELINE_FEATURES = [
+    "vix_level",
+    "vix_chg_5d",
+    "rv_20d_pct",
+    "drawdown_pct_504d",
+    "ret_20d",
+    "dist_sma50",
+]
+
+
+def _condition_values_from_cache(app_state) -> dict[str, float]:
+    cache = getattr(app_state, "_scenario_cache", None) or {}
+    baseline_vec = cache.get("baseline_vec") or {}
+    values: dict[str, float] = {}
+    for feature in CURRENT_STATE_CONDITION_FEATURES:
+        raw = baseline_vec.get(feature)
+        if raw is None:
+            continue
+        value = float(raw)
+        if math.isfinite(value):
+            values[feature] = round(value, 4)
+    return values
+
+
 @router.api_route("/health", methods=["GET", "HEAD"], response_model=HealthResponse)
 async def health(request: Request):
     app_state = _get_state(request)
@@ -92,6 +125,7 @@ async def current_state(request: Request):
         prob_elevated=latest.get("prob_elevated"),
         prob_turbulent=latest.get("prob_turbulent"),
         delta=delta,
+        condition_values=_condition_values_from_cache(app_state),
     )
 
 
@@ -595,8 +629,7 @@ async def scenario(request: Request, body: ScenarioRequest):
         for feat, dv, _ in deltas[:5]
     ]
 
-    slider_features = ["vix_level", "vix_chg_5d", "rv_20d_pct", "drawdown_pct_504d", "ret_20d", "dist_sma50"]
-    baseline_inputs = {f: round(baseline_vec.get(f, 0.0), 4) for f in slider_features}
+    baseline_inputs = {f: round(baseline_vec.get(f, 0.0), 4) for f in SCENARIO_BASELINE_FEATURES}
 
     return ScenarioResponse(
         baseline_risk=round(baseline_risk, 4),
