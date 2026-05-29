@@ -81,6 +81,8 @@ export function buildWhatChangedRows(
   const regimeChanged = dailyDiff?.diff.regime_changed ?? current.delta?.regime_changed ?? false
   const priorTrend = dailyDiff?.diff.prior_trend ?? null
   const trendChanged = dailyDiff?.diff.trend_changed ?? false
+  const hasRegimeChange = regimeChanged && Boolean(priorRegime)
+  const hasTrendChange = trendChanged && Boolean(priorTrend)
 
   return [
     {
@@ -97,7 +99,7 @@ export function buildWhatChangedRows(
       summary: regimeChanged && priorRegime
         ? `${titleCase(priorRegime)} to ${titleCase(current.regime)}`
         : 'No regime change',
-      direction: regimeChanged ? 'up' : 'flat',
+      direction: hasRegimeChange ? 'up' : 'flat',
     },
     {
       feature: 'vix_level',
@@ -113,7 +115,7 @@ export function buildWhatChangedRows(
       summary: trendChanged && priorTrend
         ? `${titleCase(priorTrend)} to ${titleCase(current.trend)}`
         : 'No trend change',
-      direction: trendChanged ? directionFromTrend(current.trend) : 'flat',
+      direction: hasTrendChange ? directionFromTrend(current.trend) : 'flat',
     },
   ]
 }
