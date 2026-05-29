@@ -234,9 +234,11 @@ export default function CurrentState() {
                   Open Signal Breakdown for model explanation
                 </Link>
               </Panel>
-              <Panel title="Last 30 Trading Days">
-                <MiniRegimeChart data={historicalPoints.slice(-30)} height={165} />
-              </Panel>
+              {historicalPoints.length > 0 && (
+                <Panel title="Last 30 Trading Days">
+                  <MiniRegimeChart data={historicalPoints.slice(-30)} height={165} />
+                </Panel>
+              )}
             </div>
           </div>
         </motion.div>
