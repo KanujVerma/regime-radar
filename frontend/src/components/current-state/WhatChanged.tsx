@@ -17,6 +17,12 @@ const directionColor = {
   flat: colors.textDim,
 } as const
 
+const directionLabel = {
+  up: 'Stress increased',
+  down: 'Stress eased',
+  flat: 'Little changed',
+} as const
+
 function formatValue(value: ChangeRow['value']) {
   if (typeof value === 'number') {
     if (Math.abs(value) <= 1) return `${(value * 100).toFixed(1)}%`
@@ -55,7 +61,8 @@ export default function WhatChanged({ rows }: WhatChangedProps) {
               <div
                 className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-sm font-black"
                 style={{ color: directionColor[row.direction], background: `${directionColor[row.direction]}14` }}
-                aria-label={row.direction}
+                role="img"
+                aria-label={directionLabel[row.direction]}
               >
                 {directionGlyph[row.direction]}
               </div>

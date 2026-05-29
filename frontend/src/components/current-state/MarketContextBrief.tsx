@@ -24,7 +24,7 @@ export default function MarketContextBrief({ cards }: MarketContextBriefProps) {
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
-        {cards.slice(0, 3).map((card) => (
+        {cards.map((card) => (
           <article
             key={`${card.title}-${card.body}`}
             className="min-h-[120px] rounded-lg p-3"
