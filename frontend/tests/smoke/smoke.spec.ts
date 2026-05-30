@@ -177,13 +177,32 @@ test.describe('Current State page', () => {
     await expect(page.getByText('What this means right now')).toBeVisible()
   })
 
-  test('Transition risk gauge SVG renders', async ({ page }) => {
-    await expect(page.getByText('Transition risk gauge')).toBeVisible()
-    await expect(page.locator('svg').first()).toBeVisible()
+  test('Risk Temperature panel renders', async ({ page }) => {
+    await expect(page.getByText('Risk Temperature')).toBeVisible()
+    await expect(page.getByText(/percentile|No percentile/)).toBeVisible()
   })
 
-  test('"What is raising risk right now" panel renders driver bars', async ({ page }) => {
-    await expect(page.getByText('What is raising risk right now')).toBeVisible()
+  test('What Changed panel renders', async ({ page }) => {
+    await expect(page.getByText('What Changed')).toBeVisible()
+    await expect(page.getByText('Transition risk')).toBeVisible()
+  })
+
+  test('Stress Ladder panel renders market-condition rails', async ({ page }) => {
+    await expect(page.getByText('Stress Ladder')).toBeVisible()
+    await expect(page.getByText('VIX Level')).toBeVisible()
+  })
+
+  test('Current State links deeper model explanation to Signal Breakdown', async ({ page }) => {
+    await expect(page.getByRole('link', { name: /Open Signal Breakdown for model explanation/i })).toBeVisible()
+  })
+
+  test('Current State does not render the old model-explanation panels', async ({ page }) => {
+    await expect(page.getByText('Transition risk gauge')).toHaveCount(0)
+    await expect(page.getByText('What is raising risk right now')).toHaveCount(0)
+  })
+
+  test('Market Context Brief stays hidden when empty', async ({ page }) => {
+    await expect(page.getByText('Possible Market Context')).toHaveCount(0)
   })
 
   test('"Last 30 Trading Days" panel renders with a chart', async ({ page }) => {
