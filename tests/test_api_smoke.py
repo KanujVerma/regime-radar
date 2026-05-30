@@ -62,7 +62,7 @@ class TestCurrentStateEndpoint:
         assert data["transition_risk"] == pytest.approx(0.12)
         assert data["mode"] == "demo"
 
-    def test_current_state_returns_condition_values_from_scenario_cache(self, app_with_state):
+    def test_current_state_returns_condition_values_from_current_snapshot(self, app_with_state):
         app, state = app_with_state
         state.write_state({
             "as_of_ts": "2024-01-01T00:00:00+00:00",
@@ -75,16 +75,15 @@ class TestCurrentStateEndpoint:
             "mode": "demo",
             "price_card_price": None,
         })
-        state._scenario_cache = {
-            "baseline_vec": {
-                "vix_level": 22.0,
-                "vix_chg_5d": 4.0,
-                "rv_20d_pct": 0.62,
-                "drawdown_pct_504d": 0.10,
-                "ret_20d": -0.02,
-                "dist_sma50": -0.01,
-                "unrelated_feature": 99.0,
-            }
+        state._scenario_cache = None
+        state._current_condition_values = {
+            "vix_level": 22.0,
+            "vix_chg_5d": 4.0,
+            "rv_20d_pct": 0.62,
+            "drawdown_pct_504d": 0.10,
+            "ret_20d": -0.02,
+            "dist_sma50": -0.01,
+            "unrelated_feature": 99.0,
         }
 
         client = TestClient(app)

@@ -7,12 +7,14 @@ Finnhub (if configured) provides an optional price-card overlay only.
 from __future__ import annotations
 import sqlite3
 import json
+import math
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 import pandas as pd
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
+from src.api.condition_features import CURRENT_STATE_CONDITION_FEATURES
 from src.utils.config import get_config, get_app_settings
 from src.utils.logging import get_logger
 from src.utils.paths import PROCESSED_DIR
@@ -32,6 +34,7 @@ class AppState:
         self._analog_index: Any | None = None
         self._latest_features: Any | None = None
         self._latest_date: Any | None = None
+        self._current_condition_values: dict[str, float] = {}
         self._scenario_cache: dict | None = None
 
     def _connect(self) -> sqlite3.Connection:
@@ -201,6 +204,13 @@ class AppState:
         latest_row = panel.iloc[-1]
         latest_features = features.iloc[-1]
         trend_latest = trend.iloc[-1] if trend is not None else "neutral"
+        self._current_condition_values = {
+            feature: round(value, 4)
+            for feature in CURRENT_STATE_CONDITION_FEATURES
+            if feature in latest_features.index
+            for value in [float(latest_features[feature])]
+            if math.isfinite(value)
+        }
 
         try:
             from src.models.registry import load_artifact, load_metadata, artifact_exists

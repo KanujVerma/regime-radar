@@ -6,6 +6,7 @@ from datetime import datetime, date, timezone
 from pathlib import Path
 import pandas as pd
 from fastapi import APIRouter, HTTPException, Request
+from src.api.condition_features import CURRENT_STATE_CONDITION_FEATURES, SCENARIO_BASELINE_FEATURES
 from src.api.schemas import (
     HealthResponse, CurrentStateResponse, HistoricalStateResponse,
     EventReplayResponse, ModelDriversResponse, DriverItem,
@@ -24,31 +25,11 @@ def _get_state(request: Request):
     return request.app.state.app_state
 
 
-CURRENT_STATE_CONDITION_FEATURES = [
-    "vix_level",
-    "vix_chg_5d",
-    "rv_20d_pct",
-    "drawdown_pct_504d",
-    "ret_20d",
-    "dist_sma50",
-]
-
-SCENARIO_BASELINE_FEATURES = [
-    "vix_level",
-    "vix_chg_5d",
-    "rv_20d_pct",
-    "drawdown_pct_504d",
-    "ret_20d",
-    "dist_sma50",
-]
-
-
-def _condition_values_from_cache(app_state) -> dict[str, float]:
-    cache = getattr(app_state, "_scenario_cache", None) or {}
-    baseline_vec = cache.get("baseline_vec") or {}
+def _condition_values_from_state(app_state) -> dict[str, float]:
+    current_values = getattr(app_state, "_current_condition_values", None) or {}
     values: dict[str, float] = {}
     for feature in CURRENT_STATE_CONDITION_FEATURES:
-        raw = baseline_vec.get(feature)
+        raw = current_values.get(feature)
         if raw is None:
             continue
         value = float(raw)
@@ -125,7 +106,7 @@ async def current_state(request: Request):
         prob_elevated=latest.get("prob_elevated"),
         prob_turbulent=latest.get("prob_turbulent"),
         delta=delta,
-        condition_values=_condition_values_from_cache(app_state),
+        condition_values=_condition_values_from_state(app_state),
     )
 
 

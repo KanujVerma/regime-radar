@@ -1,6 +1,8 @@
 import type { CurrentStateResponse, DailyDiffResponse, HistoricalPoint } from '../types/api'
-import { SLIDER_CONFIG } from './sliderConfig'
-import type { SliderConfig } from './sliderConfig'
+import {
+  CURRENT_STATE_STRESS_LADDER_CONFIG,
+  type CurrentStateConditionConfig,
+} from './currentStateConditions'
 
 export type Direction = 'up' | 'down' | 'flat'
 export type StressStatus = 'calm' | 'watch' | 'stress'
@@ -20,7 +22,7 @@ export interface ChangeRow {
 }
 
 export interface StressLadderRow {
-  feature: SliderConfig['key']
+  feature: CurrentStateConditionConfig['key']
   label: string
   value: number
   delta: number | null
@@ -124,7 +126,7 @@ export function buildStressLadderRows(
   conditionValues: Record<string, number>,
   dailyDiff: DailyDiffResponse | null,
 ): StressLadderRow[] {
-  return SLIDER_CONFIG
+  return CURRENT_STATE_STRESS_LADDER_CONFIG
     .filter((config) => Number.isFinite(conditionValues[config.key]))
     .map((config) => {
       const value = conditionValues[config.key]
@@ -139,11 +141,11 @@ export function buildStressLadderRows(
         calmMax: config.calmMax,
         stressMin: config.stressMin,
         watchHigher: inverted
-          ? `${config.label} moving higher would likely ease pressure.`
-          : `${config.label} moving higher would likely add pressure.`,
+          ? `${config.label} moving higher points toward less pressure.`
+          : `${config.label} moving higher points toward more pressure.`,
         watchLower: inverted
-          ? `${config.label} moving lower would likely add pressure.`
-          : `${config.label} moving lower would likely ease pressure.`,
+          ? `${config.label} moving lower points toward more pressure.`
+          : `${config.label} moving lower points toward less pressure.`,
       }
     })
 }
@@ -178,7 +180,7 @@ export function classifyRegimePersistence(
   return { daysInRegime, label: 'Typical' }
 }
 
-function stressStatus(value: number, config: SliderConfig): StressStatus {
+function stressStatus(value: number, config: CurrentStateConditionConfig): StressStatus {
   if (config.stressMin < config.calmMax) {
     if (value <= config.stressMin) return 'stress'
     if (value >= config.calmMax) return 'calm'
