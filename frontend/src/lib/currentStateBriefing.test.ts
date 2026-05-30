@@ -206,28 +206,28 @@ describe('current state briefing derivation helpers', () => {
     expect(vixRow?.direction).toBe('flat')
   })
 
-  it('builds directional stress ladder rows from slider config values', () => {
+  it('builds directional stress ladder rows from current-state condition config values', () => {
     const rows = buildStressLadderRows(current.condition_values, dailyDiff)
-    const forbidden = /flip|trigger|breakpoint|regime changes/i
+    const forbidden = /\bwill\b|flip|trigger|breakpoint|regime changes|likely/i
 
     expect(rows).toHaveLength(6)
     expect(rows[0].feature).toBe('vix_level')
     expect(rows[0].status).toBe('watch')
-    expect(rows[0].watchHigher).toContain('likely add pressure')
+    expect(rows[0].watchHigher).toContain('points toward more pressure')
     expect(rows[0].watchHigher).not.toMatch(forbidden)
-    expect(rows[0].watchLower).toContain('likely ease pressure')
+    expect(rows[0].watchLower).toContain('points toward less pressure')
     expect(rows[0].watchLower).not.toMatch(forbidden)
   })
 
   it('uses inverted stress ladder scales where lower values are more stressful', () => {
-    const forbidden = /flip|trigger|breakpoint|regime changes/i
+    const forbidden = /\bwill\b|flip|trigger|breakpoint|regime changes|likely/i
     const [row] = buildStressLadderRows({ ret_20d: -0.10 }, null)
 
     expect(row.feature).toBe('ret_20d')
     expect(row.status).toBe('stress')
-    expect(row.watchHigher).toContain('likely ease pressure')
+    expect(row.watchHigher).toContain('points toward less pressure')
     expect(row.watchHigher).not.toMatch(forbidden)
-    expect(row.watchLower).toContain('likely add pressure')
+    expect(row.watchLower).toContain('points toward more pressure')
     expect(row.watchLower).not.toMatch(forbidden)
   })
 
