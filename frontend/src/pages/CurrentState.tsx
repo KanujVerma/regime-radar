@@ -15,11 +15,13 @@ import RiskTemperature from '../components/current-state/RiskTemperature'
 import WhatChanged from '../components/current-state/WhatChanged'
 import StressLadder from '../components/current-state/StressLadder'
 import MarketContextBrief from '../components/current-state/MarketContextBrief'
+import RegimePersistence from '../components/current-state/RegimePersistence'
 import {
   buildMarketContextCards,
   buildRiskTemperature,
   buildStressLadderRows,
   buildWhatChangedRows,
+  classifyRegimePersistence,
 } from '../lib/currentStateBriefing'
 import { regimeColor, colors } from '../lib/tokens'
 
@@ -88,6 +90,10 @@ export default function CurrentState() {
   const whatChangedRows = buildWhatChangedRows(data, dailyDiffData)
   const stressLadderRows = buildStressLadderRows(data.condition_values ?? {}, dailyDiffData)
   const marketContextCards = buildMarketContextCards([])
+  const regimePersistenceResult = classifyRegimePersistence(data.regime, historicalPoints)
+  const regimePersistence = regimePersistenceResult
+    ? { ...regimePersistenceResult, regime }
+    : null
 
   return (
     <motion.div
@@ -221,6 +227,7 @@ export default function CurrentState() {
           <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
             <StressLadder rows={stressLadderRows} />
             <div className="space-y-4">
+              <RegimePersistence data={regimePersistence} />
               <MarketContextBrief cards={marketContextCards} />
               <Panel title="Model explanation">
                 <p className="text-[11px] leading-relaxed mb-3" style={{ color: '#94a3b8' }}>
