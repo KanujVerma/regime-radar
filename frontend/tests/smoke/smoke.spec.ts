@@ -178,18 +178,21 @@ test.describe('Current State page', () => {
   })
 
   test('Risk Temperature panel renders', async ({ page }) => {
-    await expect(page.getByText('Risk Temperature')).toBeVisible()
-    await expect(page.getByText(/percentile|No percentile/)).toBeVisible()
+    const panel = page.getByLabel('Risk Temperature')
+    await expect(panel).toBeVisible()
+    await expect(panel.getByText(/percentile|No percentile/)).toBeVisible()
   })
 
   test('What Changed panel renders', async ({ page }) => {
-    await expect(page.getByText('What Changed')).toBeVisible()
-    await expect(page.getByText('Transition risk')).toBeVisible()
+    const panel = page.getByLabel('What Changed')
+    await expect(panel).toBeVisible()
+    await expect(panel.getByText('Transition Risk', { exact: true })).toBeVisible()
   })
 
   test('Stress Ladder panel renders market-condition rails', async ({ page }) => {
-    await expect(page.getByText('Stress Ladder')).toBeVisible()
-    await expect(page.getByText('VIX Level')).toBeVisible()
+    const panel = page.getByLabel('Stress Ladder')
+    await expect(panel).toBeVisible()
+    await expect(panel.getByText('VIX Level', { exact: true })).toBeVisible()
   })
 
   test('Current State links deeper model explanation to Signal Breakdown', async ({ page }) => {
