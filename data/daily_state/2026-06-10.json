@@ -1,0 +1,45 @@
+{
+  "as_of_date": "2026-06-10",
+  "generated_at": "2026-06-10T23:39:52.854387+00:00",
+  "data_through_date": "2026-06-10",
+  "regime": "elevated",
+  "transition_risk": 0.5622,
+  "prob_calm": 0.0007,
+  "prob_elevated": 0.6111,
+  "prob_turbulent": 0.3883,
+  "vix_level": 19.87,
+  "trend": "neutral",
+  "top_drivers": [
+    {
+      "feature": "vix_zscore_252d",
+      "plain_label": "VIX z-score (1-year)",
+      "importance": 0.348949
+    },
+    {
+      "feature": "drawdown_pct_504d",
+      "plain_label": "Drawdown relative to 2-year history",
+      "importance": 0.27651
+    },
+    {
+      "feature": "emv_level",
+      "plain_label": "Equity market volatility index",
+      "importance": 0.238137
+    },
+    {
+      "feature": "emv_lag_5d",
+      "plain_label": "emv_lag_5d",
+      "importance": 0.217266
+    },
+    {
+      "feature": "rv_20d_pct",
+      "plain_label": "Realized volatility percentile",
+      "importance": 0.197459
+    }
+  ],
+  "model_version": {
+    "transition_model": "xgb_transition",
+    "transition_trained_as_of": "2026-05-23T05:55:41.428754+00:00",
+    "regime_model": "xgb_regime",
+    "regime_trained_as_of": "2026-05-23T05:54:24.300852+00:00"
+  }
+}
