@@ -54,3 +54,33 @@ def merge_incremental(old: pd.DataFrame, new: pd.DataFrame) -> pd.DataFrame:
     combined = pd.concat([old, new])
     combined = combined[~combined.index.duplicated(keep="last")]
     return combined.sort_index()
+
+
+class StaleDataError(Exception):
+    """Raised when a retrain would proceed on data that is not current.
+
+    Carries the individual reasons so callers can log them one per line.
+    """
+
+    def __init__(self, reasons: list[str]):
+        self.reasons = list(reasons)
+        super().__init__("; ".join(self.reasons))
+
+
+def stale_reasons(stale_sources, panel_end: date, asof: date) -> list[str]:
+    """Human-readable staleness reasons; empty list means fresh.
+
+    `stale_sources` is the already-filtered list of (name, cache_last) the
+    per-source check flagged; `cache_last` is None for a missing/empty cache.
+    The panel-end check is defense-in-depth.
+    """
+    reasons: list[str] = []
+    for name, cache_last in stale_sources:
+        if cache_last is None:
+            reasons.append(f"source '{name}' has no usable cache (missing or empty)")
+        else:
+            reasons.append(f"source '{name}' cache ends {cache_last}")
+    expected = last_confirmed_trading_day(asof)
+    if (expected - panel_end).days > RETRAIN_STALENESS_TOLERANCE_DAYS:
+        reasons.append(f"panel ends {panel_end}, expected through {expected}")
+    return reasons

@@ -89,3 +89,41 @@ def test_merge_empty_old_returns_new_sorted():
     new = _frame(["2026-01-06", "2026-01-02"], [12.0, 10.0])
     out = merge_incremental(pd.DataFrame(), new)
     assert list(out.index) == list(pd.to_datetime(["2026-01-02", "2026-01-06"]))
+
+
+from src.data.freshness import StaleDataError, stale_reasons
+
+
+def test_stale_reasons_reports_stale_source():
+    reasons = stale_reasons(
+        stale_sources=[("emv", date(2026, 3, 1))],
+        panel_end=date(2026, 1, 2),
+        asof=date(2026, 1, 3),
+    )
+    assert any("emv" in r and "2026-03-01" in r for r in reasons)
+
+
+def test_stale_reasons_reports_missing_cache():
+    reasons = stale_reasons(
+        stale_sources=[("emv", None)],
+        panel_end=date(2026, 1, 2),
+        asof=date(2026, 1, 3),
+    )
+    assert any("emv" in r and "no usable cache" in r for r in reasons)
+
+
+def test_stale_reasons_reports_old_panel():
+    reasons = stale_reasons(stale_sources=[], panel_end=date(2025, 12, 1), asof=date(2026, 1, 3))
+    assert any("panel" in r for r in reasons)
+
+
+def test_stale_reasons_empty_when_fresh():
+    reasons = stale_reasons(stale_sources=[], panel_end=date(2026, 1, 2), asof=date(2026, 1, 3))
+    assert reasons == []
+
+
+def test_stale_data_error_carries_reasons():
+    err = StaleDataError(["a", "b"])
+    assert err.reasons == ["a", "b"]
+    assert "a" in str(err) and "b" in str(err)
+    assert isinstance(err, Exception)
