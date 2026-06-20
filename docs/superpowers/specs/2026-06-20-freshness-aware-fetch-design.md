@@ -21,7 +21,7 @@ The known OOF embargo (walk-forward window ends ~20 trading rows before panel en
 ## Goals
 
 1. Fetchers can refresh stale caches incrementally, without re-downloading full history and without losing a good cache on a failed fetch.
-2. `retrain.py` always attempts a refresh and **aborts loudly** if the data it would train on is not current. A silent stale retrain becomes structurally impossible.
+2. `retrain.py` always attempts a refresh and **aborts loudly** if the data it would train on is not current — evaluated **per source against each source's cadence**, not just on the merged panel end. A silent stale retrain (including a single stale source hidden behind a fresh-looking panel) becomes structurally impossible.
 
 ## Non-goals
 
@@ -40,10 +40,27 @@ The known OOF embargo (walk-forward window ends ~20 trading rows before panel en
 
 - `is_stale(cache_last: pd.Timestamp, asof: date, cadence: Literal["daily", "monthly"]) -> bool`
   - `daily`: `cache_last.date() < last_expected_trading_day(asof)`
-  - `monthly`: `cache_last` older than 35 days vs `asof` (tolerates EMV publication lag)
+  - `monthly`: `(asof - cache_last.date()).days > EMV_STALENESS_TOLERANCE_DAYS`
 
 - `merge_incremental(old: pd.DataFrame, new: pd.DataFrame) -> pd.DataFrame`
-  Concatenate, drop duplicate index entries keeping `new`, sort by index ascending.
+  Concatenate `old` then `new`, then drop duplicate index entries **keeping the `new` row in full** (`~index.duplicated(keep="last")` after `pd.concat([old, new])`), sort by index ascending. **No column-level combine/fill** — a revised row from the provider replaces the cached row wholesale. Rationale: providers revise (yfinance adjusted-close shifts on dividends/splits; FRED restates), so a partial `combine_first`/`fillna` would weld stale columns onto a revised row.
+
+### Named constants (`freshness.py`)
+
+- `EMV_STALENESS_TOLERANCE_DAYS = 45` — monthly-cadence tolerance. EMV publishes ~monthly with lag; 45 days gives headroom so a retrain fired just before a publication does not false-abort. `--allow-stale` covers the "FRED genuinely late this month" case.
+- `RETRAIN_STALENESS_TOLERANCE_DAYS = 3` — guard tolerance for the daily panel-end defense-in-depth check (absorbs provider end-of-day lag).
+
+### Source registry (`SOURCE_SPECS`)
+
+Single definition of the data sources and their freshness cadence, iterated by **both** `run_pipeline` and the retrain guard (so cadence lives in exactly one place and adding a source is a one-line change):
+
+```
+SOURCE_SPECS = [
+    SourceSpec(name="spy", cache="spy.parquet", cadence="daily",   fetch=fetch_spy_history),
+    SourceSpec(name="vix", cache="vix.parquet", cadence="daily",   fetch=fetch_vix_history),
+    SourceSpec(name="emv", cache="emv.parquet", cadence="monthly", fetch=fetch_emv),
+]
+```
 
 ### Fetcher changes
 
@@ -58,13 +75,21 @@ Behavior matrix:
 | yes | True | no | return cache (already current) |
 | yes | True | yes | fetch `[cache_last + 1 day → asof]`, `merge_incremental(old, new)`, save; **on fetch exception → log WARNING and return existing cache** |
 
-The keep-cache-on-failure rule honors this codebase's documented outage history (FRED HTTP 500s; VIX has a 3-tier fallback). VIX/EMV existing fallback chains are preserved — refresh wraps the primary fetch only.
+The keep-cache-on-failure rule honors this codebase's documented outage history (FRED HTTP 500s; VIX has a 3-tier fallback).
+
+**VIX fallback chain is preserved.** `fetch_vix_history` keeps its full FRED VIXCLS → yfinance ^VIX → CSV chain. Refresh only **narrows the requested date range** to `[cache_last + 1 day → asof]` and runs that delta through the *same* chain, then `merge_incremental`s the result into the cache. Refresh must not collapse the chain to a single source or bypass the fallback semantics. Same principle for EMV's `fallback_path`.
 
 ### Pipeline + retrain
 
-- `bootstrap_data.run_pipeline(refresh: bool = False)` threads `refresh` into all three fetcher calls.
+- `bootstrap_data.run_pipeline(refresh: bool = False)` iterates `SOURCE_SPECS`, calling each fetcher with `refresh`.
 - `scripts/retrain.py` calls `run_pipeline(refresh=True)`.
-- **Retrain freshness guard:** after the panel is built, compute `panel.index.max()` and compare to `last_expected_trading_day(asof)`. If the panel end is more than a small tolerance (default: 3 trading days) behind → log a loud WARNING and `sys.exit(1)`. A `--allow-stale` flag is the only override (used for offline/dev runs). `--dry-run` is unaffected (it exits before fetch).
+- **Retrain freshness guard — two layers, both must pass:**
+  1. **Per-source (primary).** For each entry in `SOURCE_SPECS`, read its refreshed cache's last index and evaluate `is_stale(cache_last, asof, cadence)`. If *any* source is stale → loud WARNING (naming the stale source + its cache-last date) and `sys.exit(1)`. This is the layer that catches a stale forward-filled monthly source (e.g. EMV) that the panel end cannot see, and a single-source refresh failure that left a good-looking panel.
+  2. **Panel-end (defense-in-depth).** `panel.index.max()` vs `last_expected_trading_day(asof)`, tolerance `RETRAIN_STALENESS_TOLERANCE_DAYS`. Per-source freshness already implies a fresh panel end, so this layer exists to catch a *different* bug — the merge/feature-build step dropping recent rows even when all sources are current.
+
+  `--allow-stale` overrides **both** layers (offline/dev runs, or legitimately-late monthly publication). `--dry-run` is unaffected (it exits before fetch).
+
+  **Why per-source is required, not panel-end alone:** EMV is monthly and forward-filled into a daily panel, so its cache-last is *structurally* always behind `panel.index.max()` — a panel-end check is permanently blind to EMV staleness. Combined with keep-cache-on-failure (a failed EMV refresh silently retains an old cache while the panel still ends at the SPY date), a panel-end-only guard would re-admit the exact silent-stale-retrain bug this spec exists to kill, one source at a time.
 
 ---
 
@@ -72,39 +97,45 @@ The keep-cache-on-failure rule honors this codebase's documented outage history 
 
 ```
 retrain.py
-  → run_pipeline(refresh=True)
+  → run_pipeline(refresh=True)            # iterates SOURCE_SPECS
       → fetch_spy_history(refresh=True)   # incremental or cache-on-failure
-      → fetch_vix_history(refresh=True)
+      → fetch_vix_history(refresh=True)   # delta range through full fallback chain
       → fetch_emv(refresh=True)
       → build panel
-  → FRESHNESS GUARD: panel.index.max() vs last_expected_trading_day(today)
-        stale & not --allow-stale → WARN + exit(1)
+  → FRESHNESS GUARD (both layers, --allow-stale overrides both):
+      1. per-source: any is_stale(source_cache_last, asof, cadence) → WARN(name) + exit(1)
+      2. panel-end:  panel.index.max() vs last_expected_trading_day(asof) → WARN + exit(1)
   → train → OOF → reliability rebuild → eval_history write
 ```
 
-A failed live fetch keeps the last-good cache, so the panel still builds — but the guard then catches the staleness and aborts. A failed refresh degrades to a **loud abort**, never a silent stale retrain.
+A failed live fetch keeps the last-good cache, so the panel still builds — but the per-source guard then catches that source's staleness and aborts. A failed refresh degrades to a **loud abort**, never a silent stale retrain.
 
 ## Error handling
 
 - Fetch exception during refresh: caught per-source, WARNING logged, existing cache returned. Never overwrite a good cache with empty/partial data.
-- EMV monthly cadence + 35-day tolerance prevents false-flagging normal publication lag.
-- Guard tolerance (3 trading days) absorbs provider end-of-day lag without masking real staleness.
+- EMV monthly cadence + `EMV_STALENESS_TOLERANCE_DAYS` (45) prevents false-flagging normal publication lag while still aborting on genuinely stale macro data.
+- Panel-end tolerance `RETRAIN_STALENESS_TOLERANCE_DAYS` (3) absorbs provider end-of-day lag without masking real staleness.
 
 ## Testing (TDD; `respx` for HTTP providers, monkeypatch for yfinance)
 
 `tests/test_freshness.py`:
 - `last_expected_trading_day` across a weekend and a known US market holiday.
-- `is_stale` daily (current vs behind) and monthly (within vs beyond 35 days).
+- `is_stale` daily (current vs behind) and monthly (within vs beyond `EMV_STALENESS_TOLERANCE_DAYS`).
 - `merge_incremental` dedupes overlapping index and sorts.
+- **`merge_incremental` revised-overlap:** new data overlaps an existing index date but with *different column values* → the revised (new) row wins wholesale, no column-level blending.
 
 Fetcher refresh tests (extend existing):
 - Cache present + provider returns later rows → cache extended, no duplicate index, sorted.
+- Cache present + provider returns *revised* rows for existing dates → revised values persisted (ties to `merge_incremental` semantics).
 - Cache present + provider raises → original cache returned unchanged, warning logged.
 - Cache present + not stale → no provider call.
+- VIX refresh with primary (FRED) failing → falls through to the next source in the chain for the delta range (chain preserved), result merged.
 
 Retrain guard (extend `test_retrain_smoke.py`):
-- Stale panel + no `--allow-stale` → exit code 1, warning emitted, no artifacts written.
-- Current panel → proceeds normally.
+- **Per-source stale, panel-end current:** panel ends at a current trading day but one source's cache (e.g. EMV) is stale beyond tolerance → exit code 1, warning names the stale source, no artifacts written. (This is the test that proves the per-source layer; a panel-end-only guard would pass it.)
+- Panel-end stale (all sources behind) → exit code 1, no artifacts written.
+- All sources + panel current → proceeds normally.
+- Either staleness condition + `--allow-stale` → proceeds with warning.
 - `--allow-stale` on stale panel → proceeds with warning.
 
 ---
