@@ -35,11 +35,11 @@ The known OOF embargo (walk-forward window ends ~20 trading rows before panel en
 
 ### New module: `src/data/freshness.py` (pure functions, no I/O)
 
-- `last_expected_trading_day(asof: date) -> date`
-  Most recent XNYS session close on or before `asof`, using `pandas-market-calendars` (holiday/weekend correct). NOTE: `src/utils/calendar.py` is intentionally approximate (`days * 5/7`, no holidays) and must NOT be used for this.
+- `last_confirmed_trading_day(asof: date) -> date`
+  Most recent XNYS session **strictly before** `asof` (the last session whose close is confirmed available — today's close does not exist until after today's close, so this avoids intraday false-staleness). Uses `pandas-market-calendars` (holiday/weekend correct). NOTE: `src/utils/calendar.py` is intentionally approximate (`days * 5/7`, no holidays) and must NOT be used for this.
 
 - `is_stale(cache_last: pd.Timestamp, asof: date, cadence: Literal["daily", "monthly"]) -> bool`
-  - `daily`: `cache_last.date() < last_expected_trading_day(asof)`
+  - `daily`: `cache_last.date() < last_confirmed_trading_day(asof)`
   - `monthly`: `(asof - cache_last.date()).days > EMV_STALENESS_TOLERANCE_DAYS`
 
 - `merge_incremental(old: pd.DataFrame, new: pd.DataFrame) -> pd.DataFrame`
@@ -84,8 +84,8 @@ The keep-cache-on-failure rule honors this codebase's documented outage history 
 - `bootstrap_data.run_pipeline(refresh: bool = False)` iterates `SOURCE_SPECS`, calling each fetcher with `refresh`.
 - `scripts/retrain.py` calls `run_pipeline(refresh=True)`.
 - **Retrain freshness guard — two layers, both must pass:**
-  1. **Per-source (primary).** For each entry in `SOURCE_SPECS`, read its refreshed cache's last index and evaluate `is_stale(cache_last, asof, cadence)`. If *any* source is stale → loud WARNING (naming the stale source + its cache-last date) and `sys.exit(1)`. This is the layer that catches a stale forward-filled monthly source (e.g. EMV) that the panel end cannot see, and a single-source refresh failure that left a good-looking panel.
-  2. **Panel-end (defense-in-depth).** `panel.index.max()` vs `last_expected_trading_day(asof)`, tolerance `RETRAIN_STALENESS_TOLERANCE_DAYS`. Per-source freshness already implies a fresh panel end, so this layer exists to catch a *different* bug — the merge/feature-build step dropping recent rows even when all sources are current.
+  1. **Per-source (primary).** For each entry in `SOURCE_SPECS`, read its refreshed cache's last index and evaluate `is_stale(cache_last, asof, cadence)`. A **missing or empty cache counts as stale** (the EMV fallback path can return a stale snapshot without writing `cache_path`, so "absent" must not pass). If *any* source is stale → loud WARNING (naming the stale source + its cache-last date, or "no usable cache") and `sys.exit(1)`. This is the layer that catches a stale forward-filled monthly source (e.g. EMV) that the panel end cannot see, and a single-source refresh failure that left a good-looking panel.
+  2. **Panel-end (defense-in-depth).** `panel.index.max()` vs `last_confirmed_trading_day(asof)`, tolerance `RETRAIN_STALENESS_TOLERANCE_DAYS`. Per-source freshness already implies a fresh panel end, so this layer exists to catch a *different* bug — the merge/feature-build step dropping recent rows even when all sources are current.
 
   `--allow-stale` overrides **both** layers (offline/dev runs, or legitimately-late monthly publication). `--dry-run` is unaffected (it exits before fetch).
 
@@ -104,7 +104,7 @@ retrain.py
       → build panel
   → FRESHNESS GUARD (both layers, --allow-stale overrides both):
       1. per-source: any is_stale(source_cache_last, asof, cadence) → WARN(name) + exit(1)
-      2. panel-end:  panel.index.max() vs last_expected_trading_day(asof) → WARN + exit(1)
+      2. panel-end:  panel.index.max() vs last_confirmed_trading_day(asof) → WARN + exit(1)
   → train → OOF → reliability rebuild → eval_history write
 ```
 
@@ -119,7 +119,7 @@ A failed live fetch keeps the last-good cache, so the panel still builds — but
 ## Testing (TDD; `respx` for HTTP providers, monkeypatch for yfinance)
 
 `tests/test_freshness.py`:
-- `last_expected_trading_day` across a weekend and a known US market holiday.
+- `last_confirmed_trading_day` across a weekend and a known US market holiday.
 - `is_stale` daily (current vs behind) and monthly (within vs beyond `EMV_STALENESS_TOLERANCE_DAYS`).
 - `merge_incremental` dedupes overlapping index and sorts.
 - **`merge_incremental` revised-overlap:** new data overlaps an existing index date but with *different column values* → the revised (new) row wins wholesale, no column-level blending.
