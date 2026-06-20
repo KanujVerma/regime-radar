@@ -395,8 +395,9 @@ def test_since_filter(tmp_path):
 def test_limit(tmp_path):
     from src.api.routes import _compute_changelog_entries
     d = tmp_path / "daily_state"
+    # Realistic business-day dates: Mon 12 → Fri 16 → Mon 19 → Tue 20 → Wed 21
     regimes = ["calm", "elevated", "calm", "elevated", "calm", "elevated"]
-    dates = ["2026-05-16", "2026-05-17", "2026-05-18", "2026-05-19", "2026-05-20", "2026-05-21"]
+    dates = ["2026-05-12", "2026-05-13", "2026-05-14", "2026-05-19", "2026-05-20", "2026-05-21"]
     for date_str, regime in zip(dates, regimes):
         _write_snap(d, date_str, regime, 0.10, 15.0)
     all_entries = _compute_changelog_entries(d, limit=100)
@@ -632,12 +633,16 @@ async def changelog(limit: int = 50, since: str | None = None, notable_only: boo
     files = sorted(daily_state_dir.glob("*.json")) if daily_state_dir.exists() else []
     if len(files) < 2:
         raise HTTPException(status_code=404, detail="not enough daily snapshots to compute changelog")
-    entries = _compute_changelog_entries(daily_state_dir, limit=limit, since=since, notable_only=notable_only)
-    total_notable = len(
-        _compute_changelog_entries(daily_state_dir, limit=9999, since=None, notable_only=True)
-    )
+    # Single file-read pass — compute all entries, filter in memory
+    all_entries = _compute_changelog_entries(daily_state_dir, limit=9999, since=None, notable_only=False)
+    total_notable = sum(1 for e in all_entries if e["triggers"])
+    filtered = [
+        e for e in all_entries
+        if (not notable_only or e["triggers"])
+        and (since is None or e["current_date"] > since)
+    ][:limit]
     return {
-        "entries": entries,
+        "entries": filtered,
         "total_notable": total_notable,
         "total_days": len(files) - 1,
         "earliest_date": json.loads(files[0].read_text()).get("as_of_date"),
@@ -873,7 +878,8 @@ function regimeContext(entry: ChangelogEntry): string {
 }
 
 function formatDate(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00')
+  // Use UTC noon to prevent timezone-shift date rendering errors
+  const d = new Date(dateStr + 'T12:00:00Z')
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }).toUpperCase()
 }
 
@@ -988,65 +994,45 @@ git commit -m "feat: add ChangelogFeed timeline component"
 **Files:**
 - Modify: `frontend/src/pages/History.tsx`
 
-- [ ] **Step 1: Update `frontend/src/pages/History.tsx`**
+**IMPORTANT:** Make surgical edits only. Read the current file first. Do NOT replace the whole file unless the existing content exactly matches the planned version minus these four changes. The four changes are:
 
-Replace the entire file contents:
+1. Add two import lines after the existing `RiskLineChart` import
+2. Add the `useChangelog` hook call after the `useHistoricalState` call
+3. Add the third `<Panel>` block after the second Panel's closing tag
+
+- [ ] **Step 1: Read `frontend/src/pages/History.tsx` to confirm current structure**
+
+Confirm the file contains:
+- `import RiskLineChart from '../components/charts/RiskLineChart'`
+- `const { data, loading, error } = useHistoricalState()`
+- A closing `</Panel>` for the "When did the model get worried?" panel
+
+- [ ] **Step 2: Add the two new imports (after `RiskLineChart` import)**
 
 ```typescript
-import { useState } from 'react'
-import { motion } from 'framer-motion'
-import Topbar from '../components/layout/Topbar'
-import Panel from '../components/ui/Panel'
-import RegimeLegend from '../components/ui/RegimeLegend'
-import RegimeChart from '../components/charts/RegimeChart'
-import RiskLineChart from '../components/charts/RiskLineChart'
 import ChangelogFeed from '../components/ui/ChangelogFeed'
-import { useHistoricalState } from '../hooks/useHistoricalState'
 import { useChangelog } from '../hooks/useChangelog'
+```
 
-export default function History() {
-  const [showVix, setShowVix] = useState(false)
-  const { data, loading, error } = useHistoricalState()
-  const { data: changelog, loading: changelogLoading, error: changelogError } = useChangelog()
+These go immediately after:
+```typescript
+import RiskLineChart from '../components/charts/RiskLineChart'
+```
 
-  if (loading) return <div className="p-6 text-slate-500 text-sm">Loading…</div>
-  if (error) return <div className="p-6 text-red-400 text-sm">{error}</div>
-  if (!data) return null
+- [ ] **Step 3: Add the hook call (after the `useHistoricalState` line)**
 
-  const toggleBtn = (
-    <button
-      onClick={() => setShowVix(v => !v)}
-      className="text-[10px] font-bold px-3 py-1.5 rounded"
-      style={{
-        background: showVix ? '#0e4d6e' : '#0c1020',
-        border: `1px solid ${showVix ? '#06b6d4' : '#151d2e'}`,
-        color: showVix ? '#06b6d4' : '#64748b',
-      }}
-    >
-      {showVix ? '▼ Hide VIX' : '▲ Overlay VIX (fear gauge)'}
-    </button>
-  )
+```typescript
+const { data: changelog, loading: changelogLoading, error: changelogError } = useChangelog()
+```
 
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }}>
-      <Topbar title="History" subtitle={`${data.start} — ${data.end}`} />
-      <div className="p-5 space-y-5">
-        <Panel title="What happened over time?">
-          <p className="text-[10px] mb-2" style={{ color: '#94a3b8' }}>
-            Shaded bands show the market regime on each day. A darker shade indicates higher stress.
-          </p>
-          <div className="mb-2">
-            <RegimeLegend />
-          </div>
-          <div className="flex justify-end mb-2">{toggleBtn}</div>
-          <RegimeChart data={data.data} showVix={showVix} />
-        </Panel>
-        <Panel title="When did the model get worried?">
-          <p className="text-[10px] mb-3" style={{ color: '#94a3b8' }}>
-            The line shows the model's daily estimate of the chance conditions worsen within the next week.
-          </p>
-          <RiskLineChart data={data.data} />
-        </Panel>
+This goes immediately after:
+```typescript
+const { data, loading, error } = useHistoricalState()
+```
+
+- [ ] **Step 4: Add the third Panel (after the closing tag of the second Panel)**
+
+```tsx
         <Panel title="Notable days">
           {changelogLoading && (
             <div className="text-slate-500 text-sm">Loading…</div>
@@ -1056,13 +1042,11 @@ export default function History() {
           )}
           {changelog && <ChangelogFeed data={changelog} />}
         </Panel>
-      </div>
-    </motion.div>
-  )
-}
 ```
 
-- [ ] **Step 2: TypeScript compile check**
+This goes immediately after the closing `</Panel>` of the "When did the model get worried?" panel, before the closing `</div>` of the outer container.
+
+- [ ] **Step 5: TypeScript compile check**
 
 ```bash
 cd frontend && npx tsc --noEmit
