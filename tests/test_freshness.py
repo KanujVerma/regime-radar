@@ -48,3 +48,44 @@ def test_is_stale_monthly_beyond_tolerance_is_stale():
 def test_is_stale_unknown_cadence_raises():
     with pytest.raises(ValueError):
         is_stale(pd.Timestamp("2026-01-02"), date(2026, 1, 3), "weekly")
+
+
+from src.data.freshness import merge_incremental
+
+
+def _frame(dates, close):
+    return pd.DataFrame({"close": close}, index=pd.to_datetime(dates))
+
+
+def test_merge_appends_and_sorts():
+    old = _frame(["2026-01-02", "2026-01-05"], [10.0, 11.0])
+    new = _frame(["2026-01-06", "2026-01-07"], [12.0, 13.0])
+    out = merge_incremental(old, new)
+    assert list(out.index) == list(pd.to_datetime(
+        ["2026-01-02", "2026-01-05", "2026-01-06", "2026-01-07"]))
+    assert out["close"].tolist() == [10.0, 11.0, 12.0, 13.0]
+
+
+def test_merge_dedupes_no_duplicate_index():
+    old = _frame(["2026-01-02", "2026-01-05"], [10.0, 11.0])
+    new = _frame(["2026-01-05", "2026-01-06"], [11.5, 12.0])
+    out = merge_incremental(old, new)
+    assert out.index.is_unique
+    assert len(out) == 3
+
+
+def test_merge_revised_row_wins_wholesale():
+    # Overlapping date 2026-01-05 with a REVISED value -> new wins, no blending.
+    old = pd.DataFrame({"close": [11.0], "volume": [100.0]},
+                       index=pd.to_datetime(["2026-01-05"]))
+    new = pd.DataFrame({"close": [99.0], "volume": [999.0]},
+                       index=pd.to_datetime(["2026-01-05"]))
+    out = merge_incremental(old, new)
+    assert out.loc[pd.Timestamp("2026-01-05"), "close"] == 99.0
+    assert out.loc[pd.Timestamp("2026-01-05"), "volume"] == 999.0
+
+
+def test_merge_empty_old_returns_new_sorted():
+    new = _frame(["2026-01-06", "2026-01-02"], [12.0, 10.0])
+    out = merge_incremental(pd.DataFrame(), new)
+    assert list(out.index) == list(pd.to_datetime(["2026-01-02", "2026-01-06"]))

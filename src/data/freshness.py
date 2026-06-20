@@ -39,3 +39,18 @@ def is_stale(cache_last, asof: date, cadence: Literal["daily", "monthly"]) -> bo
     if cadence == "monthly":
         return (asof - cl).days > EMV_STALENESS_TOLERANCE_DAYS
     raise ValueError(f"unknown cadence: {cadence!r}")
+
+
+def merge_incremental(old: pd.DataFrame, new: pd.DataFrame) -> pd.DataFrame:
+    """Concatenate old+new, keep the NEW row wholesale on index collisions, sort.
+
+    No column-level combine/fill: a revised provider row replaces the cached row
+    entirely (providers restate — yfinance adjusted-close, FRED revisions).
+    """
+    if old is None or len(old) == 0:
+        return new.sort_index()
+    if new is None or len(new) == 0:
+        return old.sort_index()
+    combined = pd.concat([old, new])
+    combined = combined[~combined.index.duplicated(keep="last")]
+    return combined.sort_index()
