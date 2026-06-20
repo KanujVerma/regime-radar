@@ -68,3 +68,56 @@ def test_spy_refresh_failure_keeps_cache(tmp_path, monkeypatch):
     out = fy.fetch_spy_history(cache_path=p, refresh=True)
     assert out.index.max() == pd.Timestamp("2020-01-02")
     assert pd.read_parquet(p).index.max() == pd.Timestamp("2020-01-02")
+
+
+import src.data.fetch_fred as ff
+
+
+def _emv_cache(tmp_path, last):
+    last_ts = pd.Timestamp(last)
+    idx = pd.to_datetime([last_ts - pd.Timedelta(days=31), last_ts])
+    df = pd.DataFrame({"emvoverallemv": [10.0, 11.0]}, index=idx)
+    df.index.name = "date"
+    p = tmp_path / "emv.parquet"
+    df.to_parquet(p)
+    return p
+
+
+class _FakeFred:
+    def __init__(self, api_key=None): pass
+
+    def get_series(self, series_id, observation_start=None, observation_end=None):
+        idx = pd.to_datetime(["2026-02-01", "2026-03-01"])
+        return pd.Series([12.0, 13.0], index=idx)
+
+
+def test_emv_refresh_fresh_skips_download(tmp_path, monkeypatch):
+    p = _emv_cache(tmp_path, last="2026-06-10")  # 14d < 45 vs asof -> fresh
+    monkeypatch.setenv("FRED_API_KEY", "k")
+
+    class _Boom:
+        def __init__(self, api_key=None): raise AssertionError("must not construct Fred when fresh")
+    monkeypatch.setattr(ff, "Fred", _Boom, raising=False)
+    out = ff.fetch_emv(cache_path=p, refresh=True, asof=date(2026, 6, 24))
+    assert out.index.max() == pd.Timestamp("2026-06-10")
+
+
+def test_emv_refresh_extends_when_stale(tmp_path, monkeypatch):
+    p = _emv_cache(tmp_path, last="2026-01-01")  # >45d before today -> stale
+    monkeypatch.setenv("FRED_API_KEY", "k")
+    monkeypatch.setattr(ff, "Fred", _FakeFred, raising=False)
+    out = ff.fetch_emv(cache_path=p, refresh=True)
+    assert out.index.max() == pd.Timestamp("2026-03-01")
+
+
+def test_emv_refresh_failure_keeps_cache(tmp_path, monkeypatch):
+    p = _emv_cache(tmp_path, last="2026-01-01")
+    monkeypatch.setenv("FRED_API_KEY", "k")
+
+    class _Boom:
+        def __init__(self, api_key=None): pass
+        def get_series(self, *a, **k): raise RuntimeError("FRED 500")
+
+    monkeypatch.setattr(ff, "Fred", _Boom, raising=False)
+    out = ff.fetch_emv(cache_path=p, refresh=True)
+    assert out.index.max() == pd.Timestamp("2026-01-01")
