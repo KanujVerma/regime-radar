@@ -121,3 +121,52 @@ def test_emv_refresh_failure_keeps_cache(tmp_path, monkeypatch):
     monkeypatch.setattr(ff, "Fred", _Boom, raising=False)
     out = ff.fetch_emv(cache_path=p, refresh=True)
     assert out.index.max() == pd.Timestamp("2026-01-01")
+
+
+import src.data.fetch_vix as fv
+
+
+def _vix_cache(tmp_path, last):
+    last_ts = pd.Timestamp(last)
+    idx = pd.to_datetime([last_ts - pd.Timedelta(days=3), last_ts])
+    df = pd.DataFrame({"vixcls": [15.0, 16.0]}, index=idx)
+    df.index.name = "date"
+    p = tmp_path / "vix.parquet"
+    df.to_parquet(p)
+    return p
+
+
+def test_vix_refresh_fresh_skips_chain(tmp_path, monkeypatch):
+    p = _vix_cache(tmp_path, last="2026-06-23")
+    def _boom(*a, **k): raise AssertionError("chain must not be called when fresh")
+    monkeypatch.setattr(fv, "fetch_fred_series", _boom)
+    out = fv.fetch_vix_history(cache_path=p, refresh=True, asof=date(2026, 6, 24))
+    assert out.index.max() == pd.Timestamp("2026-06-23")
+
+
+def test_vix_refresh_uses_chain_for_delta(tmp_path, monkeypatch):
+    p = _vix_cache(tmp_path, last="2020-01-02")  # stale
+    captured = {}
+
+    def _fake_chain(series_id, start=None, end=None, cache_path=None):
+        captured["start"] = start
+        captured["cache_path"] = cache_path
+        idx = pd.to_datetime(["2020-01-03", "2020-01-06"])
+        df = pd.DataFrame({"vixcls": [17.0, 18.0]}, index=idx)
+        df.index.name = "date"
+        return df
+
+    monkeypatch.setattr(fv, "fetch_fred_series", _fake_chain)
+    out = fv.fetch_vix_history(cache_path=p, refresh=True)
+    assert out.index.max() == pd.Timestamp("2020-01-06")
+    assert captured["cache_path"] is None       # delta did not reuse cache
+    assert captured["start"] == "2020-01-03"     # narrowed range
+
+
+def test_vix_refresh_failure_keeps_cache(tmp_path, monkeypatch):
+    p = _vix_cache(tmp_path, last="2020-01-02")
+    monkeypatch.setattr(fv, "fetch_fred_series", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("FRED down")))
+    import yfinance as yf
+    monkeypatch.setattr(yf, "download", lambda *a, **k: (_ for _ in ()).throw(RuntimeError("yf down")))
+    out = fv.fetch_vix_history(cache_path=p, refresh=True)
+    assert out.index.max() == pd.Timestamp("2020-01-02")
