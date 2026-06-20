@@ -2,6 +2,8 @@
 """Freshness primitives for cache staleness checks (pure, no I/O)."""
 from __future__ import annotations
 from datetime import date, timedelta
+from typing import Literal
+import pandas as pd
 import pandas_market_calendars as mcal
 
 # EMV (FRED monthly) publishes ~monthly with lag; 45d headroom avoids
@@ -27,3 +29,13 @@ def last_confirmed_trading_day(asof: date) -> date:
     sched = cal.schedule(start_date=start.isoformat(), end_date=asof.isoformat())
     sessions = [ts.date() for ts in sched.index if ts.date() < asof]
     return max(sessions)
+
+
+def is_stale(cache_last, asof: date, cadence: Literal["daily", "monthly"]) -> bool:
+    """True if a cache ending at `cache_last` is stale for its cadence as of `asof`."""
+    cl = pd.Timestamp(cache_last).date()
+    if cadence == "daily":
+        return cl < last_confirmed_trading_day(asof)
+    if cadence == "monthly":
+        return (asof - cl).days > EMV_STALENESS_TOLERANCE_DAYS
+    raise ValueError(f"unknown cadence: {cadence!r}")
