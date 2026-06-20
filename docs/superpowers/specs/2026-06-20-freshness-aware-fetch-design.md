@@ -52,13 +52,13 @@ The known OOF embargo (walk-forward window ends ~20 trading rows before panel en
 
 ### Source registry (`SOURCE_SPECS`)
 
-Single definition of the data sources and their freshness cadence, iterated by **both** `run_pipeline` and the retrain guard (so cadence lives in exactly one place and adding a source is a one-line change):
+Single definition of the data sources and their freshness cadence. The **retrain guard** (`find_stale_sources`) iterates it, so source identity + cadence live in exactly one place and adding a source is a one-line change. `run_pipeline` threads `refresh=` to each fetcher; it keeps its three explicit fetch calls because `merge_market_panel(spy, vix, emv)` needs the frames as named, ordered arguments (forcing that through registry iteration would reduce readability, not improve it).
 
 ```
 SOURCE_SPECS = [
-    SourceSpec(name="spy", cache="spy.parquet", cadence="daily",   fetch=fetch_spy_history),
-    SourceSpec(name="vix", cache="vix.parquet", cadence="daily",   fetch=fetch_vix_history),
-    SourceSpec(name="emv", cache="emv.parquet", cadence="monthly", fetch=fetch_emv),
+    SourceSpec(name="spy", cache_filename="spy.parquet", cadence="daily"),
+    SourceSpec(name="vix", cache_filename="vix.parquet", cadence="daily"),
+    SourceSpec(name="emv", cache_filename="emv.parquet", cadence="monthly"),
 ]
 ```
 
