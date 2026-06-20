@@ -110,7 +110,7 @@ def build_analog_index(
         fwd = [
             str(reg_vals[pos + j])
             for j in range(1, FORWARD_WINDOW + 1)
-            if pos + j < len(reg_vals)
+            if pos + j < len(reg_vals) and not pd.isna(reg_vals[pos + j])
         ]
         regime_outcomes.append(_regime_outcome(regimes[i], fwd))
 
@@ -155,7 +155,8 @@ def find_analogs(
     elif query_ts in index.dates:
         query_row_pos = index.dates.get_loc(query_ts)
     else:
-        query_row_pos = int(index.dates.searchsorted(query_ts))
+        insert_pos = int(index.dates.searchsorted(query_ts, side="left"))
+        query_row_pos = max(0, insert_pos - 1)
 
     row_positions = np.arange(pool_len)
     distances[np.abs(row_positions - query_row_pos) <= RECENCY_ROWS] = np.inf
