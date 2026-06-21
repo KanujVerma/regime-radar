@@ -70,6 +70,49 @@ def test_spy_refresh_failure_keeps_cache(tmp_path, monkeypatch):
     assert pd.read_parquet(p).index.max() == pd.Timestamp("2020-01-02")
 
 
+def _spy_cache_tz_aware(tmp_path, last, tz="America/New_York"):
+    last_ts = pd.Timestamp(last)
+    idx = pd.to_datetime([last_ts - pd.Timedelta(days=3), last_ts]).tz_localize(tz)
+    df = pd.DataFrame(
+        {"open": [1.0, 2.0], "high": [1.0, 2.0], "low": [1.0, 2.0],
+         "close": [1.0, 2.0], "volume": [10.0, 20.0]},
+        index=idx,
+    )
+    df.index.name = "date"
+    p = tmp_path / "spy.parquet"
+    df.to_parquet(p)
+    return p
+
+
+class _FakeTickerTzAware:
+    """Mirrors real yfinance: history() returns a tz-aware (America/New_York) index."""
+
+    def __init__(self, symbol): pass
+
+    def history(self, start=None, end=None, auto_adjust=True):
+        idx = pd.to_datetime(["2020-01-03", "2020-01-06"]).tz_localize("America/New_York")
+        df = pd.DataFrame(
+            {"Open": [3.0, 4.0], "High": [3.0, 4.0], "Low": [3.0, 4.0],
+             "Close": [3.0, 4.0], "Volume": [30.0, 40.0]},
+            index=idx,
+        )
+        df.index.name = "Date"
+        return df
+
+
+def test_spy_refresh_stale_extends_cache_tz_aware(tmp_path, monkeypatch):
+    # Real-world path production hits: tz-aware cache + tz-aware yfinance delta.
+    # Without a tz-robust merge this raises inside the try/except and SILENTLY keeps
+    # the stale cache (refresh no-ops). Assert the cache actually advances on disk.
+    p = _spy_cache_tz_aware(tmp_path, last="2020-01-02")
+    monkeypatch.setattr(fy.yf, "Ticker", lambda s: _FakeTickerTzAware(s))
+    out = fy.fetch_spy_history(cache_path=p, refresh=True)
+    assert out.index.is_unique
+    # index.max must advance past the stale cache end (compare on wall-clock date).
+    assert out.index.max().date() == date(2020, 1, 6)
+    assert pd.read_parquet(p).index.max().date() == date(2020, 1, 6)
+
+
 import src.data.fetch_fred as ff
 
 

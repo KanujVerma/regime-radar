@@ -91,6 +91,49 @@ def test_merge_empty_old_returns_new_sorted():
     assert list(out.index) == list(pd.to_datetime(["2026-01-02", "2026-01-06"]))
 
 
+def test_merge_tz_naive_old_tz_aware_new_does_not_raise():
+    # Production path: cache is tz-naive, real yfinance delta is tz-aware (America/New_York).
+    # pd.concat of a tz-naive + tz-aware index raises TypeError; merge_incremental must absorb it.
+    old = _frame(["2026-01-02", "2026-01-05"], [10.0, 11.0])  # tz-naive
+    new = pd.DataFrame(
+        {"close": [12.0, 13.0]},
+        index=pd.to_datetime(["2026-01-06", "2026-01-07"]).tz_localize("America/New_York"),
+    )
+    out = merge_incremental(old, new)
+    assert out.index.is_unique
+    assert list(out.index) == sorted(out.index)
+    assert out.index.tz is None
+    assert list(out.index) == list(pd.to_datetime(
+        ["2026-01-02", "2026-01-05", "2026-01-06", "2026-01-07"]))
+    assert out["close"].tolist() == [10.0, 11.0, 12.0, 13.0]
+
+
+def test_merge_tz_aware_old_tz_naive_new_does_not_raise():
+    # Reverse mix: tz-aware cache, tz-naive delta. Must also merge cleanly.
+    old = pd.DataFrame(
+        {"close": [10.0, 11.0]},
+        index=pd.to_datetime(["2026-01-02", "2026-01-05"]).tz_localize("America/New_York"),
+    )
+    new = _frame(["2026-01-06", "2026-01-07"], [12.0, 13.0])  # tz-naive
+    out = merge_incremental(old, new)
+    assert out.index.is_unique
+    assert out.index.tz is None
+    assert list(out.index) == list(pd.to_datetime(
+        ["2026-01-02", "2026-01-05", "2026-01-06", "2026-01-07"]))
+
+
+def test_merge_revised_row_wins_across_tz_boundary():
+    # Same wall-clock date in tz-naive old and tz-aware new must dedupe to the NEW row.
+    old = pd.DataFrame({"close": [11.0]}, index=pd.to_datetime(["2026-01-05"]))  # tz-naive
+    new = pd.DataFrame(
+        {"close": [99.0]},
+        index=pd.to_datetime(["2026-01-05"]).tz_localize("America/New_York"),
+    )
+    out = merge_incremental(old, new)
+    assert len(out) == 1
+    assert out.loc[pd.Timestamp("2026-01-05"), "close"] == 99.0
+
+
 from src.data.freshness import StaleDataError, stale_reasons
 
 

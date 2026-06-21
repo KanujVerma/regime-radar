@@ -41,16 +41,46 @@ def is_stale(cache_last, asof: date, cadence: Literal["daily", "monthly"]) -> bo
     raise ValueError(f"unknown cadence: {cadence!r}")
 
 
+def _to_tz_naive_index(df: pd.DataFrame) -> pd.DataFrame:
+    """Return df with any tz-aware DatetimeIndex coerced to tz-naive WALL-CLOCK time.
+
+    WHY: real yfinance SPY downloads return a tz-aware index (America/New_York),
+    while FRED/VIX paths and on-disk caches may be tz-naive. pd.concat / sort of a
+    tz-naive + tz-aware DatetimeIndex raises TypeError ("Cannot compare tz-naive and
+    tz-aware timestamps"). In the fetchers that TypeError is swallowed by the
+    `except Exception -> keep existing cache` branch, so a refresh would SILENTLY
+    no-op and defeat the staleness guard. Normalizing both sides here prevents that
+    by construction.
+
+    tz_localize(None) drops the offset and keeps the local wall-clock time, so a
+    midnight-ET row stays on its own calendar date (NOT shifted to 05:00 UTC). The
+    staleness guard and is_stale reduce everything to .date(), and the panel build
+    (merge_sources._strip_tz) already drops tz the same way, so day-granularity
+    semantics are preserved and downstream is unaffected.
+    """
+    idx = df.index
+    if isinstance(idx, pd.DatetimeIndex) and idx.tz is not None:
+        df = df.copy()
+        df.index = idx.tz_localize(None)
+    return df
+
+
 def merge_incremental(old: pd.DataFrame, new: pd.DataFrame) -> pd.DataFrame:
     """Concatenate old+new, keep the NEW row wholesale on index collisions, sort.
 
     No column-level combine/fill: a revised provider row replaces the cached row
     entirely (providers restate — yfinance adjusted-close, FRED revisions).
+
+    tz-robust: both indices are coerced to tz-naive wall-clock before concat so a
+    tz-naive/tz-aware mismatch can never raise (and thus can never cause a silent
+    refresh failure). See _to_tz_naive_index for the rationale.
     """
     if old is None or len(old) == 0:
-        return new.sort_index()
+        return _to_tz_naive_index(new).sort_index()
     if new is None or len(new) == 0:
-        return old.sort_index()
+        return _to_tz_naive_index(old).sort_index()
+    old = _to_tz_naive_index(old)
+    new = _to_tz_naive_index(new)
     combined = pd.concat([old, new])
     combined = combined[~combined.index.duplicated(keep="last")]
     return combined.sort_index()
