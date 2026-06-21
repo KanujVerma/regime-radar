@@ -101,12 +101,15 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'scripts.build_raw_scor
 # scripts/build_raw_score_reference.py
 """Build the version-stamped raw-score reference for stress percentiles.
 
-The stress percentile ranks a live RAW (pre-calibration) transition score against
-the historical distribution of raw scores produced by the SAME (final) model that
-serves live readings. We therefore score the full historical feature matrix with
-the final model and persist the sorted raw vector, stamped with the model version.
-In-sample optimism is harmless: the percentile is a rank, invariant to monotonic
-inflation. (The reliability TABLE stays OOF — different job, different reference.)
+SEMANTICS (precise): the stress percentile is a statement ONLY about the serving
+model's own historical output distribution — "today's raw score is higher than X%
+of the raw scores THIS model has produced over history." It is NOT a market-outcome
+probability and NOT a general 'severity truth'; it is the model talking about how
+loud its own alarm is relative to its own past. We therefore score the full
+historical feature matrix with the SAME (final) model that serves live readings and
+persist the sorted raw vector, stamped with that model's version. In-sample optimism
+is harmless: the percentile is a rank, invariant to monotonic inflation. (The
+reliability TABLE stays OOF — different job, different reference.)
 """
 from __future__ import annotations
 import json
@@ -187,7 +190,9 @@ git commit -m "feat(stress): version-stamped raw-score reference for stress perc
 **Files:**
 - Create: `scripts/tier_histogram.py`
 
-**Purpose:** Print how the draft tier cutpoints (0.85 / 0.97 / 0.995) bucket the *real* raw-score distribution before they are hard-coded in Task 3. **Read-only.** The controller reviews the output and confirms or adjusts the cutpoints used in Task 3.
+**Purpose:** Print how the draft tier cutpoints (0.85 / 0.97 / 0.995) bucket the *real* raw-score distribution before they are hard-coded in Task 3. **Read-only.**
+
+**Gate rule (automatic, narrow tripwire — not a general stop):** proceed to Task 3 with the default cutpoints UNLESS a band is *degenerate*, defined as: (a) `Extreme` (p≥0.995) captures **0** historical days, OR (b) `Elevated` (p≥0.85) captures **>40%** of all history. If either trips, STOP and report to the controller to choose adjusted cutpoints; otherwise proceed automatically with 0.85/0.97/0.995.
 
 - [ ] **Step 1: Write the script**
 
@@ -308,10 +313,12 @@ Expected: FAIL — `ModuleNotFoundError: No module named 'src.evaluation.stress_
 # src/evaluation/stress_metrics.py
 """Pure stress-zone metrics: rank-based percentile + fixed ordinal tiers.
 
-stress_percentile ranks a RAW transition score against the historical raw-score
-reference (a fraction in [0,1]). stress_tier maps that percentile to an ordinal
-severity label using FIXED cutpoints (stable across retrains; the percentile
-transform already supplies distribution-relativity). Neither is a probability.
+stress_percentile ranks a RAW transition score against the SERVING MODEL'S OWN
+historical raw-score distribution (a fraction in [0,1]) — i.e. "louder than X% of
+this model's past readings." It is NOT a probability and NOT a market-outcome claim.
+stress_tier maps that percentile to an ordinal severity label using FIXED cutpoints
+(stable across retrains; the percentile transform already supplies distribution-
+relativity). Both are ordinal severity descriptors only.
 """
 from __future__ import annotations
 import bisect
@@ -457,12 +464,12 @@ OUT_SUPPORT_POINT = (COND_REF.mean() + 60 * COND_REF.std()).to_dict()
 MAXP = 0.30
 
 
-def _call(calibrated_p, raw_score, point, analogs=None):
+def _call(calibrated_p, raw_score, point, analogs=None, applicable=True):
     return build_risk_reading(
         calibrated_p=calibrated_p, raw_score=raw_score, condition_point=point,
         cond_reference=COND_REF, raw_reference=REF, model_version="v1",
         max_evaluated_p=MAXP, find_analogs_fn=(lambda: analogs if analogs is not None else []),
-        z_threshold=3.0,
+        analogs_applicable=applicable, z_threshold=3.0,
     )
 
 
@@ -490,6 +497,13 @@ def test_stress_in_support_but_no_analogs_is_unavailable():
     assert r.analog_status == "unavailable" and r.nearest_analogs is None
 
 
+def test_scenario_hypothetical_analogs_not_applicable():
+    # analogs_applicable=False (scenario hypothetical): not_applicable, NOT unavailable.
+    r = _call(calibrated_p=0.55, raw_score=0.98, point=IN_SUPPORT_POINT, applicable=False)
+    assert r.display_state == "stress_in_support"
+    assert r.analog_status == "not_applicable" and r.nearest_analogs is None
+
+
 def test_out_of_support_dominates_even_with_high_p():
     r = _call(calibrated_p=0.55, raw_score=0.98, point=OUT_SUPPORT_POINT)
     assert r.display_state == "stress_out_of_support"
@@ -511,7 +525,8 @@ def test_boundary_p_equals_max_is_validated():
     assert r.display_state == "validated"
 
 
-def test_version_mismatch_degrades_to_validated():
+def test_version_mismatch_suppresses_percentile_but_keeps_validated_in_support():
+    # In-support + version mismatch: can't rank severity -> fall back to validated.
     r = build_risk_reading(
         calibrated_p=0.55, raw_score=0.98, condition_point=IN_SUPPORT_POINT,
         cond_reference=COND_REF, raw_reference=REF, model_version="DIFFERENT",
@@ -519,7 +534,20 @@ def test_version_mismatch_degrades_to_validated():
     )
     assert r.display_state == "validated"
     assert r.validated_probability == 0.55      # falls back to showing calibrated p
-    assert r.stress_percentile is None
+    assert r.stress_percentile is None and r.stress_tier is None
+
+
+def test_version_mismatch_still_flags_out_of_support():
+    # Support is independent of the model version, so out-of-support MUST survive a
+    # mismatch (never show a 'validated' number for an off-the-map input).
+    r = build_risk_reading(
+        calibrated_p=0.55, raw_score=0.98, condition_point=OUT_SUPPORT_POINT,
+        cond_reference=COND_REF, raw_reference=REF, model_version="DIFFERENT",
+        max_evaluated_p=MAXP, find_analogs_fn=lambda: [], z_threshold=3.0,
+    )
+    assert r.display_state == "stress_out_of_support"
+    assert r.validated_probability is None
+    assert r.stress_percentile is None and r.stress_tier is None  # ranking suppressed
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -538,8 +566,15 @@ Two orthogonal primitives -> one derived display_state (support evaluated first)
   in_support, p > ceiling     -> stress_in_support
   in_support, p <= ceiling    -> validated
 
-On a reference/model version mismatch we cannot trust the percentile, so we degrade
-to validated-only behaviour (show the calibrated p, no stress fields) and warn.
+Version guard: the stress PERCENTILE is only valid against a reference produced by
+the SAME model that serves live readings. On a version mismatch we suppress the
+percentile/tier (set to None) and log loudly — but support classification does NOT
+depend on the model version (it is computed from condition vectors), so
+stress_out_of_support is STILL honored on a mismatch. An in-support reading that
+can no longer be ranked falls back to validated (show the honest calibrated p).
+
+analogs_applicable: scenario hypotheticals have no live query-date, so analogs are
+'not_applicable' there (distinct from 'unavailable' = applicable but none found).
 """
 from __future__ import annotations
 import logging
@@ -583,23 +618,30 @@ def _validated_only(calibrated_p, max_evaluated_p, support) -> RiskReading:
 
 def build_risk_reading(*, calibrated_p: float, raw_score: float, condition_point: dict,
                        cond_reference: pd.DataFrame, raw_reference: dict, model_version: str,
-                       max_evaluated_p: float, find_analogs_fn, z_threshold: float = 3.0) -> RiskReading:
+                       max_evaluated_p: float, find_analogs_fn, analogs_applicable: bool = True,
+                       z_threshold: float = 3.0) -> RiskReading:
     in_support, nn_dist = classify_support(condition_point, cond_reference, z_threshold)
     support = SupportInfo(in_support=bool(in_support), nn_z_distance=round(float(nn_dist), 4))
 
-    # Version guard: a mismatched reference makes percentile semantics meaningless.
-    if raw_reference.get("model_version") != model_version:
-        _logger.warning("raw-score reference version %s != serving model %s — degrading to validated-only",
-                        raw_reference.get("model_version"), model_version)
-        return _validated_only(calibrated_p, max_evaluated_p, support)
+    # Version guard: the percentile is only meaningful against the serving model's own
+    # reference. On mismatch, suppress percentile/tier (loudly) — but support is
+    # model-version-independent, so out_of_support is still honored below.
+    version_ok = raw_reference.get("model_version") == model_version
+    if not version_ok:
+        _logger.warning(
+            "RAW-SCORE REFERENCE VERSION MISMATCH: reference=%s serving_model=%s — "
+            "severity percentile suppressed; rebuild data/reliability/raw_score_reference.json",
+            raw_reference.get("model_version"), model_version,
+        )
 
-    pct = stress_percentile(float(raw_score), raw_reference.get("raw_scores_sorted", []))
-    tier = stress_tier(pct)
+    pct = stress_percentile(float(raw_score), raw_reference.get("raw_scores_sorted", [])) if version_ok else None
+    tier = stress_tier(pct) if version_ok else None
 
-    # Derive display_state, support FIRST.
+    # Derive display_state, support FIRST. stress_in_support requires a usable ranking
+    # (version_ok); otherwise an in-support above-ceiling reading falls back to validated.
     if not in_support:
         display_state = "stress_out_of_support"
-    elif float(calibrated_p) > max_evaluated_p:
+    elif version_ok and float(calibrated_p) > max_evaluated_p:
         display_state = "stress_in_support"
     else:
         display_state = "validated"
@@ -609,11 +651,14 @@ def build_risk_reading(*, calibrated_p: float, raw_score: float, condition_point
 
     # Stress states: no calibrated probability shown.
     if display_state == "stress_in_support":
-        analogs = find_analogs_fn() or []
-        if analogs:
-            analog_status, nearest = "available", analogs
+        if not analogs_applicable:
+            analog_status, nearest = "not_applicable", None
         else:
-            analog_status, nearest = "unavailable", None
+            analogs = find_analogs_fn() or []
+            if analogs:
+                analog_status, nearest = "available", analogs
+            else:
+                analog_status, nearest = "unavailable", None
     else:  # stress_out_of_support
         analog_status, nearest = "not_applicable", None
 
@@ -632,7 +677,7 @@ def build_risk_reading(*, calibrated_p: float, raw_score: float, condition_point
 - [ ] **Step 4: Run test to verify it passes**
 
 Run: `python3.13 -m pytest tests/test_risk_reading.py -q`
-Expected: PASS (7 tests)
+Expected: PASS (9 tests)
 
 - [ ] **Step 5: Commit**
 
@@ -784,7 +829,32 @@ def test_scenario_baseline_like_inputs_have_risk_reading(client):
     r = client.post("/scenario", json=body)
     assert r.status_code == 200
     assert r.json()["risk_reading"] is not None
+
+
+def test_scenario_version_mismatch_degrades_at_endpoint(client, monkeypatch):
+    # Endpoint-level guard: a reference whose version != serving model must NOT yield
+    # a stress percentile. We force a mismatch via the state helper and assert the
+    # in-support reading degrades (no stress_in_support, no fabricated percentile).
+    import src.api.state as state_mod
+    app_state = client.app.state.app_state if hasattr(client.app.state, "app_state") else None
+    # Force load_risk_reading_context to return a mismatched reference.
+    def _mismatched(self):
+        raw_ref, cond_ref, _ver, max_p = AppState_orig(self)
+        if raw_ref is not None:
+            raw_ref = {**raw_ref, "model_version": "STALE_VERSION"}
+        return raw_ref, cond_ref, "CURRENT_VERSION", max_p
+    AppState_orig = state_mod.AppState.load_risk_reading_context
+    monkeypatch.setattr(state_mod.AppState, "load_risk_reading_context", _mismatched)
+    body = {"vix_level": 16.0, "vix_chg_5d": 0.0, "rv_20d_pct": 0.12,
+            "drawdown_pct_504d": -0.03, "ret_20d": 0.01, "dist_sma50": 0.01}
+    r = client.post("/scenario", json=body)
+    assert r.status_code == 200
+    rr = r.json()["risk_reading"]
+    if rr is not None:
+        assert rr["stress_percentile"] is None  # ranking suppressed on mismatch
 ```
+
+> **Note:** adapt the monkeypatch wiring to however the test suite accesses `AppState` (read the top of `tests/test_api_smoke.py` for the existing app/state fixture). The assertion that matters: on a forced version mismatch the endpoint never returns a `stress_percentile`.
 
 > If the existing `tests/test_api_smoke.py` uses a different fixture name than `client`, match it (read the top of the file first).
 
@@ -853,7 +923,8 @@ Just after `scenario_risk = float(transition_model.predict_proba(X_scen)[0, 1])`
                 condition_point=condition_point, cond_reference=cond_ref,
                 raw_reference=raw_ref, model_version=model_version,
                 max_evaluated_p=max_p,
-                find_analogs_fn=lambda: [],  # scenario inputs are synthetic; no live-date analogs
+                find_analogs_fn=lambda: [],
+                analogs_applicable=False,  # hypothetical scenario -> analogs not_applicable (not 'unavailable')
             )
             risk_reading_model = RiskReadingModel.from_reading(rr)
     except Exception as e:
@@ -949,6 +1020,9 @@ In the `/current-state` handler, after `latest` is read and before constructing 
                 res = _find(query_date=app_state._latest_date,
                             query_features=app_state._latest_features,
                             index=app_state._analog_index)
+                # NOTE: find_analogs' "transition_risk" is the analog day's CALIBRATED
+                # OOF risk, not a raw score. We carry it only to back the label text;
+                # the frontend renders a.label, never this number as a probability.
                 return [{"label": a.get("display_date", ""), "date": a.get("full_date", ""),
                          "raw_score": float(a.get("transition_risk", 0.0))} for a in res[:3]]
 
@@ -1147,7 +1221,7 @@ export function riskReadingView(r: RiskReading): RiskReadingView {
 
   const pctMoreExtreme = r.stress_percentile != null ? Math.round(r.stress_percentile * 100) : null
   const severityNote = pctMoreExtreme != null
-    ? [`More extreme than ${pctMoreExtreme} out of 100 historical readings — ranks severity, not odds.`]
+    ? [`Louder than ${pctMoreExtreme} of 100 historical model readings — ranks severity, not odds.`]
     : []
 
   if (r.display_state === 'stress_in_support') {
