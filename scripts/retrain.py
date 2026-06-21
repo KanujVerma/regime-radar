@@ -53,6 +53,10 @@ def main() -> None:
         "--dry-run", action="store_true",
         help="Read pre-retrain snapshot only; exit 0 without mutating anything",
     )
+    parser.add_argument(
+        "--allow-stale", action="store_true",
+        help="Proceed even if fetched data is not current (per-source staleness guard off)",
+    )
     args = parser.parse_args()
 
     # Step 1: git commit
@@ -79,7 +83,14 @@ def main() -> None:
 
     # Steps 4-7: fetch, features, train (all via run_pipeline — canonical path)
     from bootstrap_data import run_pipeline
-    pipeline = run_pipeline()
+    from src.data.freshness import StaleDataError
+    try:
+        pipeline = run_pipeline(refresh=True, enforce_freshness=not args.allow_stale)
+    except StaleDataError as exc:
+        for reason in exc.reasons:
+            _logger.warning("stale: %s", reason)
+        _logger.warning("Aborting retrain on stale data. Re-run with --allow-stale to override.")
+        sys.exit(1)
     trans_summary = pipeline["trans_summary"]
     regime_summary = pipeline["regime_summary"]
     n_training_rows = pipeline["n_training_rows"]

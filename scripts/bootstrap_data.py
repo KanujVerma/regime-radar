@@ -4,13 +4,71 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from dataclasses import dataclass
+from datetime import date
+from pathlib import Path
+import pandas as pd
+
 from src.utils.paths import PROCESSED_DIR, FIXTURES_DIR
 from src.utils.logging import get_logger
+from src.data.freshness import is_stale, stale_reasons, StaleDataError
 
 _logger = get_logger("bootstrap")
 
 
-def run_pipeline() -> dict:
+@dataclass(frozen=True)
+class SourceSpec:
+    name: str
+    cache_filename: str
+    cadence: str  # "daily" | "monthly"
+
+
+SOURCE_SPECS = [
+    SourceSpec("spy", "spy.parquet", "daily"),
+    SourceSpec("vix", "vix.parquet", "daily"),
+    SourceSpec("emv", "emv.parquet", "monthly"),
+]
+
+
+def find_stale_sources(asof: date) -> list[tuple[str, date | None]]:
+    """Return (name, cache_last_date | None) for each stale source.
+
+    A missing or empty cache is STALE (cache_last=None): the FRED fallback path can
+    feed a stale snapshot without writing cache_path, so 'absent' must not pass.
+    """
+    out: list[tuple[str, date | None]] = []
+    for spec in SOURCE_SPECS:
+        cache = Path(PROCESSED_DIR) / spec.cache_filename
+        if not cache.exists():
+            out.append((spec.name, None))
+            continue
+        df = pd.read_parquet(cache)
+        if len(df) == 0:
+            out.append((spec.name, None))
+            continue
+        cache_last = df.index.max()
+        if is_stale(cache_last, asof, spec.cadence):
+            out.append((spec.name, pd.Timestamp(cache_last).date()))
+    return out
+
+
+def run_freshness_guard(panel, asof: date | None = None, enforce_freshness: bool = True) -> None:
+    """Raise StaleDataError (logging each reason on its own line) when stale."""
+    if not enforce_freshness:
+        return
+    asof = asof or date.today()
+    reasons = stale_reasons(find_stale_sources(asof), panel.index.max().date(), asof)
+    if reasons:
+        for r in reasons:
+            _logger.warning("stale data: %s", r)
+        raise StaleDataError(reasons)
+
+
+def run_pipeline(
+    refresh: bool = False,
+    enforce_freshness: bool = False,
+    asof: date | None = None,
+) -> dict:
     """Run the full fetch → merge → features → train pipeline.
 
     Returns:
@@ -39,18 +97,21 @@ def run_pipeline() -> dict:
 
     # 1. Fetch data (full available history)
     _logger.info("Fetching SPY history from 1993...")
-    spy = fetch_spy_history(start="1993-01-01", cache_path=Path(PROCESSED_DIR) / "spy.parquet")
+    spy = fetch_spy_history(start="1993-01-01", cache_path=Path(PROCESSED_DIR) / "spy.parquet", refresh=refresh, asof=asof)
 
     _logger.info("Fetching VIX from FRED VIXCLS (from 1990)...")
-    vix = fetch_vix_history(start="1990-01-01", cache_path=Path(PROCESSED_DIR) / "vix.parquet")
+    vix = fetch_vix_history(start="1990-01-01", cache_path=Path(PROCESSED_DIR) / "vix.parquet", refresh=refresh, asof=asof)
 
     _logger.info("Fetching EMVOVERALLEMV from FRED...")
-    emv = fetch_emv(start="1985-01-01", cache_path=Path(PROCESSED_DIR) / "emv.parquet")
+    emv = fetch_emv(start="1985-01-01", cache_path=Path(PROCESSED_DIR) / "emv.parquet", refresh=refresh, asof=asof)
 
     # 2. Merge
     _logger.info("Merging panel...")
     panel = merge_market_panel(spy, vix, emv)
     save_panel(panel, Path(PROCESSED_DIR) / "panel.parquet")
+
+    # Freshness guard: abort BEFORE any labels/features/training mutate artifacts.
+    run_freshness_guard(panel, asof=asof, enforce_freshness=enforce_freshness)
 
     # 3. Labels
     _logger.info("Building regime labels...")

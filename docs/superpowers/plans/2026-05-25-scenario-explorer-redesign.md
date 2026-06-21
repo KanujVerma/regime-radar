@@ -4,9 +4,9 @@
 
 **Goal:** Replace the single-open accordion with a persistent preset chip strip, a single collapsible Drivers section (localStorage-persisted open state), and an always-visible Threshold row; add four-state chip tracking and a "customized from preset" indicator with a reset affordance.
 
-**Architecture:** Two files change: `ScenarioSlider` gains a `presetValue` prop that drives changed-from-preset rendering (accent value, preset annotation, two-fill track); `ScenarioExplorer` replaces `openSection` accordion state with `driversOpen` + `activePresetId` + `presetThreshold`, derives `isCustomized` via deterministic snapped-value comparison, and restructures the left-column JSX. Smoke tests are updated last.
+**Architecture:** Two files change: `ScenarioSlider` gains a `presetValue` prop that drives changed-from-preset rendering (accent value, preset annotation, two-fill track); `ScenarioExplorer` replaces `openSection` accordion state with `driversOpen` + `activePresetId`, derives `isCustomized` via deterministic snapped-value comparison, and restructures the left-column JSX. Smoke tests are updated last.
 
-**Tech Stack:** React 18, TypeScript, Framer Motion (AnimatePresence for drivers collapse), Playwright (smoke tests)
+**Tech Stack:** React 18, TypeScript, Vitest (unit tests), Framer Motion (AnimatePresence for drivers collapse), Playwright (smoke tests)
 
 **Spec:** `docs/superpowers/specs/2026-05-25-scenario-explorer-redesign.md`
 
@@ -17,7 +17,8 @@
 | File | Change |
 |------|--------|
 | `frontend/src/components/ui/ScenarioSlider.tsx` | Add `presetValue?` prop; export `roundToStep`; tighter padding; two-fill track + annotation |
-| `frontend/src/pages/ScenarioExplorer.tsx` | Replace accordion; add chip/drivers/threshold state; restructure left column JSX |
+| `frontend/src/components/ui/ScenarioSlider.test.ts` | New — unit tests for `roundToStep` and `isChanged` logic |
+| `frontend/src/pages/ScenarioExplorer.tsx` | Replace accordion; add `driversOpen` + `activePresetId`; restructure left column JSX |
 | `frontend/tests/smoke/smoke.spec.ts` | 4 new tests (preset always-visible, customized indicator, inline reset, drivers toggle); update 7 existing tests that click the old accordion headers |
 
 ---
@@ -27,7 +28,7 @@
 **Files:**
 - Modify: `frontend/tests/smoke/smoke.spec.ts`
 
-- [ ] **Step 1: Add 4 new tests inside the Scenario Explorer describe block**
+- [ ] **Step 1: Add 4 new failing tests inside the Scenario Explorer describe block**
 
 Open `frontend/tests/smoke/smoke.spec.ts`. Locate the closing `})` of the `'Scenario Explorer page'` describe block (currently line 401). Insert the following four tests **before that closing `})`**:
 
@@ -51,7 +52,6 @@ Open `frontend/tests/smoke/smoke.spec.ts`. Locate the closing `})` of the `'Scen
     await page.waitForTimeout(400)
     await page.getByText('Calm Recovery').click()
     await page.waitForTimeout(400)
-    // Move the first range slider away from its preset value
     await page.locator('input[type="range"]').first().evaluate((el: HTMLInputElement) => {
       el.value = String(parseFloat(el.max) * 0.8)
       el.dispatchEvent(new Event('input', { bubbles: true }))
@@ -61,7 +61,7 @@ Open `frontend/tests/smoke/smoke.spec.ts`. Locate the closing `})` of the `'Scen
     await expect(page.getByText(/Modified from/)).toBeVisible()
   })
 
-  test('inline reset button in customized state returns chip to untouched', async ({ page }) => {
+  test('inline "Reset to preset" button clears customized state', async ({ page }) => {
     const done = page.waitForResponse(
       r => r.url().includes('/scenario') && r.status() === 200,
       { timeout: 15_000 },
@@ -78,8 +78,7 @@ Open `frontend/tests/smoke/smoke.spec.ts`. Locate the closing `})` of the `'Scen
     })
     await page.waitForTimeout(400)
     await expect(page.getByText(/Modified from/)).toBeVisible()
-    // Click the inline ↺ reset pill (not the topbar reset)
-    await page.getByRole('button', { name: /↺ reset/i }).last().click()
+    await page.getByRole('button', { name: /reset to preset/i }).click()
     await page.waitForTimeout(300)
     await expect(page.getByText(/Modified from/)).not.toBeVisible()
   })
@@ -87,13 +86,11 @@ Open `frontend/tests/smoke/smoke.spec.ts`. Locate the closing `})` of the `'Scen
   test('Drivers section can be toggled collapsed and re-expanded', async ({ page }) => {
     await page.goto('/scenario')
     await waitForLoad(page)
-    // Drivers open by default on desktop
+    // Drivers open by default on desktop viewport (1280px default)
     await expect(page.locator('input[type="range"]').first()).toBeVisible()
-    // Toggle closed
     await page.getByRole('button', { name: /Drivers/i }).click()
     await page.waitForTimeout(250)
     await expect(page.locator('input[type="range"]').first()).not.toBeVisible()
-    // Toggle open again
     await page.getByRole('button', { name: /Drivers/i }).click()
     await page.waitForTimeout(250)
     await expect(page.locator('input[type="range"]').first()).toBeVisible()
@@ -104,15 +101,100 @@ Open `frontend/tests/smoke/smoke.spec.ts`. Locate the closing `})` of the `'Scen
 
 ```bash
 cd frontend && npx playwright test tests/smoke/smoke.spec.ts \
-  --grep "preset chip strip is visible|customized indicator appears|inline reset button|Drivers section can be toggled" \
+  --grep "preset chip strip is visible|customized indicator appears|Reset to preset|Drivers section can be toggled" \
   --reporter=line 2>&1 | tail -20
 ```
 
-Expected: 4 FAIL (current UI still uses the old accordion structure).
+Expected: 4 FAIL — the current UI still uses the accordion structure.
 
 ---
 
-### Task 2: Update ScenarioSlider — tighter layout and presetValue prop
+### Task 2: Unit tests for ScenarioSlider helper math
+
+**Files:**
+- Create: `frontend/src/components/ui/ScenarioSlider.test.ts`
+
+This is the most fragile part of the redesign — the `roundToStep` function and the `isChanged` derived value must be deterministic. Test them before implementing.
+
+- [ ] **Step 1: Check Vitest is available**
+
+```bash
+cd frontend && npx vitest --version 2>&1 | head -3
+```
+
+Expected: a version string. If not found, check `package.json` for `"vitest"` — it is already a dev dependency in this project.
+
+- [ ] **Step 2: Write the failing unit tests**
+
+Create `frontend/src/components/ui/ScenarioSlider.test.ts`:
+
+```typescript
+import { describe, it, expect } from 'vitest'
+import { roundToStep } from './ScenarioSlider'
+
+describe('roundToStep', () => {
+  it('snaps to nearest step for integer steps', () => {
+    expect(roundToStep(18.3, 0.5)).toBe(18.5)
+    expect(roundToStep(18.2, 0.5)).toBe(18.0)
+    expect(roundToStep(18.0, 0.5)).toBe(18.0)
+  })
+
+  it('snaps for small decimal steps', () => {
+    expect(roundToStep(0.401, 0.01)).toBeCloseTo(0.40, 10)
+    expect(roundToStep(0.409, 0.01)).toBeCloseTo(0.41, 10)
+  })
+
+  it('snaps correctly at range boundaries', () => {
+    expect(roundToStep(0.0, 0.01)).toBeCloseTo(0.0, 10)
+    expect(roundToStep(1.0, 0.01)).toBeCloseTo(1.0, 10)
+  })
+
+  it('returns same value when already on a step', () => {
+    expect(roundToStep(24.0, 0.5)).toBe(24.0)
+    expect(roundToStep(0.40, 0.01)).toBeCloseTo(0.40, 10)
+  })
+})
+
+describe('isChanged detection (snapped comparison)', () => {
+  // Simulates the component logic: isChanged = roundToStep(value, step) !== roundToStep(presetValue, step)
+  function isChanged(value: number, presetValue: number, step: number): boolean {
+    return roundToStep(value, step) !== roundToStep(presetValue, step)
+  }
+
+  it('returns false when value equals preset exactly', () => {
+    expect(isChanged(18.0, 18.0, 0.5)).toBe(false)
+  })
+
+  it('returns false when difference is sub-step float noise', () => {
+    // 18.0 + 0.0000001 should still snap to 18.0
+    expect(isChanged(18.0000001, 18.0, 0.5)).toBe(false)
+  })
+
+  it('returns true when value is one step away', () => {
+    expect(isChanged(18.5, 18.0, 0.5)).toBe(true)
+  })
+
+  it('returns true for percentile slider one step away', () => {
+    expect(isChanged(0.41, 0.40, 0.01)).toBe(true)
+  })
+
+  it('returns false for percentile slider with sub-step noise', () => {
+    expect(isChanged(0.400001, 0.40, 0.01)).toBe(false)
+  })
+})
+```
+
+- [ ] **Step 3: Run the tests — they should fail (roundToStep not yet exported)**
+
+```bash
+cd frontend && npx vitest run src/components/ui/ScenarioSlider.test.ts 2>&1 | tail -20
+```
+
+Expected: FAIL with "roundToStep is not exported" or similar.
+
+---
+
+### Task 3: Update ScenarioSlider — tighter layout, `presetValue` prop, `roundToStep` export
 
 **Files:**
 - Modify: `frontend/src/components/ui/ScenarioSlider.tsx`
@@ -145,7 +227,7 @@ interface ScenarioSliderProps {
   step: number
   sensitivityLevel?: 'low' | 'medium' | 'high'
   decimals?: number
-  /** When provided, activates changed-from-preset styling if value ≠ presetValue after snapping. */
+  /** When provided, activates changed-from-preset styling if snapped value ≠ snapped presetValue. */
   presetValue?: number
   onChange: (value: number) => void
 }
@@ -173,7 +255,7 @@ export default function ScenarioSlider({
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '2px 0' }}>
-      {/* Label row */}
+      {/* Label + value row */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
           <span style={{ width: 6, height: 6, borderRadius: '50%', background: dotColor, flexShrink: 0 }} />
@@ -196,9 +278,7 @@ export default function ScenarioSlider({
 
       {/* Track with optional two-fill for preset delta */}
       <div style={{ position: 'relative', height: 3 }}>
-        {/* Base track */}
         <div style={{ position: 'absolute', inset: 0, background: '#1e2a3a', borderRadius: 2 }} />
-
         {isChanged && presetFrac !== null ? (
           <>
             {/* Dim fill from 0 to the lower of current/preset positions */}
@@ -221,7 +301,6 @@ export default function ScenarioSlider({
             background: '#3b82f6', borderRadius: 2,
           }} />
         )}
-
         {/* Invisible range input overlaid for interaction */}
         <input
           type="range"
@@ -242,7 +321,15 @@ export default function ScenarioSlider({
 }
 ```
 
-- [ ] **Step 2: Verify TypeScript compiles**
+- [ ] **Step 2: Run unit tests — they should now pass**
+
+```bash
+cd frontend && npx vitest run src/components/ui/ScenarioSlider.test.ts 2>&1 | tail -20
+```
+
+Expected: all unit tests PASS.
+
+- [ ] **Step 3: Verify TypeScript compiles**
 
 ```bash
 cd frontend && npx tsc --noEmit 2>&1 | head -20
@@ -250,31 +337,36 @@ cd frontend && npx tsc --noEmit 2>&1 | head -20
 
 Expected: no errors.
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add frontend/src/components/ui/ScenarioSlider.tsx
-git commit -m "feat(scenario): ScenarioSlider — tighter padding, presetValue prop, two-fill delta track"
+git add frontend/src/components/ui/ScenarioSlider.tsx \
+        frontend/src/components/ui/ScenarioSlider.test.ts
+git commit -m "feat(scenario): ScenarioSlider — tighter padding, presetValue prop, two-fill delta track, roundToStep unit tests"
 ```
 
 ---
 
-### Task 3: ScenarioExplorer — full state refactor and left column JSX restructure
+### Task 4: ScenarioExplorer — full state refactor and left column JSX restructure
 
 **Files:**
 - Modify: `frontend/src/pages/ScenarioExplorer.tsx`
 
-This task replaces the accordion logic, adds new state, and rewrites the left column JSX. The right column (lines 439–759 in the current file) is **untouched**.
+This task replaces the accordion logic, adds new state, and rewrites the left column JSX. The right column (lines ~439–759 in the current file) is **untouched**.
 
-- [ ] **Step 1: Add `roundToStep` import at the top of the file**
+**Note on `getChipStyle`:** The chip styling logic is kept as an inline function inside the component. If it grows beyond the current 4 states × 2 chip types, extract a `PresetChip` component at that point. Do not extract it now.
 
-Find the existing import block. Add this import alongside the existing `ScenarioSlider` import:
+- [ ] **Step 1: Update the `ScenarioSlider` import to also import `roundToStep`**
 
+Find:
+```typescript
+import ScenarioSlider from '../components/ui/ScenarioSlider'
+```
+
+Replace with:
 ```typescript
 import ScenarioSlider, { roundToStep } from '../components/ui/ScenarioSlider'
 ```
-
-(Replace the existing `import ScenarioSlider from '../components/ui/ScenarioSlider'` line.)
 
 - [ ] **Step 2: Replace the three state lines at the top of the component**
 
@@ -290,17 +382,36 @@ Replace with:
   const [inputs, setInputs] = useState<ScenarioInputs>(DEFAULT_INPUTS)
   const [threshold, setThreshold] = useState(DEFAULT_THRESHOLD)
   const [activePresetId, setActivePresetId] = useState<string | null>(null)
-  const [presetThreshold, setPresetThreshold] = useState<number | null>(null)
+  // Lazy initializer reads localStorage once on mount — avoids layout shift from useEffect.
+  // typeof window guard is belt-and-suspenders for any test environment without a DOM.
   const [driversOpen, setDriversOpen] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return true
     const stored = localStorage.getItem('scenario-drivers-open')
     if (stored !== null) return stored === 'true'
     return window.innerWidth >= 1024
   })
 ```
 
-- [ ] **Step 3: Add `toggleDrivers` callback and `isCustomized` derived value**
+- [ ] **Step 3: Update the `reset` callback — remove accordion reset, clear activePresetId**
 
-Find the existing `reset` useCallback (line ~137). After the `reset` callback's closing `},[...])`, add:
+Find the `reset` useCallback body. Replace the entire callback with:
+
+```typescript
+  const reset = useCallback(
+    () => {
+      setInputs(currentMarketInputs ?? DEFAULT_INPUTS)
+      setActivePresetId(null)
+      showBanner({ id: 'reset-applied', priority: 5, text: '↺ Reset to baseline', color: '#06b6d4' })
+      prevDominant.current = null
+      prevRiskBucket.current = 'low'
+    },
+    [currentMarketInputs, showBanner],
+  )
+```
+
+- [ ] **Step 4: Add `toggleDrivers` callback and `isCustomized` derived value**
+
+After the `reset` callback, add:
 
 ```typescript
   const toggleDrivers = useCallback(() => {
@@ -312,7 +423,7 @@ Find the existing `reset` useCallback (line ~137). After the `reset` callback's 
   }, [])
 ```
 
-Then find `const forwardBullets` (or the line where `dominant` is computed, around line ~164–171). After the `dominant` const, add:
+After the `dominant` const (around line ~164), add:
 
 ```typescript
   const isCustomized = (() => {
@@ -325,37 +436,27 @@ Then find `const forwardBullets` (or the line where `dominant` is computed, arou
   })()
 ```
 
-- [ ] **Step 4: Update `reset` callback to clear preset state**
+- [ ] **Step 5: Delete the `SectionHeader` inline function**
 
-Find the `reset` useCallback body. Replace it with:
+Find and delete the entire `function SectionHeader(...)` declaration (currently lines ~229–247). It is no longer used.
 
-```typescript
-  const reset = useCallback(
-    () => {
-      setInputs(currentMarketInputs ?? DEFAULT_INPUTS)
-      setActivePresetId(null)
-      setPresetThreshold(null)
-      showBanner({ id: 'reset-applied', priority: 5, text: '↺ Reset to baseline', color: '#06b6d4' })
-      prevDominant.current = null
-      prevRiskBucket.current = 'low'
-    },
-    [currentMarketInputs, showBanner],
-  )
-```
+- [ ] **Step 6: Add chip-style helper, micro-label constant, and ALL_PRESETS before the JSX return**
 
-- [ ] **Step 5: Add chip-style helper and micro-label constant before the JSX return**
-
-Find the `return (` line (the start of the JSX). Immediately before it, add:
+Immediately before the `return (` line, add:
 
 ```typescript
   const microLabelStyle: React.CSSProperties = {
     fontSize: 9, textTransform: 'uppercase' as const, letterSpacing: '0.1em', color: '#334155',
   }
 
+  // Returns chip styles for inactive / active-untouched / active-modified states.
+  // If this grows beyond 4 states × 2 chip types, extract a PresetChip component.
   const getChipStyle = (presetId: string): React.CSSProperties => {
     const isActive = activePresetId === presetId
     const isCrisis = presetId === 'crisis_peak'
-    const base: React.CSSProperties = { borderRadius: 14, fontSize: 11, cursor: 'pointer', textAlign: 'left' as const }
+    const base: React.CSSProperties = {
+      borderRadius: 14, fontSize: 11, cursor: 'pointer', textAlign: 'left' as const,
+    }
     if (!isActive) {
       return isCrisis
         ? { ...base, background: '#0e0505', border: '1px solid #7f1d1d', color: '#fca5a5', padding: '4px 12px' }
@@ -374,19 +475,15 @@ Find the `return (` line (the start of the JSX). Immediately before it, add:
   const ALL_PRESETS = [...STANDARD_PRESETS, CRISIS_PRESET]
 ```
 
-- [ ] **Step 6: Delete the `SectionHeader` inline function**
-
-Find and delete the `function SectionHeader(...)` inline function (currently lines ~229–247). It is no longer used.
-
 - [ ] **Step 7: Replace the entire left column JSX**
 
-The left column starts at the comment `{/* ── Left column ── */}` and ends just before `{/* ── Right column ── */}`. Replace everything between those two comments (inclusive of the left column outer `<div>`) with:
+Find the block starting with `{/* ── Left column ── */}` and ending just before `{/* ── Right column ── */}`. Replace it (including the outer `<div>`) with:
 
 ```tsx
         {/* ── Left column ── */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
 
-            {/* Preset chip strip — always visible */}
+            {/* Preset chip strip — always visible, never collapsible */}
             <div>
               <div style={microLabelStyle}>Quick Scenarios</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5, marginTop: 8 }}>
@@ -397,7 +494,6 @@ The left column starts at the comment `{/* ── Left column ── */}` and en
                     onClick={() => {
                       setInputs(PRESETS[p.id])
                       setActivePresetId(p.id)
-                      setPresetThreshold(null)
                       showBanner({ id: 'preset-applied', priority: 5, text: `Preset: ${p.label}`, color: '#06b6d4' })
                     }}
                     style={getChipStyle(p.id)}
@@ -409,8 +505,12 @@ The left column starts at the comment `{/* ── Left column ── */}` and en
                   </button>
                 ))}
 
+                {/* Crisis subgroup — subtle separator so the strip reads as one control system */}
                 <div style={{ height: 1, background: '#1a0a0a', width: '100%', margin: '2px 0' }} />
-                <div style={{ fontSize: 7, fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: '#5a2020', width: '100%' }}>
+                <div style={{
+                  fontSize: 7, fontWeight: 700, letterSpacing: '0.15em',
+                  textTransform: 'uppercase' as const, color: '#5a2020', width: '100%',
+                }}>
                   Sustained Crisis
                 </div>
 
@@ -419,7 +519,6 @@ The left column starts at the comment `{/* ── Left column ── */}` and en
                   onClick={() => {
                     setInputs(PRESETS[CRISIS_PRESET.id])
                     setActivePresetId(CRISIS_PRESET.id)
-                    setPresetThreshold(null)
                     showBanner({ id: 'preset-applied', priority: 5, text: `Preset: ${CRISIS_PRESET.label}`, color: '#06b6d4' })
                   }}
                   style={getChipStyle(CRISIS_PRESET.id)}
@@ -431,7 +530,7 @@ The left column starts at the comment `{/* ── Left column ── */}` and en
                 </button>
               </div>
 
-              {/* Customized indicator row */}
+              {/* Customized indicator row — only shown when sliders diverge from the active preset */}
               {isCustomized && activePresetId && (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginTop: 7, fontSize: 10, color: '#2d4a6a' }}>
                   <span style={{ color: '#3b6fa8' }}>✦</span>
@@ -449,7 +548,7 @@ The left column starts at the comment `{/* ── Left column ── */}` and en
                       fontSize: 10, color: '#60a5fa', fontWeight: 600, cursor: 'pointer',
                     }}
                   >
-                    ↺ reset
+                    Reset to preset
                   </button>
                 </div>
               )}
@@ -457,7 +556,7 @@ The left column starts at the comment `{/* ── Left column ── */}` and en
 
             <div style={{ height: 1, background: colors.border }} />
 
-            {/* Drivers — single collapsible section */}
+            {/* Drivers — the only collapsible section */}
             <div>
               <button
                 type="button"
@@ -598,33 +697,33 @@ The left column starts at the comment `{/* ── Left column ── */}` and en
           </div>
 ```
 
-- [ ] **Step 8: Verify TypeScript compiles**
+- [ ] **Step 8: Verify TypeScript compiles with no errors**
 
 ```bash
 cd frontend && npx tsc --noEmit 2>&1 | head -30
 ```
 
-Expected: no errors. If `openSection` or `SectionHeader` still appear in remaining JSX, remove those references.
+If `openSection` still appears anywhere in the file, remove those references. If `SectionHeader` is still called, ensure Step 5 removed it.
 
 - [ ] **Step 9: Commit**
 
 ```bash
 git add frontend/src/pages/ScenarioExplorer.tsx
-git commit -m "feat(scenario): replace accordion with persistent preset strip, collapsible drivers, active/modified chip states"
+git commit -m "feat(scenario): replace accordion with persistent preset strip, collapsible drivers, 4-state chip system"
 ```
 
 ---
 
-### Task 4: Update existing smoke tests and verify full suite passes
+### Task 5: Update existing smoke tests and verify full suite passes
 
 **Files:**
 - Modify: `frontend/tests/smoke/smoke.spec.ts`
 
-Seven existing Scenario Explorer tests click old accordion section headers (`'Quick Scenarios'`, `'Alert Threshold'`). These buttons no longer exist.
+Seven existing Scenario Explorer tests click old accordion headers (`'Quick Scenarios'`, `'Alert Threshold'`). These buttons no longer exist after Task 4.
 
-- [ ] **Step 1: Update the 7 affected tests**
+- [ ] **Step 1: Replace the entire Scenario Explorer describe block**
 
-Replace the entire `'Scenario Explorer page'` describe block (lines 323–401) with the version below. The 4 new tests from Task 1 are already present; the 7 old tests are updated:
+Find the `test.describe('Scenario Explorer page', ...)` block (lines 323–401) and replace it in full:
 
 ```typescript
 // ─── Scenario Explorer page ──────────────────────────────────────────────────
@@ -649,14 +748,12 @@ test.describe('Scenario Explorer page', () => {
   })
 
   test('preset chip strip is visible without opening any section', async ({ page }) => {
-    // Presets always visible — no section click required
     await expect(page.getByText('Calm Recovery')).toBeVisible()
     await expect(page.getByText('Volatility Pickup')).toBeVisible()
     await expect(page.getByText('Panic Shock')).toBeVisible()
   })
 
   test('Alert Threshold section renders metric cards without any section click', async ({ page }) => {
-    // Threshold always visible — no accordion click needed
     await expect(page.getByText(/Crises caught|False alarms|Avg warning/i).first()).toBeVisible()
   })
 
@@ -691,7 +788,6 @@ test.describe('Scenario Explorer page', () => {
   test('Crisis Peak preset renders tripod with Turbulent regime visible', async ({ page }) => {
     await page.getByText('🔴 Crisis Peak').click()
     await waitForLoad(page)
-    await expect(page.getByText('Regime probability — current market → your scenario')).toBeVisible()
     await expect(page.getByText('Turbulent').first()).toBeVisible()
   })
 
@@ -722,7 +818,7 @@ test.describe('Scenario Explorer page', () => {
     await expect(page.getByText(/Modified from/)).toBeVisible()
   })
 
-  test('inline reset button in customized state returns chip to untouched', async ({ page }) => {
+  test('inline "Reset to preset" button clears customized state', async ({ page }) => {
     const done = page.waitForResponse(
       r => r.url().includes('/scenario') && r.status() === 200,
       { timeout: 15_000 },
@@ -739,7 +835,7 @@ test.describe('Scenario Explorer page', () => {
     })
     await page.waitForTimeout(400)
     await expect(page.getByText(/Modified from/)).toBeVisible()
-    await page.getByRole('button', { name: /↺ reset/i }).last().click()
+    await page.getByRole('button', { name: /reset to preset/i }).click()
     await page.waitForTimeout(300)
     await expect(page.getByText(/Modified from/)).not.toBeVisible()
   })
@@ -756,19 +852,22 @@ test.describe('Scenario Explorer page', () => {
 })
 ```
 
-- [ ] **Step 2: Run the full smoke suite and verify all tests pass**
+- [ ] **Step 2: Run the full smoke suite and confirm all tests pass**
 
-Ensure the dev server and API backend are both running (`npm run dev` in `frontend/`, Python API on port 8000), then:
+Ensure `npm run dev` (port 5173) and the Python API (port 8000) are both running, then:
 
 ```bash
 cd frontend && npx playwright test tests/smoke/smoke.spec.ts --reporter=line 2>&1 | tail -30
 ```
 
-Expected: all tests pass. If any Scenario Explorer test fails, check the selector — the most common issue is `getByRole('button', { name: /Drivers/i })` not matching if the button text changed.
+Expected: all tests PASS. If any Scenario Explorer test fails, the most likely causes are:
+- `getByRole('button', { name: /Drivers/i })` not matching — verify the Drivers button renders with visible text "Drivers"
+- `getByRole('button', { name: /reset to preset/i })` not matching — verify the reset button text is exactly "Reset to preset"
+- Customized indicator not appearing — check that the slider `evaluate` dispatches both `input` and `change` events
 
 - [ ] **Step 3: Commit**
 
 ```bash
 git add frontend/tests/smoke/smoke.spec.ts
-git commit -m "test(scenario): update smoke tests for redesigned left column — persistent presets, collapsible drivers, customized state"
+git commit -m "test(scenario): update smoke tests for redesigned left column — persistent presets, drivers toggle, customized state"
 ```

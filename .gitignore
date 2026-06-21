@@ -5,6 +5,9 @@ __pycache__/
 .venv/
 venv/
 
+# Local agent/context-mode state — never commit
+.contextos/
+
 # Live SQLite state — ephemeral, never commit
 data/app.db
 data/app.db-shm
