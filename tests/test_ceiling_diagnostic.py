@@ -73,3 +73,32 @@ def test_ceiling_metrics_top_group_tracks_outcomes():
     m = ceiling_metrics(_oof_frame(cal, y))
     assert m["top1pct_emp"] >= 0.9   # top 1% are all the high-score positives
     assert m["roc_auc"] > 0.95
+
+
+# ---------------------------------------------------------------------------
+# LABEL_VARIANTS + build_variant_label tests
+# ---------------------------------------------------------------------------
+from src.evaluation.ceiling_diagnostic import LABEL_VARIANTS, build_variant_label
+
+
+def test_label_variants_are_the_pre_registered_grid():
+    names = {v["name"] for v in LABEL_VARIANTS}
+    # baseline + horizon sweep + persistence sweep (<=8 runs)
+    assert "baseline_h5_p3" in names
+    assert {"h10_p3", "h21_p3", "h42_p3", "h63_p3"}.issubset(names)
+    assert {"h5_p1", "h21_p1"}.issubset(names)
+    assert len(LABEL_VARIANTS) <= 8
+    for v in LABEL_VARIANTS:
+        assert v["horizon_days"] >= 1 and v["persistence_days"] >= 1
+
+
+def test_build_variant_label_changes_base_rate_with_horizon():
+    # Longer horizon -> at least as many positives as the baseline.
+    regimes = pd.Series(
+        (["calm"] * 10 + ["elevated"] * 2) * 40,
+        index=pd.date_range("2015-01-01", periods=480, freq="B"),
+    )
+    y5 = build_variant_label(regimes, horizon_days=5, persistence_days=1)
+    y42 = build_variant_label(regimes, horizon_days=42, persistence_days=1)
+    assert y42.sum() >= y5.sum()
+    assert set(y5.unique()).issubset({0, 1})

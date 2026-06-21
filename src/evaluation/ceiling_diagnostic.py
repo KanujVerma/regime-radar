@@ -113,3 +113,28 @@ def ceiling_metrics(oof: pd.DataFrame) -> dict:
         "pr_auc": round(pr, 4),
         "bins": bins,
     }
+
+
+# ---------------------------------------------------------------------------
+# Label variant grid + builder
+# ---------------------------------------------------------------------------
+from src.labeling.build_transition_labels import build_transition_labels
+
+# Pre-registered sweep (<=8 runs): baseline + horizon sweep + persistence sweep.
+LABEL_VARIANTS = [
+    {"name": "baseline_h5_p3", "horizon_days": 5, "persistence_days": 3},
+    {"name": "h10_p3", "horizon_days": 10, "persistence_days": 3},
+    {"name": "h21_p3", "horizon_days": 21, "persistence_days": 3},
+    {"name": "h42_p3", "horizon_days": 42, "persistence_days": 3},
+    {"name": "h63_p3", "horizon_days": 63, "persistence_days": 3},
+    {"name": "h5_p1", "horizon_days": 5, "persistence_days": 1},
+    {"name": "h21_p1", "horizon_days": 21, "persistence_days": 1},
+]
+
+
+def build_variant_label(regime_series: pd.Series, horizon_days: int, persistence_days: int) -> pd.Series:
+    """Build the transition-up label for a given horizon/persistence variant."""
+    return build_transition_labels(
+        regime_series,
+        config={"horizon_days": horizon_days, "persistence_days": persistence_days},
+    )
