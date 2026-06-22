@@ -94,3 +94,21 @@ def test_version_mismatch_still_flags_out_of_support():
     assert r.display_state == "stress_out_of_support"
     assert r.validated_probability is None
     assert r.stress_percentile is None and r.stress_tier is None
+
+
+from src.api.schemas import RiskReadingModel
+from src.api.risk_reading import RiskReading, SupportInfo
+
+
+def test_risk_reading_model_from_dataclass():
+    rr = RiskReading(
+        display_state="stress_out_of_support", validated_probability=None,
+        stress_percentile=0.991, stress_tier="High", analog_status="not_applicable",
+        nearest_analogs=None, support=SupportInfo(in_support=False, nn_z_distance=14.2),
+        max_evaluated_p=0.30,
+    )
+    m = RiskReadingModel.from_reading(rr)
+    assert m.display_state == "stress_out_of_support"
+    assert m.support.in_support is False
+    assert m.validated_probability is None
+    assert m.model_dump()["stress_tier"] == "High"

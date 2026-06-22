@@ -38,6 +38,7 @@ class CurrentStateResponse(BaseModel):
     prob_turbulent: float | None = None
     delta: StateDelta | None = None
     condition_values: dict[str, float] = Field(default_factory=dict)
+    risk_reading: RiskReadingModel | None = None
 
 
 class HistoricalPoint(BaseModel):
@@ -108,6 +109,7 @@ class ScenarioResponse(BaseModel):
     baseline_prob_turbulent: float
     driver_deltas: list[DriverDelta]
     baseline_inputs: dict[str, float]
+    risk_reading: RiskReadingModel | None = None
 
 
 class ModelDriversResponse(BaseModel):
@@ -234,3 +236,42 @@ class AnalogsResponse(BaseModel):
     query_transition_risk: float
     analogs: list[AnalogEntry]
     feature_set_version: str
+
+
+class SupportInfoModel(BaseModel):
+    in_support: bool
+    nn_z_distance: float
+
+
+class RiskReadingAnalog(BaseModel):
+    label: str
+    date: str
+    raw_score: float
+
+
+class RiskReadingModel(BaseModel):
+    display_state: Literal["validated", "stress_in_support", "stress_out_of_support"]
+    validated_probability: float | None = None
+    stress_percentile: float | None = None
+    stress_tier: Literal["Elevated", "High", "Extreme"] | None = None
+    analog_status: Literal["not_applicable", "available", "unavailable"] = "not_applicable"
+    nearest_analogs: list[RiskReadingAnalog] | None = None
+    support: SupportInfoModel
+    max_evaluated_p: float
+
+    @classmethod
+    def from_reading(cls, rr) -> "RiskReadingModel":
+        return cls(
+            display_state=rr.display_state,
+            validated_probability=rr.validated_probability,
+            stress_percentile=rr.stress_percentile,
+            stress_tier=rr.stress_tier,
+            analog_status=rr.analog_status,
+            nearest_analogs=(
+                [RiskReadingAnalog(**a) for a in rr.nearest_analogs]
+                if rr.nearest_analogs else None
+            ),
+            support=SupportInfoModel(in_support=rr.support.in_support,
+                                     nn_z_distance=rr.support.nn_z_distance),
+            max_evaluated_p=rr.max_evaluated_p,
+        )
