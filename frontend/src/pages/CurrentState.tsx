@@ -14,6 +14,7 @@ import WhatChanged from '../components/current-state/WhatChanged'
 import StressLadder from '../components/current-state/StressLadder'
 import MarketContextBrief from '../components/current-state/MarketContextBrief'
 import RegimePersistence from '../components/current-state/RegimePersistence'
+import { RiskReadingDisplay } from '../components/RiskReadingDisplay'
 import {
   buildMarketContextCards,
   buildRiskTemperature,
@@ -201,6 +202,14 @@ export default function CurrentState() {
             <RiskTemperature data={riskTemperature} />
             <Panel title="What this means right now">
               <p className="text-[11px] leading-relaxed mb-4" style={{ color: '#94a3b8' }}>{narrative}</p>
+              {isStress && data.risk_reading && (
+                <div
+                  className="mb-4 p-3 rounded"
+                  style={{ background: '#0c1020', border: '1px solid #151d2e', fontSize: 11, lineHeight: 1.6, color: '#94a3b8' }}
+                >
+                  <RiskReadingDisplay reading={data.risk_reading} />
+                </div>
+              )}
               <div className="text-[9px] font-bold tracking-widest uppercase mb-2" style={{ color: '#4a6080' }}>
                 Model confidence in each market state
               </div>
