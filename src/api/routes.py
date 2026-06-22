@@ -588,6 +588,35 @@ async def scenario(request: Request, body: ScenarioRequest):
     baseline_risk = float(transition_model.predict_proba(X_base)[0, 1])
     scenario_risk = float(transition_model.predict_proba(X_scen)[0, 1])
 
+    # Calibrated probability for the scenario (the validated-zone value + ceiling test).
+    from src.models.registry import artifact_exists as _ae, load_artifact as _la
+    from src.evaluation.calibration import apply_calibrator as _apply
+    scenario_cal = scenario_risk
+    if _ae("xgb_transition_calibrator"):
+        _cal = _la("xgb_transition_calibrator")
+        scenario_cal = float(_apply(_cal, [scenario_risk])[0])
+
+    risk_reading_model = None
+    try:
+        raw_ref, cond_ref, model_version, max_p = app_state.load_risk_reading_context()
+        if raw_ref is not None:
+            from src.api.risk_reading import build_risk_reading
+            from src.api.schemas import RiskReadingModel
+            condition_point = {c: scenario_vec[c] for c in SCENARIO_BASELINE_FEATURES}
+            rr = build_risk_reading(
+                calibrated_p=scenario_cal, raw_score=scenario_risk,
+                condition_point=condition_point, cond_reference=cond_ref,
+                raw_reference=raw_ref, model_version=model_version,
+                max_evaluated_p=max_p,
+                find_analogs_fn=lambda: [],
+                analogs_applicable=False,  # hypothetical scenario -> analogs not_applicable
+            )
+            risk_reading_model = RiskReadingModel.from_reading(rr)
+    except Exception as e:
+        import logging as _lg
+        _lg.getLogger(__name__).warning("scenario risk_reading failed: %s", e)
+        risk_reading_model = None
+
     base_regime_probs = regime_model.predict_proba(X_base)[0]
     scen_regime_probs = regime_model.predict_proba(X_scen)[0]
 
@@ -624,4 +653,5 @@ async def scenario(request: Request, body: ScenarioRequest):
         baseline_prob_turbulent=round(float(base_regime_probs[2]), 4),
         driver_deltas=driver_deltas,
         baseline_inputs=baseline_inputs,
+        risk_reading=risk_reading_model,
     )

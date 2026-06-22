@@ -333,3 +333,32 @@ class AppState:
     def force_refresh(self) -> None:
         """Manually trigger a refresh (used by /refresh-data endpoint)."""
         self._do_refresh()
+
+    def load_risk_reading_context(self):
+        """Return (raw_reference dict|None, cond_reference DataFrame|None, model_version, max_evaluated_p).
+
+        Read lazily; safe to call per-request. Returns Nones if artifacts/data are
+        absent so callers can skip the risk_reading rather than error.
+        """
+        import json as _json
+        import pandas as _pd
+        from pathlib import Path as _Path
+        from src.models.registry import load_metadata, artifact_exists
+        from src.utils.paths import PROCESSED_DIR
+        from src.features.build_market_features import build_features
+        from src.labeling.build_regime_labels import build_regime_labels
+
+        base = _Path(__file__).resolve().parent.parent.parent / "data" / "reliability"
+        ref_path = base / "raw_score_reference.json"
+        rel_path = base / "transition_reliability.json"
+        if not (ref_path.exists() and artifact_exists("xgb_transition")):
+            return None, None, None, 0.30
+        raw_reference = _json.loads(ref_path.read_text())
+        model_version = load_metadata("xgb_transition").get("saved_at", "unknown")
+        max_evaluated_p = 0.30
+        if rel_path.exists():
+            max_evaluated_p = float(_json.loads(rel_path.read_text()).get("max_evaluated_p", 0.30))
+        panel = _pd.read_parquet(_Path(PROCESSED_DIR) / "panel.parquet")
+        regime = build_regime_labels(panel)
+        cond_reference = build_features(panel, regime_series=regime).dropna()
+        return raw_reference, cond_reference, model_version, max_evaluated_p
