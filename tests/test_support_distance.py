@@ -39,3 +39,22 @@ def test_build_support_report_flags_extrapolation_fraction():
     # Each probe row records its multiplier and whether it has an analog.
     for pr in report["probes"]:
         assert "label" in pr and "nn_z_distance" in pr and "in_support" in pr
+
+
+from src.evaluation.support_distance import classify_support
+
+
+def test_classify_support_in_distribution_point_is_supported():
+    ref = _ref()  # existing helper (6 SCENARIO_BASELINE_FEATURES)
+    point = ref.iloc[10].to_dict()
+    in_support, dist = classify_support(point, ref, z_threshold=3.0)
+    assert in_support is True
+    assert dist < 1e-6
+
+
+def test_classify_support_extreme_point_is_unsupported():
+    ref = _ref()
+    point = (ref.mean() + 50 * ref.std()).to_dict()
+    in_support, dist = classify_support(point, ref, z_threshold=3.0)
+    assert in_support is False
+    assert dist > 10

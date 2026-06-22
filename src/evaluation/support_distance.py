@@ -59,3 +59,19 @@ def build_support_report(features: pd.DataFrame, z_threshold: float = 3.0) -> di
         "extrapolation_fraction": round(len(extrap) / len(probes), 4),
         "probes": probes,
     }
+
+
+def classify_support(point: dict, reference: pd.DataFrame, z_threshold: float = 3.0) -> tuple[bool, float]:
+    """Classify a single condition vector against the historical reference.
+
+    Standardizes `point` and `reference` over the shared SCENARIO_BASELINE_FEATURES
+    columns, then returns (in_support, nn_z_distance) where in_support is
+    nn_z_distance <= z_threshold.
+    """
+    cols = [c for c in SCENARIO_BASELINE_FEATURES if c in reference.columns and c in point]
+    ref = reference[cols].dropna()
+    mean, std = standardize_reference(ref)
+    z_ref = ((ref - mean) / std).to_numpy()
+    p = pd.Series({c: float(point[c]) for c in cols})
+    dist = nn_distance((p - mean) / std, z_ref)
+    return (dist <= z_threshold, dist)
