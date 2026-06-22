@@ -31,6 +31,7 @@ export interface CurrentStateResponse {
   prob_turbulent: number | null
   delta: StateDelta | null
   condition_values: Record<string, number>
+  risk_reading?: RiskReading | null
 }
 
 export interface HistoricalPoint {
@@ -118,6 +119,7 @@ export interface ScenarioResponse {
   baseline_prob_turbulent: number
   driver_deltas: DriverDelta[]
   baseline_inputs: Record<string, number>
+  risk_reading?: RiskReading | null
 }
 
 export interface DailyDriverEntry {
@@ -223,4 +225,25 @@ export interface AnalogsResponse {
   query_transition_risk: number
   analogs: AnalogEntry[]
   feature_set_version: string
+}
+
+export type RiskDisplayState = 'validated' | 'stress_in_support' | 'stress_out_of_support'
+export type StressTier = 'Elevated' | 'High' | 'Extreme'
+export type AnalogStatus = 'not_applicable' | 'available' | 'unavailable'
+
+export interface RiskReadingAnalog {
+  label: string
+  date: string
+  raw_score: number
+}
+
+export interface RiskReading {
+  display_state: RiskDisplayState
+  validated_probability: number | null
+  stress_percentile: number | null
+  stress_tier: StressTier | null
+  analog_status: AnalogStatus
+  nearest_analogs: RiskReadingAnalog[] | null
+  support: { in_support: boolean; nn_z_distance: number }
+  max_evaluated_p: number
 }
