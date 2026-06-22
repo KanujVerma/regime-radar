@@ -17,6 +17,7 @@ import { useStateBanners } from '../hooks/useStateBanners'
 import StateBanner from '../components/ui/StateBanner'
 import { regimeColor, colors } from '../lib/tokens'
 import ScenarioSlider, { roundToStep } from '../components/ui/ScenarioSlider'
+import { RiskReadingDisplay } from '../components/RiskReadingDisplay'
 import { AnimatePresence } from 'framer-motion'
 
 const DEFAULT_INPUTS: ScenarioInputs = {
@@ -601,6 +602,16 @@ export default function ScenarioExplorer() {
                   </span>
                 )}
               </div>
+
+              {data.risk_reading && (
+                <div className="module-base rounded-lg" style={{ border: '1px solid #151d2e' }}>
+                  <Panel title="Transition risk — honesty check">
+                    <div style={{ fontSize: 11, lineHeight: 1.6, color: '#94a3b8' }}>
+                      <RiskReadingDisplay reading={data.risk_reading} />
+                    </div>
+                  </Panel>
+                </div>
+              )}
 
               {/* Probability Tripod */}
               <div ref={probModuleRef} className="module-base rounded-lg" style={{ border: '1px solid #151d2e' }}>

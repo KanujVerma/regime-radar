@@ -481,11 +481,14 @@ def test_scenario_response_shape(app_with_state, monkeypatch):
     import src.models.registry as reg
     monkeypatch.setattr(reg, "artifact_exists", lambda name: True)
     monkeypatch.setattr(reg, "load_artifact",
-        lambda name: fake_transition if "transition" in name else fake_regime)
+        lambda name: fake_transition
+        if ("transition" in name and "calibrator" not in name)
+        else (fake_regime if "regime" in name else object()))
     monkeypatch.setattr(reg, "load_metadata", lambda name: {
         "feature_names": FEATURES,
         "feature_importances": fake_transition.feature_importances_.tolist(),
     })
+    monkeypatch.setattr("src.evaluation.calibration.apply_calibrator", lambda cal, x: list(x))
 
     # Mock pipeline at source modules so build_features doesn't need real OHLCV
     monkeypatch.setattr("src.labeling.build_regime_labels.build_regime_labels",
@@ -703,3 +706,111 @@ class TestAnalogsEndpoint:
         }
         for entry in data["analogs"]:
             assert required_keys <= entry.keys()
+
+
+def _scenario_risk_reading_mocks(monkeypatch, version="2026-05-23T05:55:41.428754+00:00"):
+    """Mock models + data pipeline so the scenario risk_reading path runs deterministically.
+    `version` controls the model stamp: matching the committed raw_score_reference.json
+    version -> version_ok True; any other string -> version mismatch (percentile suppressed)."""
+    import numpy as np
+    import pandas as pd
+    FEATURES = ["vix_level", "vix_chg_5d", "rv_20d_pct", "drawdown_pct_504d", "ret_20d", "dist_sma50"]
+    rng = np.random.default_rng(0)
+    fake_features = pd.DataFrame(
+        rng.normal(loc=[18, 0, 0.15, -0.05, 0.0, 0.0], scale=[4, 2, 0.05, 0.05, 0.05, 0.05], size=(300, 6)),
+        columns=FEATURES, index=pd.bdate_range("2023-01-01", periods=300),
+    )
+    fake_regime_series = pd.Series(["calm"] * 300, index=fake_features.index, name="regime")
+
+    class FakeTransition:
+        feature_importances_ = np.array([0.3, 0.2, 0.1, 0.2, 0.1, 0.1])
+        def predict_proba(self, X):
+            return np.array([[0.4, 0.6]] * len(X))   # raw 0.6 -> above the 0.30 ceiling
+
+    class FakeRegime:
+        def predict_proba(self, X):
+            return np.array([[0.5, 0.3, 0.2]] * len(X))
+
+    import src.models.registry as reg
+    monkeypatch.setattr(reg, "artifact_exists", lambda name: True)
+    monkeypatch.setattr(reg, "load_artifact",
+        lambda name: FakeTransition() if ("transition" in name and "calibrator" not in name)
+        else (FakeRegime() if "regime" in name else object()))
+    monkeypatch.setattr(reg, "load_metadata", lambda name: {
+        "feature_names": FEATURES,
+        "feature_importances": [0.3, 0.2, 0.1, 0.2, 0.1, 0.1],
+        "saved_at": version,
+    })
+    monkeypatch.setattr("src.labeling.build_regime_labels.build_regime_labels",
+                        lambda panel, **kw: fake_regime_series)
+    monkeypatch.setattr("src.features.build_market_features.build_features",
+                        lambda panel, **kw: fake_features)
+    monkeypatch.setattr("src.evaluation.calibration.apply_calibrator", lambda cal, x: list(x))
+    import src.api.routes as routes_mod
+    monkeypatch.setattr(routes_mod.pd, "read_parquet", lambda p: fake_features)
+    return FEATURES
+
+
+def test_scenario_maxed_sliders_returns_out_of_support(app_with_state, monkeypatch):
+    _scenario_risk_reading_mocks(monkeypatch)
+    app, _ = app_with_state
+    client = TestClient(app)
+    body = {"vix_level": 200.0, "vix_chg_5d": 50.0, "rv_20d_pct": 5.0,
+            "drawdown_pct_504d": -0.95, "ret_20d": -0.9, "dist_sma50": -0.9}
+    r = client.post("/scenario", json=body)
+    assert r.status_code == 200
+    rr = r.json().get("risk_reading")
+    assert rr is not None
+    assert rr["display_state"] == "stress_out_of_support"
+    assert rr["validated_probability"] is None
+    assert rr["support"]["in_support"] is False
+
+
+def test_scenario_baseline_like_inputs_have_risk_reading(app_with_state, monkeypatch):
+    _scenario_risk_reading_mocks(monkeypatch)
+    app, _ = app_with_state
+    client = TestClient(app)
+    body = {"vix_level": 16.0, "vix_chg_5d": 0.0, "rv_20d_pct": 0.12,
+            "drawdown_pct_504d": -0.03, "ret_20d": 0.01, "dist_sma50": 0.01}
+    r = client.post("/scenario", json=body)
+    assert r.status_code == 200
+    assert r.json()["risk_reading"] is not None
+
+
+def test_scenario_version_mismatch_suppresses_percentile(app_with_state, monkeypatch):
+    # Force a model stamp that differs from the committed reference -> ranking suppressed.
+    _scenario_risk_reading_mocks(monkeypatch, version="STALE_VERSION")
+    app, _ = app_with_state
+    client = TestClient(app)
+    body = {"vix_level": 16.0, "vix_chg_5d": 0.0, "rv_20d_pct": 0.12,
+            "drawdown_pct_504d": -0.03, "ret_20d": 0.01, "dist_sma50": 0.01}
+    r = client.post("/scenario", json=body)
+    assert r.status_code == 200
+    rr = r.json()["risk_reading"]
+    assert rr is not None
+    assert rr["stress_percentile"] is None  # ranking suppressed on version mismatch
+
+
+def test_current_state_has_risk_reading(app_with_state, monkeypatch):
+    import pandas as pd
+    _scenario_risk_reading_mocks(monkeypatch)  # mocks registry + pipeline + a 300-row in-dist cond reference
+    app, state = app_with_state
+    state.write_state({
+        "as_of_ts": "2024-01-02T00:00:00+00:00",
+        "regime": "calm", "transition_risk": 0.12, "transition_risk_raw": 0.4,
+        "trend": "neutral", "mode": "demo", "price_card_price": None,
+    })
+    # Provide a live, in-distribution feature vector (-> in_support) and no analog index.
+    state._latest_features = pd.Series({
+        "vix_level": 18.0, "vix_chg_5d": 0.0, "rv_20d_pct": 0.15,
+        "drawdown_pct_504d": -0.05, "ret_20d": 0.0, "dist_sma50": 0.0})
+    state._latest_date = None
+    state._analog_index = None
+    client = TestClient(app)
+    r = client.get("/current-state")
+    assert r.status_code == 200
+    rr = r.json().get("risk_reading")
+    assert rr is not None
+    assert rr["display_state"] in ("validated", "stress_in_support", "stress_out_of_support")
+    if rr["display_state"] == "validated":
+        assert rr["validated_probability"] is not None

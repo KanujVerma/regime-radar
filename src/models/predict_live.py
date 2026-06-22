@@ -84,6 +84,7 @@ def predict_current_state(
     return {
         "regime": latest_regime,
         "transition_risk": round(latest_risk, 4),
+        "transition_risk_raw": round(float(transition_raw[-1]), 4),
         "regime_history": regime_smoothed.iloc[-5:].tolist(),
         "prob_calm": round(float(latest_probs[0]), 4),
         "prob_elevated": round(float(latest_probs[1]), 4),

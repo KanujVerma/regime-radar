@@ -61,7 +61,7 @@ class AppState:
                     prob_turbulent REAL
                 )
             """)
-            for col in ("prob_calm", "prob_elevated", "prob_turbulent"):
+            for col in ("prob_calm", "prob_elevated", "prob_turbulent", "transition_risk_raw"):
                 try:
                     conn.execute(f"ALTER TABLE live_state ADD COLUMN {col} REAL")
                 except Exception:
@@ -74,14 +74,16 @@ class AppState:
             conn.execute(
                 """INSERT INTO live_state
                    (as_of_ts, regime, transition_risk, trend, vix_level, vix_chg_1d,
-                    top_drivers, mode, price_card_price, prob_calm, prob_elevated, prob_turbulent)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    top_drivers, mode, price_card_price, prob_calm, prob_elevated, prob_turbulent,
+                    transition_risk_raw)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     state.get("as_of_ts"), state.get("regime"), state.get("transition_risk"),
                     state.get("trend"), state.get("vix_level"), state.get("vix_chg_1d"),
                     json.dumps(state.get("top_drivers") or []), state.get("mode"),
                     state.get("price_card_price"),
                     state.get("prob_calm"), state.get("prob_elevated"), state.get("prob_turbulent"),
+                    state.get("transition_risk_raw"),
                 ),
             )
             conn.commit()
@@ -272,6 +274,7 @@ class AppState:
             "as_of_ts": datetime.now(timezone.utc).isoformat(),
             "regime": result["regime"],
             "transition_risk": result["transition_risk"],
+            "transition_risk_raw": result.get("transition_risk_raw"),
             "trend": trend_latest,
             "vix_level": float(latest_row.get("vixcls", 0)) if "vixcls" in latest_row.index else None,
             "vix_chg_1d": float(latest_features.get("vix_chg_1d", 0)) if "vix_chg_1d" in latest_features.index else None,
@@ -333,3 +336,32 @@ class AppState:
     def force_refresh(self) -> None:
         """Manually trigger a refresh (used by /refresh-data endpoint)."""
         self._do_refresh()
+
+    def load_risk_reading_context(self):
+        """Return (raw_reference dict|None, cond_reference DataFrame|None, model_version, max_evaluated_p).
+
+        Read lazily; safe to call per-request. Returns Nones if artifacts/data are
+        absent so callers can skip the risk_reading rather than error.
+        """
+        import json as _json
+        import pandas as _pd
+        from pathlib import Path as _Path
+        from src.models.registry import load_metadata, artifact_exists
+        from src.utils.paths import PROCESSED_DIR
+        from src.features.build_market_features import build_features
+        from src.labeling.build_regime_labels import build_regime_labels
+
+        base = _Path(__file__).resolve().parent.parent.parent / "data" / "reliability"
+        ref_path = base / "raw_score_reference.json"
+        rel_path = base / "transition_reliability.json"
+        if not (ref_path.exists() and artifact_exists("xgb_transition")):
+            return None, None, None, 0.30
+        raw_reference = _json.loads(ref_path.read_text())
+        model_version = load_metadata("xgb_transition").get("saved_at", "unknown")
+        max_evaluated_p = 0.30
+        if rel_path.exists():
+            max_evaluated_p = float(_json.loads(rel_path.read_text()).get("max_evaluated_p", 0.30))
+        panel = _pd.read_parquet(_Path(PROCESSED_DIR) / "panel.parquet")
+        regime = build_regime_labels(panel)
+        cond_reference = build_features(panel, regime_series=regime).dropna()
+        return raw_reference, cond_reference, model_version, max_evaluated_p

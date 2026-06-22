@@ -2,7 +2,6 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useCurrentState } from '../hooks/useCurrentState'
 import { useHistoricalState } from '../hooks/useHistoricalState'
-import { useReliability } from '../hooks/useReliability'
 import { useDailyDiff } from '../hooks/useDailyDiff'
 import MiniRegimeChart from '../components/charts/MiniRegimeChart'
 import Topbar from '../components/layout/Topbar'
@@ -10,12 +9,12 @@ import Panel from '../components/ui/Panel'
 import RegimeBadge from '../components/ui/RegimeBadge'
 import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { buildCurrentStateNarrative } from '../lib/narratives'
-import { reliabilityFor } from '../lib/reliability'
 import RiskTemperature from '../components/current-state/RiskTemperature'
 import WhatChanged from '../components/current-state/WhatChanged'
 import StressLadder from '../components/current-state/StressLadder'
 import MarketContextBrief from '../components/current-state/MarketContextBrief'
 import RegimePersistence from '../components/current-state/RegimePersistence'
+import { RiskReadingDisplay } from '../components/RiskReadingDisplay'
 import {
   buildMarketContextCards,
   buildRiskTemperature,
@@ -36,7 +35,6 @@ const cardVariants = {
 export default function CurrentState() {
   const { data, loading, error, refresh } = useCurrentState()
   const { data: recentData } = useHistoricalState('2020-01-01')
-  const { data: reliabilityTable } = useReliability()
   const { data: dailyDiffData } = useDailyDiff()
 
   if (loading) return (
@@ -57,13 +55,12 @@ export default function CurrentState() {
   const regime = data.regime.toLowerCase()
   const rColor = regimeColor[regime] ?? regimeColor['unknown']
 
-  const reliability = reliabilityTable
-    ? reliabilityFor(data.transition_risk, reliabilityTable)
-    : null
+  // Backend display_state is authoritative; stress = anything not validated.
+  const isStress = data.risk_reading != null && data.risk_reading.display_state !== 'validated'
 
   const narrative = buildCurrentStateNarrative(
     data.regime, data.transition_risk, data.trend, data.vix_level, data.vix_chg_1d,
-    reliability?.out_of_range,
+    isStress,
   )
 
   const refreshAction = (
@@ -205,6 +202,14 @@ export default function CurrentState() {
             <RiskTemperature data={riskTemperature} />
             <Panel title="What this means right now">
               <p className="text-[11px] leading-relaxed mb-4" style={{ color: '#94a3b8' }}>{narrative}</p>
+              {isStress && data.risk_reading && (
+                <div
+                  className="mb-4 p-3 rounded"
+                  style={{ background: '#0c1020', border: '1px solid #151d2e', fontSize: 11, lineHeight: 1.6, color: '#94a3b8' }}
+                >
+                  <RiskReadingDisplay reading={data.risk_reading} />
+                </div>
+              )}
               <div className="text-[9px] font-bold tracking-widest uppercase mb-2" style={{ color: '#4a6080' }}>
                 Model confidence in each market state
               </div>
