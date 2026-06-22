@@ -61,7 +61,7 @@ class AppState:
                     prob_turbulent REAL
                 )
             """)
-            for col in ("prob_calm", "prob_elevated", "prob_turbulent"):
+            for col in ("prob_calm", "prob_elevated", "prob_turbulent", "transition_risk_raw"):
                 try:
                     conn.execute(f"ALTER TABLE live_state ADD COLUMN {col} REAL")
                 except Exception:
@@ -74,14 +74,16 @@ class AppState:
             conn.execute(
                 """INSERT INTO live_state
                    (as_of_ts, regime, transition_risk, trend, vix_level, vix_chg_1d,
-                    top_drivers, mode, price_card_price, prob_calm, prob_elevated, prob_turbulent)
-                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    top_drivers, mode, price_card_price, prob_calm, prob_elevated, prob_turbulent,
+                    transition_risk_raw)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     state.get("as_of_ts"), state.get("regime"), state.get("transition_risk"),
                     state.get("trend"), state.get("vix_level"), state.get("vix_chg_1d"),
                     json.dumps(state.get("top_drivers") or []), state.get("mode"),
                     state.get("price_card_price"),
                     state.get("prob_calm"), state.get("prob_elevated"), state.get("prob_turbulent"),
+                    state.get("transition_risk_raw"),
                 ),
             )
             conn.commit()
@@ -272,6 +274,7 @@ class AppState:
             "as_of_ts": datetime.now(timezone.utc).isoformat(),
             "regime": result["regime"],
             "transition_risk": result["transition_risk"],
+            "transition_risk_raw": result.get("transition_risk_raw"),
             "trend": trend_latest,
             "vix_level": float(latest_row.get("vixcls", 0)) if "vixcls" in latest_row.index else None,
             "vix_chg_1d": float(latest_features.get("vix_chg_1d", 0)) if "vix_chg_1d" in latest_features.index else None,

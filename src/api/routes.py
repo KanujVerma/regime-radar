@@ -93,6 +93,41 @@ async def current_state(request: Request):
             top_feature_direction="up" if risk_delta > 0 else "down",
         )
 
+    risk_reading_model = None
+    try:
+        raw_ref, cond_ref, model_version, max_p = app_state.load_risk_reading_context()
+        raw_score = latest.get("transition_risk_raw")
+        if raw_ref is not None and raw_score is not None and app_state._latest_features is not None:
+            from src.api.risk_reading import build_risk_reading
+            from src.api.schemas import RiskReadingModel
+            from src.models.analogs import find_analogs as _find
+            feats = app_state._latest_features
+            condition_point = {c: float(feats[c]) for c in SCENARIO_BASELINE_FEATURES if c in feats.index}
+
+            def _live_analogs():
+                if app_state._analog_index is None or app_state._latest_date is None:
+                    return []
+                res = _find(query_date=app_state._latest_date,
+                            query_features=app_state._latest_features,
+                            index=app_state._analog_index)
+                # find_analogs' "transition_risk" is the analog day's CALIBRATED OOF risk,
+                # carried only to back the label text; the frontend renders a.label, never
+                # this number as a probability.
+                return [{"label": a.get("display_date", ""), "date": a.get("full_date", ""),
+                         "raw_score": float(a.get("transition_risk", 0.0))} for a in res[:3]]
+
+            rr = build_risk_reading(
+                calibrated_p=float(latest.get("transition_risk") or 0.0),
+                raw_score=float(raw_score), condition_point=condition_point,
+                cond_reference=cond_ref, raw_reference=raw_ref, model_version=model_version,
+                max_evaluated_p=max_p, find_analogs_fn=_live_analogs,
+            )
+            risk_reading_model = RiskReadingModel.from_reading(rr)
+    except Exception as e:
+        import logging as _lg
+        _lg.getLogger(__name__).warning("current-state risk_reading failed: %s", e)
+        risk_reading_model = None
+
     return CurrentStateResponse(
         regime=latest.get("regime", "unknown"),
         transition_risk=latest.get("transition_risk", 0.0),
@@ -107,6 +142,7 @@ async def current_state(request: Request):
         prob_turbulent=latest.get("prob_turbulent"),
         delta=delta,
         condition_values=_condition_values_from_state(app_state),
+        risk_reading=risk_reading_model,
     )
 
 

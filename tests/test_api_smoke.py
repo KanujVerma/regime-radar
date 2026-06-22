@@ -789,3 +789,28 @@ def test_scenario_version_mismatch_suppresses_percentile(app_with_state, monkeyp
     rr = r.json()["risk_reading"]
     assert rr is not None
     assert rr["stress_percentile"] is None  # ranking suppressed on version mismatch
+
+
+def test_current_state_has_risk_reading(app_with_state, monkeypatch):
+    import pandas as pd
+    _scenario_risk_reading_mocks(monkeypatch)  # mocks registry + pipeline + a 300-row in-dist cond reference
+    app, state = app_with_state
+    state.write_state({
+        "as_of_ts": "2024-01-02T00:00:00+00:00",
+        "regime": "calm", "transition_risk": 0.12, "transition_risk_raw": 0.4,
+        "trend": "neutral", "mode": "demo", "price_card_price": None,
+    })
+    # Provide a live, in-distribution feature vector (-> in_support) and no analog index.
+    state._latest_features = pd.Series({
+        "vix_level": 18.0, "vix_chg_5d": 0.0, "rv_20d_pct": 0.15,
+        "drawdown_pct_504d": -0.05, "ret_20d": 0.0, "dist_sma50": 0.0})
+    state._latest_date = None
+    state._analog_index = None
+    client = TestClient(app)
+    r = client.get("/current-state")
+    assert r.status_code == 200
+    rr = r.json().get("risk_reading")
+    assert rr is not None
+    assert rr["display_state"] in ("validated", "stress_in_support", "stress_out_of_support")
+    if rr["display_state"] == "validated":
+        assert rr["validated_probability"] is not None
