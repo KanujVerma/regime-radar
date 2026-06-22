@@ -11,9 +11,6 @@ import json
 import sys
 from pathlib import Path
 
-import matplotlib
-matplotlib.use("Agg")
-import matplotlib.pyplot as plt
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
@@ -44,6 +41,15 @@ def decide_branch(metrics: list[dict]) -> str:
 
 
 def _plot_reliability(bins: list[dict], path: Path, title: str) -> None:
+    # matplotlib is an optional diagnostic extra (not in requirements.txt).
+    # Skip the plot gracefully if it isn't installed — the asserted artifacts
+    # (summary.csv, report.md, support_report.json) do not depend on it.
+    try:
+        import matplotlib
+        matplotlib.use("Agg")
+        import matplotlib.pyplot as plt
+    except ImportError:
+        return
     xs = [b["p_mid"] for b in bins]
     ys = [b["empirical_rate"] for b in bins]
     ns = [b["n"] for b in bins]

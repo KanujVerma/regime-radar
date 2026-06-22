@@ -21,6 +21,20 @@ def _tiny_panel(n=1700, seed=3):
     return pd.DataFrame({"close": close, "vixcls": vix, "emvoverallemv": emv}, index=idx)
 
 
+def test_plot_reliability_degrades_when_matplotlib_absent(tmp_path, monkeypatch):
+    # CI does not install matplotlib (it is an optional diagnostic extra).
+    # Importing the module and producing the asserted artifacts must NOT require it.
+    # Simulate its absence: `import matplotlib` then raises ImportError.
+    import sys
+    monkeypatch.setitem(sys.modules, "matplotlib", None)
+    monkeypatch.setitem(sys.modules, "matplotlib.pyplot", None)
+    out = tmp_path / "rel.png"
+    bins = [{"p_mid": 0.1, "empirical_rate": 0.1, "n": 5},
+            {"p_mid": 0.3, "empirical_rate": 0.4, "n": 3}]
+    rcd._plot_reliability(bins, out, "t")  # must not raise
+    assert not out.exists()  # plot skipped gracefully, no crash
+
+
 def test_decide_branch_rule():
     # Pure decision-rule unit: thresholds are pre-registered.
     a = [{"max_validated_p": 0.55, "top1pct_emp": 0.6, "monotonic_ok": True, "pr_auc": 0.4, "base_rate": 0.1}]
