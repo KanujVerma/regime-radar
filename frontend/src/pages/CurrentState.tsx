@@ -2,7 +2,6 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { useCurrentState } from '../hooks/useCurrentState'
 import { useHistoricalState } from '../hooks/useHistoricalState'
-import { useReliability } from '../hooks/useReliability'
 import { useDailyDiff } from '../hooks/useDailyDiff'
 import MiniRegimeChart from '../components/charts/MiniRegimeChart'
 import Topbar from '../components/layout/Topbar'
@@ -10,7 +9,6 @@ import Panel from '../components/ui/Panel'
 import RegimeBadge from '../components/ui/RegimeBadge'
 import SkeletonBlock from '../components/ui/SkeletonBlock'
 import { buildCurrentStateNarrative } from '../lib/narratives'
-import { reliabilityFor } from '../lib/reliability'
 import RiskTemperature from '../components/current-state/RiskTemperature'
 import WhatChanged from '../components/current-state/WhatChanged'
 import StressLadder from '../components/current-state/StressLadder'
@@ -36,7 +34,6 @@ const cardVariants = {
 export default function CurrentState() {
   const { data, loading, error, refresh } = useCurrentState()
   const { data: recentData } = useHistoricalState('2020-01-01')
-  const { data: reliabilityTable } = useReliability()
   const { data: dailyDiffData } = useDailyDiff()
 
   if (loading) return (
@@ -57,13 +54,12 @@ export default function CurrentState() {
   const regime = data.regime.toLowerCase()
   const rColor = regimeColor[regime] ?? regimeColor['unknown']
 
-  const reliability = reliabilityTable
-    ? reliabilityFor(data.transition_risk, reliabilityTable)
-    : null
+  // Backend display_state is authoritative; stress = anything not validated.
+  const isStress = data.risk_reading != null && data.risk_reading.display_state !== 'validated'
 
   const narrative = buildCurrentStateNarrative(
     data.regime, data.transition_risk, data.trend, data.vix_level, data.vix_chg_1d,
-    reliability?.out_of_range,
+    isStress,
   )
 
   const refreshAction = (
