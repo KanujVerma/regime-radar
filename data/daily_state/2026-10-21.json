@@ -1,0 +1,45 @@
+{
+  "as_of_date": "2026-10-21",
+  "generated_at": "2026-10-23T00:29:17.630935+00:00",
+  "data_through_date": "2026-10-21",
+  "regime": "calm",
+  "transition_risk": 0.5246,
+  "prob_calm": 0.9787,
+  "prob_elevated": 0.0212,
+  "prob_turbulent": 0.0,
+  "vix_level": 16.68,
+  "trend": "uptrend",
+  "top_drivers": [
+    {
+      "feature": "rv_20d",
+      "plain_label": "rv_20d",
+      "importance": 0.556104
+    },
+    {
+      "feature": "days_in_regime_lag1",
+      "plain_label": "Days in current regime (lagged)",
+      "importance": 0.259341
+    },
+    {
+      "feature": "drawdown",
+      "plain_label": "drawdown",
+      "importance": 0.231263
+    },
+    {
+      "feature": "vix_pct_504d",
+      "plain_label": "VIX relative to 2-year history",
+      "importance": 0.156251
+    },
+    {
+      "feature": "turbulent_count_30d_lag1",
+      "plain_label": "Turbulent days in past 30 days (lagged)",
+      "importance": 0.125857
+    }
+  ],
+  "model_version": {
+    "transition_model": "xgb_transition",
+    "transition_trained_as_of": "2026-05-23T05:55:41.428754+00:00",
+    "regime_model": "xgb_regime",
+    "regime_trained_as_of": "2026-05-23T05:54:24.300852+00:00"
+  }
+}
