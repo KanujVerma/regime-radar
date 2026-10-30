@@ -1,0 +1,45 @@
+{
+  "as_of_date": "2026-10-29",
+  "generated_at": "2026-10-30T01:46:13.484971+00:00",
+  "data_through_date": "2026-10-29",
+  "regime": "calm",
+  "transition_risk": 0.2752,
+  "prob_calm": 0.6672,
+  "prob_elevated": 0.3327,
+  "prob_turbulent": 0.0001,
+  "vix_level": 16.91,
+  "trend": "uptrend",
+  "top_drivers": [
+    {
+      "feature": "rv_20d_pct",
+      "plain_label": "Realized volatility percentile",
+      "importance": 0.281907
+    },
+    {
+      "feature": "turbulent_count_30d_lag1",
+      "plain_label": "Turbulent days in past 30 days (lagged)",
+      "importance": 0.155302
+    },
+    {
+      "feature": "days_in_regime_lag1",
+      "plain_label": "Days in current regime (lagged)",
+      "importance": 0.128036
+    },
+    {
+      "feature": "vix_pct_504d",
+      "plain_label": "VIX relative to 2-year history",
+      "importance": 0.119345
+    },
+    {
+      "feature": "vix_zscore_252d",
+      "plain_label": "VIX z-score (1-year)",
+      "importance": 0.091804
+    }
+  ],
+  "model_version": {
+    "transition_model": "xgb_transition",
+    "transition_trained_as_of": "2026-05-23T05:55:41.428754+00:00",
+    "regime_model": "xgb_regime",
+    "regime_trained_as_of": "2026-05-23T05:54:24.300852+00:00"
+  }
+}
