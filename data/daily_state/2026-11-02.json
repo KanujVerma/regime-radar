@@ -1,39 +1,39 @@
 {
   "as_of_date": "2026-11-02",
-  "generated_at": "2026-11-03T03:23:59.953097+00:00",
+  "generated_at": "2026-11-04T02:02:46.468732+00:00",
   "data_through_date": "2026-11-02",
   "regime": "elevated",
-  "transition_risk": 0.5054,
-  "prob_calm": 0.0008,
-  "prob_elevated": 0.9958,
-  "prob_turbulent": 0.0033,
-  "vix_level": 19.42,
+  "transition_risk": 0.6362,
+  "prob_calm": 0.0025,
+  "prob_elevated": 0.9621,
+  "prob_turbulent": 0.0354,
+  "vix_level": 21.15,
   "trend": "downtrend",
   "top_drivers": [
     {
-      "feature": "rv_20d_pct",
-      "plain_label": "Realized volatility percentile",
-      "importance": 0.323196
-    },
-    {
       "feature": "vix_zscore_252d",
       "plain_label": "VIX z-score (1-year)",
-      "importance": 0.304285
+      "importance": 0.55108
+    },
+    {
+      "feature": "rv_20d_pct",
+      "plain_label": "Realized volatility percentile",
+      "importance": 0.354259
     },
     {
       "feature": "drawdown_pct_504d",
       "plain_label": "Drawdown relative to 2-year history",
-      "importance": 0.292097
+      "importance": 0.288368
     },
     {
       "feature": "days_in_regime_lag1",
       "plain_label": "Days in current regime (lagged)",
-      "importance": 0.256349
+      "importance": 0.247653
     },
     {
       "feature": "emv_lag_5d",
       "plain_label": "emv_lag_5d",
-      "importance": 0.219712
+      "importance": 0.226845
     }
   ],
   "model_version": {
