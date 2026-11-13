@@ -1,39 +1,39 @@
 {
   "as_of_date": "2026-11-11",
-  "generated_at": "2026-11-12T02:47:15.180638+00:00",
+  "generated_at": "2026-11-13T02:29:59.452427+00:00",
   "data_through_date": "2026-11-11",
   "regime": "turbulent",
   "transition_risk": 0.0009,
   "prob_calm": 0.0,
-  "prob_elevated": 0.0018,
-  "prob_turbulent": 0.9982,
-  "vix_level": 19.46,
+  "prob_elevated": 0.0768,
+  "prob_turbulent": 0.9231,
+  "vix_level": 17.49,
   "trend": "downtrend",
   "top_drivers": [
     {
-      "feature": "vix_zscore_252d",
-      "plain_label": "VIX z-score (1-year)",
-      "importance": 0.476966
-    },
-    {
       "feature": "turbulent_count_30d_lag1",
       "plain_label": "Turbulent days in past 30 days (lagged)",
-      "importance": 0.253062
+      "importance": 0.257985
     },
     {
-      "feature": "ret_20d",
-      "plain_label": "20-day SPY return",
-      "importance": 0.171365
+      "feature": "vix_zscore_252d",
+      "plain_label": "VIX z-score (1-year)",
+      "importance": 0.2502
     },
     {
       "feature": "emv_lag_5d",
       "plain_label": "emv_lag_5d",
-      "importance": 0.147794
+      "importance": 0.144448
     },
     {
-      "feature": "emv_lag_20d",
-      "plain_label": "emv_lag_20d",
-      "importance": 0.085548
+      "feature": "ret_20d",
+      "plain_label": "20-day SPY return",
+      "importance": 0.127639
+    },
+    {
+      "feature": "vix_pct_504d",
+      "plain_label": "VIX relative to 2-year history",
+      "importance": 0.098783
     }
   ],
   "model_version": {
