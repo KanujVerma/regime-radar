@@ -1,0 +1,45 @@
+{
+  "as_of_date": "2026-11-20",
+  "generated_at": "2026-11-21T03:02:15.814877+00:00",
+  "data_through_date": "2026-11-20",
+  "regime": "turbulent",
+  "transition_risk": 0.0009,
+  "prob_calm": 0.0,
+  "prob_elevated": 0.0,
+  "prob_turbulent": 1.0,
+  "vix_level": 28.44,
+  "trend": "downtrend",
+  "top_drivers": [
+    {
+      "feature": "vix_zscore_252d",
+      "plain_label": "VIX z-score (1-year)",
+      "importance": 0.295212
+    },
+    {
+      "feature": "drawdown_pct_504d",
+      "plain_label": "Drawdown relative to 2-year history",
+      "importance": 0.268882
+    },
+    {
+      "feature": "emv_lag_5d",
+      "plain_label": "emv_lag_5d",
+      "importance": 0.148248
+    },
+    {
+      "feature": "emv_lag_20d",
+      "plain_label": "emv_lag_20d",
+      "importance": 0.086735
+    },
+    {
+      "feature": "ret_1d",
+      "plain_label": "ret_1d",
+      "importance": 0.07337
+    }
+  ],
+  "model_version": {
+    "transition_model": "xgb_transition",
+    "transition_trained_as_of": "2026-05-23T05:55:41.428754+00:00",
+    "regime_model": "xgb_regime",
+    "regime_trained_as_of": "2026-05-23T05:54:24.300852+00:00"
+  }
+}
